@@ -189,19 +189,10 @@ class OverlayService : Service() {
         }
     }
 
-    // 決定前景服務類型：有麥克風權限才加上 microphone
-    private fun foregroundTypes(): Int {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && hasMicPermission()) {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE  // Android 11～13 用麥克風類型
-            } else {
-                0  // 舊版不分類型
-            }
-        }
-        var types = ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-        if (hasMicPermission()) types = types or ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE
-        return types
-    }
+    // 決定前景服務類型：只用 specialUse。收音由系統語音辨識服務在它自己的程序進行，本 App 不需要 microphone 類型
+    // （實測 vivo 會在鎖屏時把帶 microphone 類型的前景服務收掉）
+    private fun foregroundTypes(): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
 
     // 建立常駐通知（含「停止」按鈕）
     private fun buildNotification(): Notification {
