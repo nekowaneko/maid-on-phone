@@ -56,9 +56,19 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 主畫面已開著時，磁磚帶來的「自動開始」從這裡進來
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+    }
+
     override fun onResume() {
         super.onResume()
         refreshUi()  // 從系統設定回來時更新說明
+        if (intent.getBooleanExtra(EXTRA_AUTO_START, false)) {
+            intent.removeExtra(EXTRA_AUTO_START)  // 只自動按一次
+            onStartPressed()
+        }
     }
 
     // dp 轉 px
@@ -81,6 +91,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(button("停止") { stopPet() })
         root.addView(button("允許麥克風（用說的）") { requestRuntimePermissions() })
         root.addView(button("匯出耗電紀錄") { exportAndShare() })
+        root.addView(button("允許自動恢復（精確鬧鐘）") { openExactAlarmSettings() })
         return root
     }
 
@@ -108,13 +119,16 @@ class MainActivity : AppCompatActivity() {
                 status.text = OVERLAY_EXPLANATION
                 openOverlaySettings()
             }
-            StartAction.START_OVERLAY -> ContextCompat.startForegroundService(this, Intent(this, OverlayService::class.java))
+            StartAction.START_OVERLAY -> {
+                runIntentStore(this).save(true)  // 使用者想開著：之後被收掉會自動恢復
+                startPetService(this)
+            }
         }
     }
 
     // 停止角色
     private fun stopPet() {
-        startService(Intent(this, OverlayService::class.java).setAction(ACTION_STOP))
+        stopPetService(this)  // 服務會記錄不想開著並取消巡邏
     }
 
     // 開啟系統的懸浮窗授權頁
@@ -142,5 +156,14 @@ class MainActivity : AppCompatActivity() {
         }
         status.text = "已匯出：${file.name}"
         startActivity(Intent.createChooser(send, "分享耗電紀錄"))
+    }
+
+    // 開啟系統的精確鬧鐘授權頁（Android 12+）；有權限時巡邏更準時
+    private fun openExactAlarmSettings() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || canUseExactAlarm(this)) {
+            status.text = "已允許自動恢復。"
+            return
+        }
+        startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
     }
 }

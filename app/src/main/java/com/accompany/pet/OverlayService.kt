@@ -94,6 +94,8 @@ class OverlayService : Service() {
     // 收到啟動或停止指令
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
+            runIntentStore(this).save(false)  // 使用者主動停止：不再自動恢復
+            cancelWatchdog(this)
             stopPet()
             return START_NOT_STICKY
         }
@@ -111,6 +113,8 @@ class OverlayService : Service() {
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         dispatch(PetEvent.START)
         running = true
+        scheduleWatchdog(this)  // 被系統收掉時由巡邏叫回
+        refreshTile(this)
         batteryLogger.start()  // 螢幕關閉時也不停（S14 優先）
         return START_NOT_STICKY
     }
@@ -138,6 +142,7 @@ class OverlayService : Service() {
     // 收掉懸浮窗與接收器
     private fun cleanup() {
         running = false
+        refreshTile(this)
         batteryLogger.stop()
         speech.release()
         try {
@@ -250,7 +255,7 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT,  // 透明背景
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 setCanPlayMoveAnimation(false)  // 關掉系統的視窗移動動畫：展開泡泡、拖曳、吸附都要立即到位，不要滑動
             }
             x = petPos.x
