@@ -52,6 +52,7 @@ const val TAP_SLOP_PX = 10                            // 移動小於這個距�
 const val CHANNEL_ID = "pet_overlay"                  // 通知頻道
 const val NOTIFICATION_ID = 1                         // 常駐通知編號
 const val POSITION_FILE = "pet-position.txt"          // 位置檔名
+const val LOG_TAG = "AccompanyPet"                    // logcat 標籤
 const val ASSET_ROOT = "file:///android_asset/pet/"   // WebView 唯一允許的網址開頭
 
 // 判斷網址是否為角色頁的本機資產（架構約束 A4）
@@ -59,6 +60,10 @@ fun isAllowedUrl(url: String): Boolean = url.startsWith(ASSET_ROOT)
 
 // 前景服務：顯示懸浮角色、處理拖曳、螢幕開關與通知
 class OverlayService : Service() {
+
+    companion object {
+        @Volatile var running = false  // 服務是否執行中（給主畫面判斷要不要刷新）
+    }
 
     private var state: PetState = INITIAL_STATE         // 目前狀態
     private var webView: WebView? = null                 // 角色頁
@@ -75,7 +80,10 @@ class OverlayService : Service() {
         override fun onReceive(context: Context, intent: Intent) {
             when (intent.action) {
                 Intent.ACTION_SCREEN_OFF -> dispatch(PetEvent.SCREEN_OFF)
-                Intent.ACTION_SCREEN_ON -> dispatch(PetEvent.SCREEN_ON)
+                Intent.ACTION_SCREEN_ON -> {
+                    ensureOverlay()  // 視窗或渲染程序被系統收掉時重建
+                    dispatch(PetEvent.SCREEN_ON)
+                }
             }
         }
     }
@@ -88,7 +96,11 @@ class OverlayService : Service() {
             stopPet()
             return START_NOT_STICKY
         }
-        if (state.service == com.accompany.pet.core.ServiceState.RUNNING) return START_NOT_STICKY  // 已在執行
+        if (state.service == com.accompany.pet.core.ServiceState.RUNNING) {
+            startInForeground()  // 已在執行：重新宣告前景類型（剛取得麥克風權限時補上 microphone）
+            ensureOverlay()
+            return START_NOT_STICKY
+        }
         startInForeground()
         showOverlay()
         val filter = IntentFilter().apply {
@@ -97,6 +109,7 @@ class OverlayService : Service() {
         }
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         dispatch(PetEvent.START)
+        running = true
         batteryLogger.start()  // 螢幕關閉時也不停（S14 優先）
         return START_NOT_STICKY
     }
@@ -123,6 +136,7 @@ class OverlayService : Service() {
 
     // 收掉懸浮窗與接收器
     private fun cleanup() {
+        running = false
         batteryLogger.stop()
         speech.release()
         try {
@@ -130,12 +144,35 @@ class OverlayService : Service() {
         } catch (e: IllegalArgumentException) {
             // 尚未註冊，略過
         }
+        removeOverlay()
+    }
+
+    // 把 WebView 從畫面移除並釋放
+    private fun removeOverlay() {
         webView?.let {
-            windowManager.removeView(it)
+            try {
+                windowManager.removeView(it)
+            } catch (e: IllegalArgumentException) {
+                // 視窗已被系統移除，略過
+            }
             it.destroy()
         }
         webView = null
+        bubbleShown = false
     }
+
+    // 確認懸浮窗還掛在畫面上，不在就重建
+    private fun ensureOverlay() {
+        val wv = webView
+        if (wv != null && wv.isAttachedToWindow) return
+        android.util.Log.w(LOG_TAG, "懸浮窗不在畫面上，重建")
+        removeOverlay()
+        showOverlay()
+        dispatch(if (isScreenOn()) PetEvent.SCREEN_ON else PetEvent.SCREEN_OFF)
+    }
+
+    // 螢幕目前是否亮著
+    private fun isScreenOn(): Boolean = (getSystemService(POWER_SERVICE) as android.os.PowerManager).isInteractive
 
     // 以前景服務身分啟動，並顯示常駐通知
     private fun startInForeground() {
@@ -330,7 +367,18 @@ class OverlayService : Service() {
     }
 
     // 只允許載入角色頁的本機資產，其他網址一律攔截（A4）
-    private class PetWebViewClient : WebViewClient() {
+    private inner class PetWebViewClient : WebViewClient() {
+        // WebView 渲染程序被系統收掉（常見於螢幕關閉時）：丟掉舊的並重建，不讓服務閃退
+        override fun onRenderProcessGone(view: WebView, detail: android.webkit.RenderProcessGoneDetail): Boolean {
+            android.util.Log.w(LOG_TAG, "WebView 渲染程序結束，crash=${detail.didCrash()}")
+            if (view == webView) {
+                removeOverlay()
+                showOverlay()
+                dispatch(PetEvent.SCREEN_ON.takeIf { isScreenOn() } ?: PetEvent.SCREEN_OFF)
+            }
+            return true
+        }
+
         // 攔截頁面跳轉
         override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
             !isAllowedUrl(request.url.toString())

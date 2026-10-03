@@ -35,7 +35,13 @@ class MainActivity : AppCompatActivity() {
 
     // 請求麥克風與通知權限（只能在 Activity 請求）
     private val permissionLauncher =
-        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { refreshUi() }
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+            refreshUi()
+            // 角色已在執行時，通知服務重新宣告前景類型，補上 microphone
+            if (result[Manifest.permission.RECORD_AUDIO] == true && OverlayService.running) {
+                ContextCompat.startForegroundService(this, Intent(this, OverlayService::class.java))
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

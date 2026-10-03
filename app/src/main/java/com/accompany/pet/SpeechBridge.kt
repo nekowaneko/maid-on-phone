@@ -16,7 +16,7 @@ const val NOT_HEARD_MESSAGE = "沒聽清楚，再說一次好嗎？"            
 // 把辨識錯誤碼轉成泡泡要顯示的文字
 fun speechErrorMessage(error: Int): String = when (error) {
     SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> NOT_HEARD_MESSAGE
-    else -> MIC_UNAVAILABLE_MESSAGE  // 權限、背景限制、忙碌等一律請使用者打開 App 再試，不嘗試繞過
+    else -> "$MIC_UNAVAILABLE_MESSAGE（代碼 $error）"  // 附上錯誤碼方便實測回報；不嘗試繞過系統限制
 }
 
 // SpeechRecognizer → 文字。呼叫端須先確認已有麥克風權限；所有方法都在主執行緒呼叫
@@ -27,7 +27,8 @@ class SpeechBridge(private val context: Context, private val onText: (String) ->
     // 開始一次語音辨識
     fun start() {
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            onText(MIC_UNAVAILABLE_MESSAGE)
+            android.util.Log.w(LOG_TAG, "找不到語音辨識服務")
+            onText("$MIC_UNAVAILABLE_MESSAGE（找不到語音辨識服務）")
             return
         }
         val r = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also {
@@ -62,6 +63,7 @@ class SpeechBridge(private val context: Context, private val onText: (String) ->
 
         // 辨識失敗：顯示對應提示
         override fun onError(error: Int) {
+            android.util.Log.w(LOG_TAG, "語音辨識錯誤 $error")
             onText(speechErrorMessage(error))
         }
 

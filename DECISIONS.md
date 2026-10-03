@@ -40,3 +40,5 @@
 - 把「角色在左／右」正式列入原生 → 網頁介面表（目前以 `dataset.side` 實作，見決策 14）。
 - 角色圖改為含透明通道的 PNG。
 - 依賴套件升級另開批次處理（Lint 列出 7 個可升級套件）。
+24. **實測修正（螢幕關閉後角色消失）**：處理 WebView 渲染程序被系統收掉（`onRenderProcessGone` 重建，不閃退），螢幕打開時檢查懸浮窗是否還掛著，不在就重建。根因待手機 log 確認。
+25. **實測修正（麥克風一直無法使用）**：Manifest 加 `<queries>` 宣告 `RecognitionService`（Android 11+ 未宣告時找不到語音辨識服務）；取得麥克風權限後若角色已在執行，重新呼叫 `startForeground` 補上 microphone 類型；錯誤訊息附上錯誤碼以利回報。
