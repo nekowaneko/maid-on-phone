@@ -174,7 +174,7 @@ pass "V15"
 
 # V16：高風險清單涵蓋 §2.1
 [ -f RISK-REVIEW.md ] || fail "V16 缺少 RISK-REVIEW.md"
-for name in exportCsv FilePositionStore PetBridge BatteryLogger; do
+for name in exportCsv FilePositionStore PetBridge BatteryLogger FileReminderQueueStore FileSeenIdStore PetMessagingService ReminderDispatcher ForegroundDetector PushTokenStore; do
   grep -q "$name" RISK-REVIEW.md || fail "V16 RISK-REVIEW.md 缺少 $name"
 done
 pass "V16"

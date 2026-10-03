@@ -44,3 +44,24 @@ gitleaks 未安裝，改用計畫指定的 grep 樣式掃描所有追蹤檔：�
 | SetTextI18n | 1 | `MainActivity.kt` | 文字串接，M0 不做多語系 |
 
 無安全類別的 warning（例如 `SetJavaScriptEnabled` 已在程式中以註記標示並說明理由）。
+
+## M1 架構約束檢查（verify.sh L1）
+
+| # | 結果 |
+|---|---|
+| A11 `core/reminder/` 只用標準庫與 `java.util`／`java.io` | 通過（V01、V02；`java.util.Base64` 屬於允許範圍） |
+| A12 `app/src/main` 不自行連外 | 通過（V18，並由凍結的 S15 再檢查一次） |
+| A13 所有提醒都走 `ReminderDispatcher.handle` | `PetMessagingService` 與主畫面測試推播都只呼叫它；人工閱讀見 RISK-REVIEW.md |
+| A14 `PetMessagingService` 為 `exported="false"` | 通過（V20） |
+| A15 排隊通知頻道 `IMPORTANCE_MIN`、靜音、不震動 | 通過（V21） |
+| A16 Firebase 設定只從 `firebase.properties` 讀入、沒有檔案照常建置 | 本機沒有該檔案，建置與 L1～L3 全部通過；V06 確認該檔與 `google-services.json` 未被追蹤 |
+| A17 推播代碼不寫進 log | 通過（V22）；`PetApp` 初始化失敗時只記例外類型 |
+| A3 原始碼 Manifest 無 INTERNET | 通過（V03、S15）；Firebase 套件合併進來的網路權限不算 |
+
+## M1 其他安全事項
+
+- `PACKAGE_USAGE_STATS` 由使用者在系統設定自行開啟；`ForegroundDetector` 只在收到推播的當下查詢最近 60 秒的事件一次，不常駐、不保存使用紀錄。
+- 推播資料只取 `id`、`text` 兩個鍵，文字截斷為 500 字；顯示時沿用 `JSONObject.quote` 跳脫、網頁端 `textContent`，不解析 HTML。
+- 一般通知的點擊使用 `FLAG_IMMUTABLE` 的 PendingIntent，只能叫出角色並帶入同一則文字。
+- 沒有新增 `@JavascriptInterface`（V08 仍為 2 個）。
+- Lint：`./gradlew :app:lintDebug` error 0 個、warning 16 個（與 M0 相同數量，M1 沒有新增 warning 類別）。
