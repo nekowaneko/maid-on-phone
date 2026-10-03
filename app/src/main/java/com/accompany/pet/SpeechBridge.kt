@@ -8,7 +8,7 @@ import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 
 // 常數定義
-const val SPEECH_LANGUAGE = "zh-TW"                                    // 辨識語言
+const val SPEECH_LANGUAGE = "cmn-Hant-TW"                                   // 辨識語言
 const val MIC_UNAVAILABLE_MESSAGE = "目前無法使用麥克風，請打開 App 再試"  // 系統限制時的提示
 const val LISTENING_MESSAGE = "我在聽…"                                 // 開始聆聽時的提示
 const val NOT_HEARD_MESSAGE = "沒聽清楚，再說一次好嗎？"                 // 沒辨識出文字時的提示
