@@ -23,9 +23,8 @@ class PetTileService : TileService() {
     override fun onClick() {
         super.onClick()
         if (OverlayService.running) {
-            stopPetService(this)  // 服務收到停止指令會記錄不想開著
+            stopPetService(this)
         } else {
-            runIntentStore(this).save(true)
             if (!hasOverlayPermission(this) || !startPetService(this)) openMainActivity()  // 沒權限或被拒絕時改開主畫面
         }
         updateTile()

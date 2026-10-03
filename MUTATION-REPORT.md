@@ -34,3 +34,5 @@
 範圍新增 `permission/Restore.kt` 的 `decideRestore`，突變共 4 個、全部被殺死（100%）。
 殺死 `decideRestore` 突變的是輔助測試 `RestoreTest`（八種組合），規格測試尚未涵蓋，建議新增規格範例列：
 「使用者按停止後，角色被系統收掉也不會自動跑回來」。
+
+> 2026-10-03：`decideRestore` 已隨定時巡邏刪除，突變範圍回到 `decideStart`（1 個突變，已殺死）。

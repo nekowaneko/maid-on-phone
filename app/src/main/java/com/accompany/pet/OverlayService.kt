@@ -99,8 +99,6 @@ class OverlayService : Service() {
             return START_NOT_STICKY
         }
         if (intent?.action == ACTION_STOP) {
-            runIntentStore(this).save(false)  // 使用者主動停止：不再自動恢復
-            cancelWatchdog(this)
             stopPet()
             return START_NOT_STICKY
         }
@@ -118,7 +116,6 @@ class OverlayService : Service() {
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         dispatch(PetEvent.START)
         running = true
-        scheduleWatchdog(this)  // 被系統收掉時由巡邏叫回
         refreshTile(this)
         batteryLogger.start()  // 螢幕關閉時也不停（S14 優先）
         return START_NOT_STICKY

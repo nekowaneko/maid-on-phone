@@ -9,7 +9,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
 
     <!-- Android 11+ 套件可見性：要宣告才找得到系統的語音辨識服務 -->
     <queries>
@@ -47,10 +46,6 @@
                 android:value="桌面懸浮陪伴角色，需常駐顯示並在使用者點擊時接收語音" />
         </service>
 
-        <!-- 定時巡邏：只接受自己的鬧鐘（A8） -->
-        <receiver
-            android:name=".WatchdogReceiver"
-            android:exported="false" />
 
         <!-- 快速設定磚：只有系統能綁定（A9） -->
         <service

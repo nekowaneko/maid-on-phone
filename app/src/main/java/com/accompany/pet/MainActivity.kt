@@ -92,7 +92,6 @@ class MainActivity : AppCompatActivity() {
         root.addView(button("停止") { stopPet() })
         root.addView(button("允許麥克風（用說的）") { requestRuntimePermissions() })
         root.addView(button("匯出耗電紀錄") { exportAndShare() })
-        root.addView(button("允許自動恢復（精確鬧鐘）") { openExactAlarmSettings() })
         testModeButton = button(testModeLabel()) {
             setBatteryTestMode(this, !isBatteryTestMode(this))
             testModeButton.text = testModeLabel()
@@ -126,7 +125,6 @@ class MainActivity : AppCompatActivity() {
                 openOverlaySettings()
             }
             StartAction.START_OVERLAY -> {
-                runIntentStore(this).save(true)  // 使用者想開著：之後被收掉會自動恢復
                 startPetService(this)
             }
         }
@@ -164,14 +162,6 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(send, "分享耗電紀錄"))
     }
 
-    // 開啟系統的精確鬧鐘授權頁（Android 12+）；有權限時巡邏更準時
-    private fun openExactAlarmSettings() {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || canUseExactAlarm(this)) {
-            status.text = "已允許自動恢復。"
-            return
-        }
-        startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
-    }
 
     // 耗電測試模式按鈕的文字
     private fun testModeLabel(): String =

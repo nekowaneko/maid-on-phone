@@ -103,9 +103,6 @@ if [ "$CORE_ONLY" -eq 0 ]; then
   grep -q 'PROPERTY_SPECIAL_USE_FGS_SUBTYPE' "$MANIFEST" || fail "V10 Manifest 缺少 PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
   pass "V10"
 
-  # V18：巡邏接收器不對外開放（M0.5 A8）
-  grep -A2 'android:name=".WatchdogReceiver"' "$MANIFEST" | grep -q 'android:exported="false"' || fail "V18 WatchdogReceiver 必須 exported=false"
-  pass "V18"
 
   # V19：快速設定磚只有系統能綁定（M0.5 A9）
   grep -A5 'android:name=".PetTileService"' "$MANIFEST" | grep -q 'BIND_QUICK_SETTINGS_TILE' || fail "V19 PetTileService 缺少 BIND_QUICK_SETTINGS_TILE"
