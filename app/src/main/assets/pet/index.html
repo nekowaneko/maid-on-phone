@@ -19,10 +19,9 @@
          background: #ff8fab; color: #fff; font-size: 13px; }
   #pet { width: 96px; height: 108px; flex: 0 0 auto; position: relative; }
   #pet img { width: 100%; height: 100%; object-fit: contain; position: absolute; left: 0; top: 0;
-             animation: breathe 3s ease-in-out infinite; transform-origin: 50% 100%; }
+             transform-origin: 50% 100%; }
+  #pet { transform-origin: 50% 100%; } /* 呼吸改由 JS 以低幀率驅動，省電 */
   #blink { visibility: hidden; }
-  body.paused * { animation-play-state: paused !important; } /* 暫停所有 CSS 動畫 */
-  @keyframes breathe { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-2px) scaleY(1.02); } }
 </style>
 </head>
 <body>
@@ -33,6 +32,9 @@
   var BLINK_MS = 150;        // 眨眼圖顯示時間
   var BLINK_MIN_MS = 4000;   // 眨眼最短間隔
   var BLINK_MAX_MS = 6000;   // 眨眼最長間隔
+  var BREATH_PERIOD_MS = 3000; // 呼吸週期
+  var BREATH_FPS = 10;         // 呼吸每秒更新次數（CSS 動畫會以 60fps 持續重繪，耗電又容易被系統判定為高耗電）
+  var breathTimer = null;      // 呼吸計時器
 
   var blinkTimer = null;     // 下一次眨眼的計時器
   var unblinkTimer = null;   // 眨眼結束的計時器
@@ -59,10 +61,17 @@
     }, BLINK_MS);
   }
 
+  // 依時間算出這一格的呼吸位移
+  function breathStep() {
+    var t = (Date.now() % BREATH_PERIOD_MS) / BREATH_PERIOD_MS;
+    var k = (1 - Math.cos(t * 2 * Math.PI)) / 2;  // 0→1→0 的平滑曲線
+    document.getElementById("pet").style.transform = "translateY(" + (-2 * k).toFixed(2) + "px) scaleY(" + (1 + 0.02 * k).toFixed(4) + ")";
+  }
+
   // 停掉所有計時器
   function clearTimers() {
-    clearTimeout(blinkTimer); clearTimeout(unblinkTimer);
-    blinkTimer = null; unblinkTimer = null;
+    clearTimeout(blinkTimer); clearTimeout(unblinkTimer); clearInterval(breathTimer);
+    blinkTimer = null; unblinkTimer = null; breathTimer = null;
     document.getElementById('blink').style.visibility = 'hidden';
   }
 
@@ -77,8 +86,7 @@
     setRender: function (mode) {
       clearTimers();
       playing = (mode === 'playing');
-      document.body.classList.toggle('paused', !playing);
-      if (playing) scheduleBlink();
+      if (playing) { scheduleBlink(); breathTimer = setInterval(breathStep, 1000 / BREATH_FPS); }
     },
     // 在泡泡裡顯示文字
     showText: function (text) {
