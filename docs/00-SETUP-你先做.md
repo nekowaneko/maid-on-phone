@@ -50,7 +50,7 @@
 ## 5. 放好規格書與計畫書
 
 - [x] 在專案資料夾建立 `docs/`，把根目錄的檔案**搬進去**（計畫書會到 `docs/` 找）：
-  - `docs/SPEC.md`（就是 wish28-pet-spec.md，改名）
+  - `docs/wish28-pet-spec.md`（規格書）
   - `docs/CHEAP-PLAN.md`
   - `docs/EXPENSIVE-PLAN.md`
 

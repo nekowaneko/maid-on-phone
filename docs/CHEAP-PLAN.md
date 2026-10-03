@@ -3,7 +3,7 @@
 > 這份文件給協作代理人自主執行。
 > 本批次為純產出工作（文件、設定、佔位素材），不含修正迴圈，可用較便宜的模型執行。
 > 執行順序：本批次先跑，完成後才執行 docs/EXPENSIVE-PLAN.md。
-> 背景規格：docs/SPEC.md（第一版規格書）。本批次只做 M0（耗電實測 spike）需要的部分。
+> 背景規格：docs/wish28-pet-spec.md（第一版規格書）。本批次只做 M0（耗電實測 spike）需要的部分。
 
 ## 0. 執行協定
 
@@ -25,7 +25,7 @@
 | 建立 | `.gitignore`（合併既有內容）、`LICENSE`、`README.md`、`DEVICE-CHECKLIST.md`、`CHECKLIST.md`、`DECISIONS.md`、`PROGRESS.md`、`BLOCKERS.md`、`docs/ARCHITECTURE.md` |
 | 建立佔位素材 | `app/src/main/assets/pet/frames/placeholder-idle.svg`、`placeholder-blink.svg` |
 | 建立空資料夾標記 | `app/src/main/assets/pet/frames/local/.gitkeep` |
-| 不動 | Android Studio 產生的任何 `.kt`、`.kts`、`AndroidManifest.xml`、`gradle/`、`docs/SPEC.md`、`docs/*-PLAN.md` |
+| 不動 | Android Studio 產生的任何 `.kt`、`.kts`、`AndroidManifest.xml`、`gradle/`、`docs/wish28-pet-spec.md`、`docs/*-PLAN.md` |
 
 ## 2. 產出檔案清單（交接契約）
 
@@ -118,7 +118,7 @@ MIT 授權英文原文。年份 2026，著作權人寫 `AccompanyPet contributor
 | 消耗 | | |
 | **角色造成的額外耗電** | （有角色消耗 − 無角色消耗）= | |
 
-- [ ] 額外耗電 ≤ 5%（暫定目標；若超過，依 docs/SPEC.md §5 M0 的備案改成原生圖片循環）
+- [ ] 額外耗電 ≤ 5%（暫定目標；若超過，依 docs/wish28-pet-spec.md §5 M0 的備案改成原生圖片循環）
 - [ ] 手機明顯發燙？（是／否）
 
 ## C. 手機省電機制
@@ -150,7 +150,7 @@ MIT 授權英文原文。年份 2026，著作權人寫 `AccompanyPet contributor
 
 ### 3.7 docs/ARCHITECTURE.md（總長 ≤ 800 字）
 
-章節順序固定，內容依 docs/SPEC.md §2 摘要，只寫 M0 相關部分：
+章節順序固定，內容依 docs/wish28-pet-spec.md §2 摘要，只寫 M0 相關部分：
 
 1. `## 模組` — `core`（純 Kotlin 邏輯，不依賴 Android）與 `app`（Android 殼）
 2. `## 懸浮角色怎麼運作` — 前景服務（specialUse）→ WindowManager 懸浮窗（只有角色大小）→ 透明 WebView 載入 `file:///android_asset/pet/index.html`
@@ -169,7 +169,7 @@ MIT 授權英文原文。年份 2026，著作權人寫 `AccompanyPet contributor
 | 問題 | 預設值 |
 |---|---|
 | .gitignore 已有相同規則 | 不重複追加 |
-| docs/SPEC.md 不存在 | 寫入 BLOCKERS.md，其餘照做；ARCHITECTURE.md 依本文件 §3.7 的描述撰寫 |
+| docs/wish28-pet-spec.md 不存在 | 寫入 BLOCKERS.md，其餘照做；ARCHITECTURE.md 依本文件 §3.7 的描述撰寫 |
 | 字數超出上限 | 精簡內容，不得刪除必要章節 |
 | SVG 畫得不好看 | 不重要，只要透明背景、兩張只差在眼睛 |
 | 專案根目錄沒有 Android Studio 產生的檔案 | 停止，寫入 BLOCKERS.md：「請先完成 00-SETUP 第 2 步」 |
@@ -187,7 +187,7 @@ MIT 授權英文原文。年份 2026，著作權人寫 `AccompanyPet contributor
 | C05 | docs/ARCHITECTURE.md 四個章節標題齊全 | 解析標題 |
 | C06 | 兩個 SVG 都是合法 XML，且 viewBox 為 `0 0 120 135` | 解析 |
 | C07 | README.md ≤ 600 字、ARCHITECTURE.md ≤ 800 字 | 計算字數 |
-| C08 | 沒有修改 §1「不動」列出的任何檔案 | `git diff --stat <範本 commit> -- '*.kt' '*.kts' 'app/src/main/AndroidManifest.xml' gradle/ docs/SPEC.md` 為空 |
+| C08 | 沒有修改 §1「不動」列出的任何檔案 | `git diff --stat <範本 commit> -- '*.kt' '*.kts' 'app/src/main/AndroidManifest.xml' gradle/ docs/wish28-pet-spec.md` 為空 |
 | C09 | git 工作區乾淨 | `git status --porcelain` 為空 |
 
 **不得為了通過驗收而放寬標準、刪減章節、或改寫驗收條件本身。**
