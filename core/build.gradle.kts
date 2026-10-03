@@ -22,6 +22,7 @@ dependencies {
 // 突變測試只針對權限判斷（計畫 §2.2）
 pitest {
     targetClasses.set(listOf("com.accompany.pet.core.permission.*"))
+    targetTests.set(listOf("com.accompany.pet.*"))  // 用全部測試（spec＋helper）去殺突變
     outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
 }

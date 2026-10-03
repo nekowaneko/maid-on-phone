@@ -23,3 +23,7 @@
 - 修正輪數：0
 - 錯誤指紋：無
 - 驗收項失敗次數：全部 0
+
+## T4
+- `./verify.sh --full` 一次全綠；修正輪數 0；錯誤指紋無
+- Pitest 初次只用 permission 套件內的測試（0% 覆蓋），補設 `targetTests = com.accompany.pet.*` 後 1/1 殺死

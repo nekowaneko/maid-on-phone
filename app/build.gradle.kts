@@ -26,6 +26,9 @@ android {
             }
         }
     }
+    lint {
+        abortOnError = true  // error 等級中斷建置，warning 不中斷
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
