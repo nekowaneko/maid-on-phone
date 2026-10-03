@@ -48,3 +48,4 @@
 27. **規格書路徑**：依使用者指示，`docs/SPEC.md` 的引用全部改為 `docs/wish28-pet-spec.md`（規格書已由使用者移入 docs/）。BLOCKERS.md、DECISIONS.md 的歷史紀錄保留原文，另加解決註記。
 28. **前景服務不再宣告 microphone 類型**（手機實測，vivo V2503）：帶 microphone 類型時，螢幕一關約 0.2 秒程序就被系統收掉（log 前一刻都有麥克風權限狀態變動）；只宣告 specialUse 後，同樣測試程序存活。收音由系統語音辨識服務在它自己的程序進行，本 App 不需要此類型。Manifest 的 `specialUse|microphone` 宣告依架構約束 A7 保留。
 29. **刪除定時巡邏**（依使用者指示）：vivo 凍結 App 時會移除其鬧鐘，巡邏在主要使用的手機上無效，留著只是技術債。一併移除 `WatchdogReceiver`、精確鬧鐘權限與按鈕、使用者意圖紀錄（`RunIntentStore`）、`decideRestore` 與其測試、驗收項 V18。快速設定磚保留。設計方向改為「需要時才出現」，見 M1 計畫書。
+30. **M1 便宜批次**：開工前只 commit 既有的 `tools/`；`.idea/` 為 IDE 個人設定，不納入版本控制，維持未追蹤。各文件依 docs/M1-CHEAP-PLAN.md §3 照抄追加，沒有同名章節衝突。
