@@ -272,6 +272,7 @@ class OverlayService : Service() {
         windowManager.addView(wv, lp)
         webView = wv
         params = lp
+        applyWindowLayout()  // 依左右側設定基準點
     }
 
     // 點角色：展開或收起泡泡，視窗跟著擴張或縮回（A6：只到角色＋泡泡大小）
@@ -290,7 +291,14 @@ class OverlayService : Service() {
         val right = isOnRightSide()
         lp.width = pet.w + extra
         lp.height = pet.h
-        lp.x = if (right) petPos.x - extra else petPos.x  // 向角色內側擴張
+        // 在右邊時以螢幕右緣為基準：視窗變寬只往左長，右緣與角色位置不動，展開泡泡時角色不會跳
+        if (right) {
+            lp.gravity = Gravity.TOP or Gravity.END
+            lp.x = screenSize().w - petPos.x - pet.w  // 與右緣的距離
+        } else {
+            lp.gravity = Gravity.TOP or Gravity.START
+            lp.x = petPos.x
+        }
         lp.y = petPos.y
         callJs("document.documentElement.dataset.side='${if (right) "right" else "left"}'")
         windowManager.updateViewLayout(wv, lp)
