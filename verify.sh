@@ -6,11 +6,12 @@
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="9f5111379052d49416ab4233dc27142c407863cc"   # 凍結規格測試的 commit
+FROZEN_HASH="4f9208aa29cd471cd64f499f1bbe86bc1db492d5"   # 凍結規格測試的 commit（M1 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 MANIFEST="app/src/main/AndroidManifest.xml"
 ASSET_PREFIX="file:///android_asset/pet/"
 SPEC_IDS="S01 S02 S03 S07 S08 S09 S10 S13 S14 S15"
+M1_SPEC_IDS="M1-S01 M1-S02 M1-S03 M1-S04 M1-S05 M1-S06 M1-S07 M1-S08 M1-S09 M1-S10 M1-S11 M1-S12 M1-S14 M1-S15"  # M1 自動列（計畫書寫 13 個但列了 14 列，見 DECISIONS.md）
 
 FULL=0
 CORE_ONLY=0
@@ -53,10 +54,10 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" || fail "V04 spec 目錄與凍結
 [ -z "$(git status --porcelain -- "$SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：10 個規格測試、各列一次、沒有 @Ignore
+# V05：M0 10 個＋M1 14 個規格測試、各列一次、沒有 @Ignore
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 10 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 10"
-for id in $SPEC_IDS; do
+[ "$TEST_COUNT" -eq 24 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 24"
+for id in $SPEC_IDS $M1_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -73,6 +74,7 @@ else
   [ -z "$LEAKS" ] || { echo "$LEAKS"; fail "V06 追蹤中的檔案含疑似憑證"; }
 fi
 if git ls-files | grep -E '\.jks$|frames/local/.*\.png$'; then fail "V06 追蹤了金鑰或私人角色圖"; fi
+if git ls-files | grep -E '(^|/)(firebase\.properties|google-services\.json)$'; then fail "V06 追蹤了 Firebase 設定檔"; fi
 pass "V06"
 
 if [ "$CORE_ONLY" -eq 0 ]; then
@@ -107,6 +109,25 @@ if [ "$CORE_ONLY" -eq 0 ]; then
   # V19：快速設定磚只有系統能綁定（M0.5 A9）
   grep -A5 'android:name=".PetTileService"' "$MANIFEST" | grep -q 'BIND_QUICK_SETTINGS_TILE' || fail "V19 PetTileService 缺少 BIND_QUICK_SETTINGS_TILE"
   pass "V19"
+
+  # V18：app 不自行連外（M1 A12）
+  if grep -rnE 'java\.net\.URL\(|HttpURLConnection|okhttp|retrofit|ktor' app/src/main; then fail "V18 app 含自行連外的程式"; fi
+  pass "V18"
+
+  # V20：PetMessagingService 不對外開放（M1 A14）
+  grep -A3 'android:name=".PetMessagingService"' "$MANIFEST" | grep -q 'android:exported="false"' || fail "V20 PetMessagingService 不是 exported=false"
+  pass "V20"
+
+  # V21：排隊通知頻道為最低重要性且靜音（M1 A15）
+  NOTIF=app/src/main/java/com/accompany/pet/ReminderNotifications.kt
+  [ -f "$NOTIF" ] || fail "V21 找不到 ReminderNotifications.kt"
+  grep -q 'IMPORTANCE_MIN' "$NOTIF" || fail "V21 缺少 IMPORTANCE_MIN"
+  grep -q 'setSilent(true)' "$NOTIF" || fail "V21 缺少 setSilent(true)"
+  pass "V21"
+
+  # V22：推播代碼不得寫進 log（M1 A17）
+  if grep -rnE 'Log\.[a-z]\(.*[Tt]oken' app/src/main; then fail "V22 token 被寫進 log"; fi
+  pass "V22"
 else
   echo "⚠️  --core-only：略過 V07～V10（app 尚未實作）"
 fi

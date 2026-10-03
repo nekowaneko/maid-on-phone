@@ -27,3 +27,12 @@
 ## T4
 - `./verify.sh --full` 一次全綠；修正輪數 0；錯誤指紋無
 - Pitest 初次只用 permission 套件內的測試（0% 覆蓋），補設 `targetTests = com.accompany.pet.*` 後 1/1 殺死
+
+## M1
+
+### T0a
+- M1 便宜批次的產出檔案全部存在且非空。
+
+### T0b
+- 凍結 M1 規格測試 commit：`4f9208aa29cd471cd64f499f1bbe86bc1db492d5`（M0 10 個＋M1 14 個，共 24 個）
+- 修正輪數：0；錯誤指紋：無
