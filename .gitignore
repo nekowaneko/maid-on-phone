@@ -25,3 +25,5 @@ keystore.properties
 
 # 耗電紀錄匯出檔
 *.csv
+firebase.properties
+google-services.json
