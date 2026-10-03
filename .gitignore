@@ -27,3 +27,4 @@ keystore.properties
 *.csv
 firebase.properties
 google-services.json
+*firebase-adminsdk*.json
