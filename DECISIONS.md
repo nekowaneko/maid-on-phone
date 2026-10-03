@@ -51,3 +51,4 @@
 30. **M1 便宜批次**：開工前只 commit 既有的 `tools/`；`.idea/` 為 IDE 個人設定，不納入版本控制，維持未追蹤。各文件依 docs/M1-CHEAP-PLAN.md §3 照抄追加，沒有同名章節衝突。
 31. **M1 規格測試數量為 14，不是 13**：計畫書 §4.5 的自動列為 M1-S01～S12、S14、S15 共 14 列，但文字寫「13 列」。依「每列一個函式、不得合併」轉寫 14 個，verify.sh 的 V05 計數改為 M0 10＋M1 14＝24。屬計畫書筆誤，不是規格爭議。
 32. **凍結 hash 分兩個 commit**：hash 無法寫進自己所在的 commit，所以先 commit 規格測試（`4f9208a`），再 commit verify.sh 對新 hash 的引用。
+33. **V02 排除 spec 目錄**：凍結的 M0-S15（修訂）必須在測試裡列出 `HttpURLConnection`、`okhttp` 等禁用字串，會被 V02 掃到。V02 的本意是 core 的**程式**不得連網，因此改為 `--exclude-dir=spec`，掃描範圍仍涵蓋 core 的 main 與其他測試。

@@ -36,3 +36,9 @@
 ### T0b
 - 凍結 M1 規格測試 commit：`4f9208aa29cd471cd64f499f1bbe86bc1db492d5`（M0 10 個＋M1 14 個，共 24 個）
 - 修正輪數：0；錯誤指紋：無
+
+### T1
+- 修正輪數：2（皆為 verify.sh／腳本自身問題，非建置錯誤）
+- 錯誤指紋：`fp-v02-spec-forbidden-words`（V02 掃到凍結的 S15 所列的禁用字串，改為排除 spec 目錄）；`fp-bash-syntax-eof`（修改 V02 時註解吃掉了 fail，修正）
+- 驗收項失敗次數：V02 ×1
+- `./verify.sh --core-only` 全綠，24 個規格測試通過

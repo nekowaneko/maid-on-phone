@@ -42,7 +42,7 @@ if grep -rnE '^\s*import\s+(android|androidx)\.' core/src; then fail "V01 core �
 pass "V01"
 
 # V02：core 不得連網
-if grep -rnE 'java\.net|okhttp|HttpURLConnection' core/src; then fail "V02 core 含連網程式"; fi
+if grep -rnE 'java\.net|okhttp|HttpURLConnection' core/src --exclude-dir=spec; then fail "V02 core 含連網程式"; fi  # 凍結的 S15 本身要列出禁用字串，排除 spec 目錄
 pass "V02"
 
 # V03：Manifest 不得宣告 INTERNET
