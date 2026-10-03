@@ -45,6 +45,7 @@ import kotlin.math.abs
 
 // 常數定義
 const val ACTION_STOP = "com.accompany.pet.STOP"     // 通知「停止」按鈕的動作
+const val ACTION_APPLY_SETTINGS = "com.accompany.pet.APPLY_SETTINGS"  // 主畫面改了設定，請服務重新套用
 const val PET_WIDTH_DP = 96                           // 角色寬
 const val PET_HEIGHT_DP = 108                         // 角色高
 const val BUBBLE_WIDTH_DP = 164                       // 泡泡寬（含間距）
@@ -93,6 +94,10 @@ class OverlayService : Service() {
 
     // 收到啟動或停止指令
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_APPLY_SETTINGS) {
+            applyWindowLayout()  // 例如耗電測試模式切換時更新「保持螢幕開啟」
+            return START_NOT_STICKY
+        }
         if (intent?.action == ACTION_STOP) {
             runIntentStore(this).save(false)  // 使用者主動停止：不再自動恢復
             cancelWatchdog(this)
@@ -306,6 +311,12 @@ class OverlayService : Service() {
             lp.x = petPos.x
         }
         lp.y = petPos.y
+        // 耗電測試模式：角色在畫面上時保持螢幕亮著（只影響本 App 的懸浮窗，不改系統設定）
+        lp.flags = if (isBatteryTestMode(this)) {
+            lp.flags or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+        } else {
+            lp.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON.inv()
+        }
         callJs("document.documentElement.dataset.side='${if (right) "right" else "left"}'")
         // WebView 在容器內靠角色那一側對齊，被裁掉的是泡泡那一側
         (wv.layoutParams as android.widget.FrameLayout.LayoutParams).gravity = if (right) Gravity.END else Gravity.START

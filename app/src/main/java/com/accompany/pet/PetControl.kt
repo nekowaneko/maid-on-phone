@@ -81,3 +81,18 @@ fun cancelWatchdog(context: Context) {
 fun refreshTile(context: Context) {
     TileService.requestListeningState(context, ComponentName(context, PetTileService::class.java))
 }
+
+// 耗電測試模式的紀錄檔（內容 1 或 0）
+private fun batteryTestFile(context: Context) = java.io.File(context.filesDir, "battery-test-mode.txt")
+
+// 是否開啟耗電測試模式（開啟時角色在畫面上會保持螢幕亮著）
+fun isBatteryTestMode(context: Context): Boolean =
+    batteryTestFile(context).let { it.isFile && it.readText().trim() == "1" }
+
+// 切換耗電測試模式，並請執行中的服務立即套用
+fun setBatteryTestMode(context: Context, on: Boolean) {
+    batteryTestFile(context).writeText(if (on) "1" else "0")
+    if (OverlayService.running) {
+        context.startService(Intent(context, OverlayService::class.java).setAction(ACTION_APPLY_SETTINGS))
+    }
+}

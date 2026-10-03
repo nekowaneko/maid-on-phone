@@ -32,6 +32,7 @@ class MainActivity : AppCompatActivity() {
 
     private lateinit var status: TextView        // 說明文字
     private lateinit var grantButton: Button     // 前往授權按鈕
+    private lateinit var testModeButton: Button  // 耗電測試模式開關
 
     // 請求麥克風與通知權限（只能在 Activity 請求）
     private val permissionLauncher =
@@ -92,6 +93,11 @@ class MainActivity : AppCompatActivity() {
         root.addView(button("允許麥克風（用說的）") { requestRuntimePermissions() })
         root.addView(button("匯出耗電紀錄") { exportAndShare() })
         root.addView(button("允許自動恢復（精確鬧鐘）") { openExactAlarmSettings() })
+        testModeButton = button(testModeLabel()) {
+            setBatteryTestMode(this, !isBatteryTestMode(this))
+            testModeButton.text = testModeLabel()
+        }
+        root.addView(testModeButton)
         return root
     }
 
@@ -166,4 +172,8 @@ class MainActivity : AppCompatActivity() {
         }
         startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.parse("package:$packageName")))
     }
+
+    // 耗電測試模式按鈕的文字
+    private fun testModeLabel(): String =
+        if (isBatteryTestMode(this)) "耗電測試模式：開（螢幕保持亮著）" else "耗電測試模式：關"
 }
