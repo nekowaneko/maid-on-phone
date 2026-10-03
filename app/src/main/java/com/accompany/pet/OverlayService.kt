@@ -67,6 +67,7 @@ class OverlayService : Service() {
 
     private var state: PetState = INITIAL_STATE         // 目前狀態
     private var webView: WebView? = null                 // 角色頁
+    private var container: android.widget.FrameLayout? = null  // 懸浮窗根視圖：只裁切大小，WebView 本身寬度固定
     private var params: WindowManager.LayoutParams? = null
     private var petPos = Point(0, 0)                     // 角色本體左上角（不含泡泡）
     private var bubbleShown = false                      // 泡泡是否展開
@@ -149,22 +150,23 @@ class OverlayService : Service() {
 
     // 把 WebView 從畫面移除並釋放
     private fun removeOverlay() {
-        webView?.let {
+        container?.let {
             try {
                 windowManager.removeView(it)
             } catch (e: IllegalArgumentException) {
                 // 視窗已被系統移除，略過
             }
-            it.destroy()
         }
+        webView?.destroy()
         webView = null
+        container = null
         bubbleShown = false
     }
 
     // 確認懸浮窗還掛在畫面上，不在就重建
     private fun ensureOverlay() {
         val wv = webView
-        if (wv != null && wv.isAttachedToWindow) return
+        if (wv != null && container?.isAttachedToWindow == true) return
         android.util.Log.w(LOG_TAG, "懸浮窗不在畫面上，重建")
         removeOverlay()
         showOverlay()
@@ -269,7 +271,11 @@ class OverlayService : Service() {
         wv.addJavascriptInterface(PetBridge(onTap = ::toggleBubble, onMic = ::onMicPressed), "PetBridge")
         wv.setOnTouchListener(DragHandler())
         wv.loadUrl("file:///android_asset/pet/index.html")
-        windowManager.addView(wv, lp)
+        // WebView 固定為「角色＋泡泡」寬，展開泡泡時只改外層容器大小，WebView 不必重新排版，避免先錯位再彈回
+        val box = android.widget.FrameLayout(this)
+        box.addView(wv, android.widget.FrameLayout.LayoutParams(pet.w + dp(BUBBLE_WIDTH_DP), pet.h))
+        windowManager.addView(box, lp)
+        container = box
         webView = wv
         params = lp
         applyWindowLayout()  // 依左右側設定基準點
@@ -286,6 +292,7 @@ class OverlayService : Service() {
     private fun applyWindowLayout() {
         val lp = params ?: return
         val wv = webView ?: return
+        val box = container ?: return
         val pet = petSize()
         val extra = if (bubbleShown) dp(BUBBLE_WIDTH_DP) else 0
         val right = isOnRightSide()
@@ -301,7 +308,10 @@ class OverlayService : Service() {
         }
         lp.y = petPos.y
         callJs("document.documentElement.dataset.side='${if (right) "right" else "left"}'")
-        windowManager.updateViewLayout(wv, lp)
+        // WebView 在容器內靠角色那一側對齊，被裁掉的是泡泡那一側
+        (wv.layoutParams as android.widget.FrameLayout.LayoutParams).gravity = if (right) Gravity.END else Gravity.START
+        wv.requestLayout()
+        windowManager.updateViewLayout(box, lp)
     }
 
     // 按麥克風：沒權限就提示，有權限才啟動語音辨識
