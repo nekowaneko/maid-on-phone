@@ -54,3 +54,6 @@
 33. **V02 排除 spec 目錄**：凍結的 M0-S15（修訂）必須在測試裡列出 `HttpURLConnection`、`okhttp` 等禁用字串，會被 V02 掃到。V02 的本意是 core 的**程式**不得連網，因此改為 `--exclude-dir=spec`，掃描範圍仍涵蓋 core 的 main 與其他測試。
 34. **Firebase BOM 版本 34.19.0**：查詢 Google Maven 的 `firebase-bom` metadata，目前最新穩定版為 34.19.0（`firebase-messaging` 25.1.3），寫進 `libs.versions.toml`。不使用 google-services 外掛，由 `PetApp` 以 `FirebaseOptions` 手動初始化。
 35. **Manifest 加桌面應用程式 queries**：Android 11+ 套件可見性限制下，`ApplicationInfo.category` 需要查得到該套件。以 MAIN／LAUNCHER 的 `<queries>` 讓遊戲等桌面 App 可見，不使用範圍更大的 QUERY_ALL_PACKAGES。沒有桌面圖示的 App 查不到分類，視為非遊戲（使用者可用自訂遊戲清單補）。
+36. **沒有懸浮窗權限時收到 ACTION_SHOW**：服務依 Android 規定先宣告前景再立刻結束，不顯示角色（避免加視窗時閃退）；來源是推播時 `ReminderDispatcher` 已事先改發一般通知。
+37. **頁面載入完成前的文字先暫存**：`loadUrl` 是非同步，剛啟動就呼叫 `window.pet.showText` 會丟失，故 `OverlayService` 在 `onPageFinished` 才補顯示。
+38. **閒置計時不因螢幕關閉暫停**：互動時間以 `System.currentTimeMillis()` 計，3 分鐘到就收起；M1 不做更細的處理（建議後續：螢幕關閉期間是否暫停計時）。

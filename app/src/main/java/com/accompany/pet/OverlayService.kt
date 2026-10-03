@@ -16,7 +16,9 @@ import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.os.SystemClock
 import android.view.Gravity
 import android.view.MotionEvent
@@ -38,7 +40,10 @@ import com.accompany.pet.core.Size
 import com.accompany.pet.core.clampInScreen
 import com.accompany.pet.core.initialPosition
 import com.accompany.pet.core.permission.MIC_DENIED_MESSAGE
+import com.accompany.pet.core.reminder.idleDeadline
+import com.accompany.pet.core.reminder.shouldHide
 import com.accompany.pet.core.reduce
+import com.accompany.pet.core.reminder.IDLE_HIDE_MILLIS
 import com.accompany.pet.core.snapToEdge
 import java.io.ByteArrayInputStream
 import kotlin.math.abs
@@ -76,6 +81,11 @@ class OverlayService : Service() {
     private val positionStore by lazy { FilePositionStore(java.io.File(filesDir, POSITION_FILE)) }
     private val speech by lazy { SpeechBridge(this, ::showText) }
     private val batteryLogger by lazy { BatteryLogger(this) { state.render == RenderState.PLAYING } }
+    private val idleHandler = Handler(Looper.getMainLooper())  // 閒置收起的計時
+    @Volatile private var lastInteractionMillis = 0L           // 最後一次互動的時間（網頁橋接執行緒也會更新）
+    private var pageReady = false                              // 角色頁是否載入完成
+    private var pendingText: String? = null                    // 頁面還沒載入完成時先存著的話
+    private val idleCheck = Runnable { checkIdle() }           // 到期檢查
 
     // 接收螢幕開關事件
     private val screenReceiver = object : BroadcastReceiver() {
@@ -102,9 +112,17 @@ class OverlayService : Service() {
             stopPet()
             return START_NOT_STICKY
         }
+        if (!hasOverlayPermission(this)) {
+            startInForeground()  // 被要求前景啟動就一定要宣告，再立刻結束；不嘗試繞過權限
+            ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            stopSelf()
+            return START_NOT_STICKY
+        }
+        val text = intent?.getStringExtra(EXTRA_TEXT)  // 提醒文字（沒有就只報告排隊）
         if (state.service == com.accompany.pet.core.ServiceState.RUNNING) {
             startInForeground()  // 已在執行：重新宣告前景類型（剛取得麥克風權限時補上 microphone）
             ensureOverlay()
+            presentReport(text)
             return START_NOT_STICKY
         }
         startInForeground()
@@ -118,6 +136,7 @@ class OverlayService : Service() {
         running = true
         refreshTile(this)
         batteryLogger.start()  // 螢幕關閉時也不停（S14 優先）
+        presentReport(text)
         return START_NOT_STICKY
     }
 
@@ -143,6 +162,7 @@ class OverlayService : Service() {
 
     // 收掉懸浮窗與接收器
     private fun cleanup() {
+        idleHandler.removeCallbacks(idleCheck)
         running = false
         refreshTile(this)
         batteryLogger.stop()
@@ -168,6 +188,7 @@ class OverlayService : Service() {
         webView = null
         container = null
         bubbleShown = false
+        pageReady = false
     }
 
     // 確認懸浮窗還掛在畫面上，不在就重建
@@ -282,8 +303,32 @@ class OverlayService : Service() {
         applyWindowLayout()  // 依左右側設定基準點
     }
 
+    // 記下互動時間：懸浮窗任何觸控、點角色、按麥克風都算（M1-S12）
+    private fun markInteraction() {
+        lastInteractionMillis = System.currentTimeMillis()
+    }
+
+    // 角色出現：重新計時、取出排隊內容與新提醒一起顯示
+    private fun presentReport(text: String?) {
+        markInteraction()
+        showText(ReminderDispatcher.takeReport(this, text))
+        idleHandler.removeCallbacks(idleCheck)
+        idleHandler.postDelayed(idleCheck, IDLE_HIDE_MILLIS)
+    }
+
+    // 到期檢查：該收起就停止服務（不改角色模式），否則等到新的期限再查
+    private fun checkIdle() {
+        val now = System.currentTimeMillis()
+        if (shouldHide(lastInteractionMillis, now)) {
+            stopPet()
+        } else {
+            idleHandler.postDelayed(idleCheck, idleDeadline(lastInteractionMillis) - now)
+        }
+    }
+
     // 點角色：展開或收起泡泡，視窗跟著擴張或縮回（A6：只到角色＋泡泡大小）
     private fun toggleBubble() {
+        markInteraction()
         bubbleShown = !bubbleShown
         callJs("window.pet.showBubble($bubbleShown)")
         applyWindowLayout()
@@ -323,6 +368,7 @@ class OverlayService : Service() {
 
     // 按麥克風：沒權限就提示，有權限才啟動語音辨識
     private fun onMicPressed() {
+        markInteraction()
         if (!hasMicPermission()) {
             showText(MIC_DENIED_MESSAGE)  // 沒權限不啟動辨識（S02）
             return
@@ -332,6 +378,10 @@ class OverlayService : Service() {
 
     // 在泡泡顯示文字（以 JSON 字串跳脫，避免注入）
     fun showText(text: String) {
+        if (!pageReady) {
+            pendingText = text  // 頁面還沒載入完成，等 onPageFinished 再顯示
+            return
+        }
         callJs("window.pet.showText(${org.json.JSONObject.quote(text)})")
         if (!bubbleShown) toggleBubble()
     }
@@ -350,6 +400,7 @@ class OverlayService : Service() {
 
         // 處理觸控事件
         override fun onTouch(v: android.view.View, e: MotionEvent): Boolean {
+            markInteraction()  // 任何觸控都重新計時
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = e.rawX
@@ -402,6 +453,13 @@ class OverlayService : Service() {
                 dispatch(PetEvent.SCREEN_ON.takeIf { isScreenOn() } ?: PetEvent.SCREEN_OFF)
             }
             return true
+        }
+
+        // 頁面載入完成：補顯示先前存著的話
+        override fun onPageFinished(view: WebView, url: String) {
+            if (view != webView) return
+            pageReady = true
+            pendingText?.let { pendingText = null; showText(it) }
         }
 
         // 攔截頁面跳轉

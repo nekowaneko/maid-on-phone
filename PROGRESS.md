@@ -47,3 +47,6 @@
 - 修正輪數：1
 - 錯誤指紋：`fp-kts-unresolved-java-util`（build.gradle.kts 內 `java` 被當成 Gradle 的 java 擴充，改用 `import java.util.Properties`）
 - 驗收項失敗次數：V11 ×1（Gradle 腳本編譯失敗連帶）
+
+### T3
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0

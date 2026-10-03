@@ -1,6 +1,9 @@
 package com.accompany.pet
 
 import android.Manifest
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -8,7 +11,9 @@ import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
+import android.widget.EditText
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -24,7 +29,10 @@ import com.accompany.pet.core.permission.decideStart
 // 常數定義
 const val OVERLAY_EXPLANATION =
     "陪伴角色需要「顯示在其他應用程式上層」權限，才能待在桌面上陪你。\n" +
-        "請按下方按鈕到系統設定開啟，開啟後回到這裡按「開始」。"
+        "請按下方按鈕到系統設定開啟，開啟後回到這裡按「叫出角色」。"
+const val USAGE_ACCESS_HINT = "開啟後才能在玩遊戲時先不打擾"  // 沒有使用情形存取權時的說明
+const val NO_FIREBASE_HINT = "尚未設定 Firebase，見 docs/FIREBASE-SETUP.md"  // 沒有推播代碼時的說明
+const val TEST_PUSH_TEXT = "這是一則測試推播"  // 測試推播的內容
 const val PADDING_DP = 24  // 畫面四周留白
 
 // 主畫面：權限說明、開始／停止
@@ -33,6 +41,11 @@ class MainActivity : AppCompatActivity() {
     private lateinit var status: TextView        // 說明文字
     private lateinit var grantButton: Button     // 前往授權按鈕
     private lateinit var testModeButton: Button  // 耗電測試模式開關
+    private lateinit var usageStatus: TextView   // 使用情形存取權說明
+    private lateinit var usageButton: Button     // 前往開啟使用情形存取權
+    private lateinit var pushCode: TextView      // 推播代碼
+    private lateinit var customGames: EditText   // 自訂遊戲清單輸入框
+    private var lastTestId: String? = null       // 上一則測試推播的編號（供「重送上一則」）
 
     // 請求麥克風與通知權限（只能在 Activity 請求）
     private val permissionLauncher =
@@ -76,10 +89,14 @@ class MainActivity : AppCompatActivity() {
     private fun dp(v: Int): Int = (v * resources.displayMetrics.density).toInt()
 
     // 建立畫面元件
-    private fun buildLayout(): LinearLayout {
+    private fun buildLayout(): ScrollView {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER_HORIZONTAL
+        }
+        val scroll = ScrollView(this).apply {
+            clipToPadding = false
+            addView(root)
         }
         status = TextView(this).apply { textSize = 16f }
         grantButton = Button(this).apply {
@@ -88,16 +105,61 @@ class MainActivity : AppCompatActivity() {
         }
         root.addView(status)
         root.addView(grantButton)
-        root.addView(button("開始") { onStartPressed() })
-        root.addView(button("停止") { stopPet() })
+        root.addView(button("叫出角色") { onStartPressed() })
+        root.addView(button("收起角色") { stopPet() })
         root.addView(button("允許麥克風（用說的）") { requestRuntimePermissions() })
+        addReminderSection(root)
         root.addView(button("匯出耗電紀錄") { exportAndShare() })
         testModeButton = button(testModeLabel()) {
             setBatteryTestMode(this, !isBatteryTestMode(this))
             testModeButton.text = testModeLabel()
         }
         root.addView(testModeButton)
-        return root
+        return scroll
+    }
+
+    // 建立提醒相關區塊：使用情形存取權、自訂遊戲清單、推播代碼、測試推播
+    private fun addReminderSection(root: LinearLayout) {
+        usageStatus = TextView(this).apply { textSize = 14f }
+        usageButton = button("前往開啟「使用情形存取權」") {
+            startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+        }
+        customGames = EditText(this).apply {
+            hint = "自訂遊戲清單：一行一個套件名稱"
+            minLines = 3
+            gravity = Gravity.TOP
+            setText(readCustomGamesText(this@MainActivity))
+        }
+        pushCode = TextView(this).apply {
+            textSize = 12f
+            setTextIsSelectable(true)
+        }
+        root.addView(usageStatus)
+        root.addView(usageButton)
+        root.addView(customGames)
+        root.addView(button("儲存自訂遊戲清單") {
+            saveCustomGames(this, customGames.text.toString())
+            status.text = "已儲存自訂遊戲清單"
+        })
+        root.addView(pushCode)
+        root.addView(button("複製推播代碼") { copyPushCode() })
+        root.addView(button("測試推播") { sendTestPush(newId = true) })
+        root.addView(button("重送上一則") { sendTestPush(newId = false) })
+    }
+
+    // 複製推播代碼到剪貼簿
+    private fun copyPushCode() {
+        val value = PushTokenStore(this).load() ?: return
+        val clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("推播代碼", value))
+        status.text = "已複製推播代碼"
+    }
+
+    // 送一則測試推播：同樣走 ReminderDispatcher（A13）；newId=false 時沿用上一則的編號
+    private fun sendTestPush(newId: Boolean) {
+        val id = if (newId || lastTestId == null) "test-${System.currentTimeMillis()}" else lastTestId!!
+        lastTestId = id
+        ReminderDispatcher.handle(this, mapOf("id" to id, "text" to TEST_PUSH_TEXT))
     }
 
     // 建立一個按鈕
@@ -113,11 +175,15 @@ class MainActivity : AppCompatActivity() {
     // 依權限狀態更新說明與按鈕
     private fun refreshUi() {
         val granted = hasOverlayPermission()
-        status.text = if (granted) "已授權，可以按「開始」叫出角色。" else OVERLAY_EXPLANATION
+        status.text = if (granted) "已授權，可以按「叫出角色」。" else OVERLAY_EXPLANATION
         grantButton.isEnabled = !granted
+        val usage = hasUsageAccess(this)
+        usageStatus.text = if (usage) "使用情形存取權：已開啟" else USAGE_ACCESS_HINT
+        usageButton.isEnabled = !usage
+        pushCode.text = PushTokenStore(this).load()?.let { "推播代碼：$it" } ?: NO_FIREBASE_HINT
     }
 
-    // 按「開始」：沒權限就說明，有權限才啟動角色（S01）
+    // 按「叫出角色」：沒權限就說明，有權限才啟動角色（S01）
     private fun onStartPressed() {
         when (decideStart(hasOverlayPermission())) {
             StartAction.SHOW_PERMISSION_EXPLANATION -> {
@@ -132,7 +198,7 @@ class MainActivity : AppCompatActivity() {
 
     // 停止角色
     private fun stopPet() {
-        stopPetService(this)  // 服務會記錄不想開著並取消巡邏
+        stopPetService(this)  // 只收起角色，不改角色模式
     }
 
     // 開啟系統的懸浮窗授權頁
