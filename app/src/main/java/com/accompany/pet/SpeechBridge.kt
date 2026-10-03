@@ -12,10 +12,15 @@ const val SPEECH_LANGUAGE = "zh-TW"                                    // 辨識
 const val MIC_UNAVAILABLE_MESSAGE = "目前無法使用麥克風，請打開 App 再試"  // 系統限制時的提示
 const val LISTENING_MESSAGE = "我在聽…"                                 // 開始聆聽時的提示
 const val NOT_HEARD_MESSAGE = "沒聽清楚，再說一次好嗎？"                 // 沒辨識出文字時的提示
+const val NEED_LANGUAGE_PACK_MESSAGE = "需要連上網路，或先下載「中文（台灣）」離線語音包"  // 辨識服務無法使用時的提示
+const val ERROR_LANGUAGE_NOT_SUPPORTED_CODE = 12   // SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED（API 31）
+const val ERROR_LANGUAGE_UNAVAILABLE_CODE = 13     // SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE（API 31）
 
 // 把辨識錯誤碼轉成泡泡要顯示的文字
 fun speechErrorMessage(error: Int): String = when (error) {
     SpeechRecognizer.ERROR_NO_MATCH, SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> NOT_HEARD_MESSAGE
+    SpeechRecognizer.ERROR_NETWORK, SpeechRecognizer.ERROR_NETWORK_TIMEOUT,
+    ERROR_LANGUAGE_NOT_SUPPORTED_CODE, ERROR_LANGUAGE_UNAVAILABLE_CODE -> NEED_LANGUAGE_PACK_MESSAGE  // 沒網路又沒離線語音包
     else -> "$MIC_UNAVAILABLE_MESSAGE（代碼 $error）"  // 附上錯誤碼方便實測回報；不嘗試繞過系統限制
 }
 

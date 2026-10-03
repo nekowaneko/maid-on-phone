@@ -42,3 +42,6 @@
 - 依賴套件升級另開批次處理（Lint 列出 7 個可升級套件）。
 24. **實測修正（螢幕關閉後角色消失）**：處理 WebView 渲染程序被系統收掉（`onRenderProcessGone` 重建，不閃退），螢幕打開時檢查懸浮窗是否還掛著，不在就重建。根因待手機 log 確認。
 25. **實測修正（麥克風一直無法使用）**：Manifest 加 `<queries>` 宣告 `RecognitionService`（Android 11+ 未宣告時找不到語音辨識服務）；取得麥克風權限後若角色已在執行，重新呼叫 `startForeground` 補上 microphone 類型；錯誤訊息附上錯誤碼以利回報。
+26. **手機 log 確認的根因**（2026-10-03，vivo V2503、Android 16）：
+    - 麥克風：Google 語音辨識服務其實有連上，失敗原因是手機當時沒網路（`ERR_INTERNET_DISCONNECTED`），也沒有中文離線語音包（`LANGUAGE_PACK_ERROR` 12）。新增錯誤碼 1、2、12、13 的提示文字，引導使用者連網或下載離線語音包。第 25 項的 `<queries>` 保留，因為 Android 11 以上本來就需要這個宣告。
+    - 螢幕關閉後角色消失：螢幕關閉約 60 毫秒後，程序被系統直接收掉，沒有 Java 例外，也沒有 `am_kill` 紀錄，符合 vivo 鎖屏清理的行為。從最近任務滑掉 App 時，vivo 也會連同前景服務一起收掉（`remove-task`）。這需要在手機設定加入白名單；程式端的重建機制只能處理 WebView 渲染程序被收掉的情況。
