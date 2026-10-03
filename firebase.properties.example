@@ -1,0 +1,6 @@
+# Firebase 推播設定範例。複製成 firebase.properties 後填入真實值（不會進 git）。
+# 步驟見 docs/FIREBASE-SETUP.md
+projectId=
+applicationId=
+apiKey=
+senderId=
