@@ -15,4 +15,10 @@ data class PetState(val service: ServiceState, val render: RenderState, val noti
 val INITIAL_STATE = PetState(ServiceState.STOPPED, RenderState.PAUSED, false)  // App 剛啟動時的狀態
 
 // 依事件算出下一個狀態
-fun reduce(state: PetState, event: PetEvent): PetState = TODO()
+fun reduce(state: PetState, event: PetEvent): PetState = when (event) {
+    PetEvent.START -> PetState(ServiceState.RUNNING, RenderState.PLAYING, true)
+    PetEvent.STOP -> INITIAL_STATE  // 服務結束、通知移除
+    PetEvent.SCREEN_OFF -> state.copy(render = RenderState.PAUSED)  // 只暫停渲染，取樣不停（S14 優先）
+    PetEvent.SCREEN_ON ->
+        if (state.service == ServiceState.RUNNING) state.copy(render = RenderState.PLAYING) else state  // 沒在跑就不播放
+}
