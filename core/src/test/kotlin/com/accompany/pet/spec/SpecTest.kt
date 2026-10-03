@@ -121,9 +121,16 @@ class SpecTest {
     }
 
     @Test
-    fun `S15 手機沒有網路時照常運作 Manifest 不含 INTERNET 權限`() {
-        val candidates = listOf(File("../app/src/main/AndroidManifest.xml"), File("app/src/main/AndroidManifest.xml"))
-        val manifest = candidates.first { it.exists() }  // 依執行目錄找 Manifest
-        assertFalse(manifest.readText().contains("android.permission.INTERNET"))
+    fun `S15 App 只透過 Firebase 推播收資料不自行連其他外部服務`() {
+        val candidates = listOf(File("../app/src/main"), File("app/src/main"))
+        val mainDir = candidates.first { it.exists() }  // 依執行目錄找原始碼
+        val forbidden = listOf("java.net.URL(", "HttpURLConnection", "okhttp", "retrofit", "ktor")
+        val sources = mainDir.walkTopDown().filter { it.isFile && it.extension == "kt" }.toList()
+        assertTrue(sources.isNotEmpty())
+        for (f in sources) {
+            val text = f.readText()
+            for (word in forbidden) assertFalse("${f.name} 含 $word", text.contains(word))
+        }
+        assertFalse(File(mainDir, "AndroidManifest.xml").readText().contains("android.permission.INTERNET"))
     }
 }
