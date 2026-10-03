@@ -1,0 +1,27 @@
+// core 模組：純 Kotlin JVM 邏輯，不依賴 Android，可在電腦上用 JUnit 測試
+plugins {
+    alias(libs.plugins.kotlin.jvm)
+    alias(libs.plugins.pitest)
+}
+
+java {
+    sourceCompatibility = JavaVersion.VERSION_11  // 與 app 一致
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+kotlin {
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_11)
+    }
+}
+
+dependencies {
+    testImplementation(libs.junit)
+}
+
+// 突變測試只針對權限判斷（計畫 §2.2）
+pitest {
+    targetClasses.set(listOf("com.accompany.pet.core.permission.*"))
+    outputFormats.set(listOf("HTML", "XML"))
+    timestampedReports.set(false)
+}

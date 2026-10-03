@@ -23,4 +23,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "AccompanyPet"
-include(":app")
+include(":app", ":core")
