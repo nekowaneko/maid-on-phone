@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<title>AccompanyPet</title>
+<style>
+  /* 常數定義：角色 96×108、泡泡寬 160（單位為 CSS px＝dp） */
+  html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; height: 100%; }
+  body { display: flex; flex-direction: row; justify-content: flex-end; align-items: flex-end;
+         font-family: sans-serif; user-select: none; -webkit-user-select: none; }
+  html[data-side="left"] body { flex-direction: row-reverse; } /* 角色在左邊時泡泡放右側 */
+  #bubble { display: none; box-sizing: border-box; width: 156px; max-height: 108px; margin: 0 4px;
+            padding: 6px 8px; background: rgba(255,255,255,0.95); border-radius: 12px; color: #222;
+            font-size: 13px; line-height: 1.35; overflow-y: auto; }
+  #bubble.show { display: flex; flex-direction: column; gap: 6px; }
+  #text { white-space: pre-wrap; word-break: break-all; min-height: 1em; }
+  #mic { align-self: flex-start; border: none; border-radius: 16px; padding: 4px 12px;
+         background: #ff8fab; color: #fff; font-size: 13px; }
+  #pet { width: 96px; height: 108px; flex: 0 0 auto; position: relative; }
+  #pet img { width: 100%; height: 100%; object-fit: contain; position: absolute; left: 0; top: 0;
+             animation: breathe 3s ease-in-out infinite; transform-origin: 50% 100%; }
+  #blink { visibility: hidden; }
+  body.paused * { animation-play-state: paused !important; } /* 暫停所有 CSS 動畫 */
+  @keyframes breathe { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-2px) scaleY(1.02); } }
+</style>
+</head>
+<body>
+  <div id="bubble"><div id="text"></div><button id="mic" type="button">🎤 說話</button></div>
+  <div id="pet"><img id="idle" alt=""><img id="blink" alt=""></div>
+<script>
+  // 常數定義
+  var BLINK_MS = 150;        // 眨眼圖顯示時間
+  var BLINK_MIN_MS = 4000;   // 眨眼最短間隔
+  var BLINK_MAX_MS = 6000;   // 眨眼最長間隔
+
+  var blinkTimer = null;     // 下一次眨眼的計時器
+  var unblinkTimer = null;   // 眨眼結束的計時器
+  var playing = false;       // 目前是否播放中
+
+  // 先載入 local 圖，失敗就改用 placeholder SVG（不顯示錯誤）
+  function loadFrame(img, name) {
+    img.onerror = function () { img.onerror = null; img.src = 'frames/placeholder-' + name + '.svg'; };
+    img.src = 'frames/local/' + name + '.png';
+  }
+
+  // 排定下一次眨眼
+  function scheduleBlink() {
+    var wait = BLINK_MIN_MS + Math.random() * (BLINK_MAX_MS - BLINK_MIN_MS);
+    blinkTimer = setTimeout(doBlink, wait);
+  }
+
+  // 切到眨眼圖 150 毫秒再切回來
+  function doBlink() {
+    document.getElementById('blink').style.visibility = 'visible';
+    unblinkTimer = setTimeout(function () {
+      document.getElementById('blink').style.visibility = 'hidden';
+      if (playing) scheduleBlink();
+    }, BLINK_MS);
+  }
+
+  // 停掉所有計時器
+  function clearTimers() {
+    clearTimeout(blinkTimer); clearTimeout(unblinkTimer);
+    blinkTimer = null; unblinkTimer = null;
+    document.getElementById('blink').style.visibility = 'hidden';
+  }
+
+  // 呼叫原生橋接（在瀏覽器測試時沒有 PetBridge 就略過）
+  function callBridge(name) {
+    if (window.PetBridge && window.PetBridge[name]) window.PetBridge[name]();
+  }
+
+  // 原生 → 網頁的介面
+  window.pet = {
+    // 切換播放或暫停
+    setRender: function (mode) {
+      clearTimers();
+      playing = (mode === 'playing');
+      document.body.classList.toggle('paused', !playing);
+      if (playing) scheduleBlink();
+    },
+    // 在泡泡裡顯示文字
+    showText: function (text) {
+      document.getElementById('text').textContent = String(text); // 用 textContent，不解析 HTML
+    },
+    // 顯示或收起泡泡
+    showBubble: function (show) {
+      document.getElementById('bubble').classList.toggle('show', !!show);
+    }
+  };
+
+  loadFrame(document.getElementById('idle'), 'idle');
+  loadFrame(document.getElementById('blink'), 'blink');
+  document.getElementById('pet').addEventListener('click', function () { callBridge('onPetTapped'); });
+  document.getElementById('mic').addEventListener('click', function () { callBridge('onMicPressed'); });
+  window.pet.setRender('playing');
+</script>
+</body>
+</html>
