@@ -21,3 +21,18 @@ fun toCsvLine(s: BatterySample, zone: java.time.ZoneId): String {
     val anim = if (s.animating) "播放中" else "暫停"
     return "$time,${s.batteryPercent},$screen,$anim"
 }
+
+// 把 toCsvLine 產生的一行解析回樣本；格式錯誤回傳 null（給匯出時讀樣本檔用）
+fun parseCsvLine(line: String, zone: java.time.ZoneId): BatterySample? {
+    val parts = line.trim().split(",")
+    if (parts.size != 4) return null
+    return try {
+        val time = java.time.LocalDateTime.parse(parts[0], DateTimeFormatter.ofPattern(TIME_PATTERN))
+        val percent = parts[1].toIntOrNull() ?: return null
+        val screenOn = when (parts[2]) { "開" -> true; "關" -> false; else -> return null }
+        val animating = when (parts[3]) { "播放中" -> true; "暫停" -> false; else -> return null }
+        BatterySample(time.atZone(zone).toInstant().toEpochMilli(), percent, screenOn, animating)
+    } catch (e: java.time.format.DateTimeParseException) {
+        null  // 時間格式錯誤，略過這行
+    }
+}

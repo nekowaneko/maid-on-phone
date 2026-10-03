@@ -14,6 +14,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import com.accompany.pet.core.exportCsv
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import com.accompany.pet.core.permission.StartAction
@@ -72,6 +74,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(button("開始") { onStartPressed() })
         root.addView(button("停止") { stopPet() })
         root.addView(button("允許麥克風（用說的）") { requestRuntimePermissions() })
+        root.addView(button("匯出耗電紀錄") { exportAndShare() })
         return root
     }
 
@@ -119,5 +122,19 @@ class MainActivity : AppCompatActivity() {
         val perms = mutableListOf(Manifest.permission.RECORD_AUDIO)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) perms += Manifest.permission.POST_NOTIFICATIONS
         permissionLauncher.launch(perms.toTypedArray())
+    }
+
+    // 匯出耗電紀錄成新的 CSV 檔，並開啟分享選單（每次都是新檔，不覆蓋，S03）
+    private fun exportAndShare() {
+        val dir = getExternalFilesDir("exports") ?: java.io.File(filesDir, "exports")
+        val file = exportCsv(dir, readSamples(this), System.currentTimeMillis(), LOG_ZONE)
+        val uri = FileProvider.getUriForFile(this, "$packageName.fileprovider", file)
+        val send = Intent(Intent.ACTION_SEND).apply {
+            type = "text/csv"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)  // 只授權讀取這一個檔案
+        }
+        status.text = "已匯出：${file.name}"
+        startActivity(Intent.createChooser(send, "分享耗電紀錄"))
     }
 }

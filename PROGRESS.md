@@ -18,3 +18,8 @@
 - 修正輪數：2
 - 錯誤指紋：`fp-v06-decisions-pattern`（DECISIONS.md 文字本身含掃描樣式，改寫敘述）、`fp-unresolved-servicecompat-startforeground`（core-ktx 1.10.1 沒有此 API，改用 Service.startForeground 搭配 SDK 判斷，不升級套件）
 - 驗收項失敗次數：V06 ×1、V12 ×1
+
+## T3
+- 修正輪數：0
+- 錯誤指紋：無
+- 驗收項失敗次數：全部 0

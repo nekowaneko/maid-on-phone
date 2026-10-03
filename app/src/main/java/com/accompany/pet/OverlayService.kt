@@ -67,6 +67,8 @@ class OverlayService : Service() {
     private var bubbleShown = false                      // 泡泡是否展開
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private val positionStore by lazy { FilePositionStore(java.io.File(filesDir, POSITION_FILE)) }
+    private val speech by lazy { SpeechBridge(this, ::showText) }
+    private val batteryLogger by lazy { BatteryLogger(this) { state.render == RenderState.PLAYING } }
 
     // 接收螢幕開關事件
     private val screenReceiver = object : BroadcastReceiver() {
@@ -95,6 +97,7 @@ class OverlayService : Service() {
         }
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         dispatch(PetEvent.START)
+        batteryLogger.start()  // 螢幕關閉時也不停（S14 優先）
         return START_NOT_STICKY
     }
 
@@ -120,6 +123,8 @@ class OverlayService : Service() {
 
     // 收掉懸浮窗與接收器
     private fun cleanup() {
+        batteryLogger.stop()
+        speech.release()
         try {
             unregisterReceiver(screenReceiver)
         } catch (e: IllegalArgumentException) {
@@ -254,13 +259,13 @@ class OverlayService : Service() {
         windowManager.updateViewLayout(wv, lp)
     }
 
-    // 按麥克風（T3 換成語音辨識）
+    // 按麥克風：沒權限就提示，有權限才啟動語音辨識
     private fun onMicPressed() {
         if (!hasMicPermission()) {
-            showText(MIC_DENIED_MESSAGE)  // 沒權限不啟動辨識
+            showText(MIC_DENIED_MESSAGE)  // 沒權限不啟動辨識（S02）
             return
         }
-        showText("語音功能準備中")
+        speech.start()
     }
 
     // 在泡泡顯示文字（以 JSON 字串跳脫，避免注入）
