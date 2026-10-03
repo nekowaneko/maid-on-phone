@@ -259,6 +259,9 @@ class OverlayService : Service() {
             PixelFormat.TRANSLUCENT,  // 透明背景
         ).apply {
             gravity = Gravity.TOP or Gravity.START
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                setCanPlayMoveAnimation(false)  // 關掉系統的視窗移動動畫：展開泡泡、拖曳、吸附都要立即到位，不要滑動
+            }
             x = petPos.x
             y = petPos.y
         }
