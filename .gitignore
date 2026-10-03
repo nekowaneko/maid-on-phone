@@ -13,3 +13,15 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# 個人角色圖不進公開 repo
+app/src/main/assets/pet/frames/local/*
+!app/src/main/assets/pet/frames/local/.gitkeep
+
+# 簽章與本機設定
+*.jks
+*.keystore
+keystore.properties
+
+# 耗電紀錄匯出檔
+*.csv
