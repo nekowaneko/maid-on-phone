@@ -9,13 +9,17 @@ import android.util.Log
 import androidx.core.content.ContextCompat
 
 // 常數定義
+const val ACTION_SHOW = "com.accompany.pet.SHOW"  // 叫出角色（可帶要說的話）
+const val EXTRA_TEXT = "text"                      // ACTION_SHOW 帶的提醒文字
 
 // 是否有懸浮窗權限
 fun hasOverlayPermission(context: Context): Boolean = Settings.canDrawOverlays(context)
 
-// 啟動角色服務；被系統拒絕（例如背景啟動限制）時回傳 false，不嘗試繞過
-fun startPetService(context: Context): Boolean = try {
-    ContextCompat.startForegroundService(context, Intent(context, OverlayService::class.java))
+// 啟動（叫出）角色服務，text 為角色要說的話；被系統拒絕（例如背景啟動限制）時回傳 false，不嘗試繞過
+fun startPetService(context: Context, text: String? = null): Boolean = try {
+    val intent = Intent(context, OverlayService::class.java).setAction(ACTION_SHOW)
+    if (text != null) intent.putExtra(EXTRA_TEXT, text)
+    ContextCompat.startForegroundService(context, intent)
     true
 } catch (e: IllegalStateException) {
     // Android 12+ 的 ForegroundServiceStartNotAllowedException 也是 IllegalStateException

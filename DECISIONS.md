@@ -52,3 +52,5 @@
 31. **M1 規格測試數量為 14，不是 13**：計畫書 §4.5 的自動列為 M1-S01～S12、S14、S15 共 14 列，但文字寫「13 列」。依「每列一個函式、不得合併」轉寫 14 個，verify.sh 的 V05 計數改為 M0 10＋M1 14＝24。屬計畫書筆誤，不是規格爭議。
 32. **凍結 hash 分兩個 commit**：hash 無法寫進自己所在的 commit，所以先 commit 規格測試（`4f9208a`），再 commit verify.sh 對新 hash 的引用。
 33. **V02 排除 spec 目錄**：凍結的 M0-S15（修訂）必須在測試裡列出 `HttpURLConnection`、`okhttp` 等禁用字串，會被 V02 掃到。V02 的本意是 core 的**程式**不得連網，因此改為 `--exclude-dir=spec`，掃描範圍仍涵蓋 core 的 main 與其他測試。
+34. **Firebase BOM 版本 34.19.0**：查詢 Google Maven 的 `firebase-bom` metadata，目前最新穩定版為 34.19.0（`firebase-messaging` 25.1.3），寫進 `libs.versions.toml`。不使用 google-services 外掛，由 `PetApp` 以 `FirebaseOptions` 手動初始化。
+35. **Manifest 加桌面應用程式 queries**：Android 11+ 套件可見性限制下，`ApplicationInfo.category` 需要查得到該套件。以 MAIN／LAUNCHER 的 `<queries>` 讓遊戲等桌面 App 可見，不使用範圍更大的 QUERY_ALL_PACKAGES。沒有桌面圖示的 App 查不到分類，視為非遊戲（使用者可用自訂遊戲清單補）。

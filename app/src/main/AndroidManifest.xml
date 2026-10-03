@@ -9,9 +9,18 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- 讀取當下前景 App（只在收到推播時讀一次），使用者要在系統設定自行開啟 -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
 
     <!-- Android 11+ 套件可見性：要宣告才找得到系統的語音辨識服務 -->
     <queries>
+        <!-- 讓 App 查得到桌面上的應用程式分類（判斷是否為遊戲） -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
         <intent>
             <action android:name="android.speech.RecognitionService" />
         </intent>
@@ -23,6 +32,7 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:name=".PetApp"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.AccompanyPet">
@@ -46,6 +56,14 @@
                 android:value="桌面懸浮陪伴角色，需常駐顯示並在使用者點擊時接收語音" />
         </service>
 
+        <!-- 只接受 Firebase 程式庫轉交的推播（A14） -->
+        <service
+            android:name=".PetMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <!-- 快速設定磚：只有系統能綁定（A9） -->
         <service

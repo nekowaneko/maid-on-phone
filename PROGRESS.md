@@ -42,3 +42,8 @@
 - 錯誤指紋：`fp-v02-spec-forbidden-words`（V02 掃到凍結的 S15 所列的禁用字串，改為排除 spec 目錄）；`fp-bash-syntax-eof`（修改 V02 時註解吃掉了 fail，修正）
 - 驗收項失敗次數：V02 ×1
 - `./verify.sh --core-only` 全綠，24 個規格測試通過
+
+### T2
+- 修正輪數：1
+- 錯誤指紋：`fp-kts-unresolved-java-util`（build.gradle.kts 內 `java` 被當成 Gradle 的 java 擴充，改用 `import java.util.Properties`）
+- 驗收項失敗次數：V11 ×1（Gradle 腳本編譯失敗連帶）
