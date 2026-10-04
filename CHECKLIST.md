@@ -31,3 +31,8 @@
 - [ ] 讀 M1.5 的 RISK-REVIEW.md 新增項目
 - [ ] 依賴套件稽核：`backend/` 在 npm 上沒有依賴套件；wrangler 版本由 npx 取最新，自行留意
 - [ ] 聊天畫面改以角色頭貼呈現表情：與 Claude 討論後另立計畫
+- [ ] 聊天畫面在 App 內無法上傳背景圖（M1.5 不支援檔案選擇），需要換背景請用瀏覽器開 Worker B
+- [ ] `app/build/intermediates` 下合併後的 Manifest 含 `android.permission.INTERNET`（聊天畫面靠 Firebase 套件合併進來的網路權限；原始碼 Manifest 仍不得宣告）
+- [ ] V24 的規格爭議：決定是否移除 `backend/worker/llm-client.js` 的 Gemini 直連備援（見 BLOCKERS.md）
+- [ ] 部署前把 `backend/wrangler.toml` 的 `database_id` 換成 `pet-maid-db` 的編號（不得填 accompany_bot 的）
+- [ ] 突變報告中存活的等價突變（MUTATION-REPORT.md M1.5 段落）看一眼是否同意判斷

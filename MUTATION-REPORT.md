@@ -50,3 +50,44 @@
 ## 建議新增的規格範例列
 
 無存活的非等價突變，因此 0 列。（可考慮：「寫入尚不存在的資料夾下的檔案時會自動建立資料夾」，目前只有 App 實機行為涵蓋。）
+
+## M1.5（執行範圍：`core/permission`＋`core/reminder`＋`core/chat`＋`backend/core/push.js`）
+
+- 狀態：已執行
+- Kotlin：Pitest，指令 `./gradlew :core:pitest`，`targetClasses` 為 `core.permission.*`、`core.reminder.*`、`core.chat.*`，使用 `com.accompany.pet.*` 全部測試（規格 28 個＋輔助測試）
+- JavaScript：Stryker（`npx --yes @stryker-mutator/core@10.0.0 run`，設定檔 `backend/stryker.config.json`，`mutate: ["core/push.js"]`，command runner 跑 `tests/spec/m15/push.test.js` 與 `tests/push-helper.test.js`）；原始報告 `backend/reports/mutation/`（不進 git）
+
+### Pitest 結果（Kotlin）
+
+| 範圍 | 突變 | 殺死 | 存活 | 無覆蓋 |
+|---|---|---|---|---|
+| `core/permission` | 1 | 1 | 0 | 0 |
+| `core/reminder` | 85 | 79 | 6 | 0 |
+| `core/chat` | 55 | 44 | 8 | 3 |
+| 合計 | 141 | 124 | 14 | 3 |
+
+突變分數 88%；行覆蓋 97%。`core/reminder` 的 6 個存活與 M1 相同（等價突變，見上方 M1 段落）。
+
+| `core/chat` 未殺死的突變 | 位置 | 判斷 |
+|---|---|---|
+| `Intrinsics.checkNotNullExpressionValue` 被移除（7 個） | `Chat.kt` 的 `parseOrigin`（`substring`、`lowercase` 的回傳值） | 等價突變：Kotlin 編譯器插入的空值檢查，這些標準庫呼叫不會回傳 null |
+| `colon < 0` 改成 `colon <= 0`（第 36 行，決定埠號的分支） | `parseOrigin` | 等價突變：`colon == 0` 代表主機為空，前一行已經回傳 null，走不到這裡 |
+| `Origin` 的 `getScheme`／`getHost`／`getPort` 無覆蓋（3 個） | `Chat.kt` 第 15 行 data class | 編譯器產生的取值函式，程式只用 data class 的 `equals` 比對，不呼叫取值函式 |
+
+T4 前曾有 3 個非等價存活（`sep <= 0` 邊界、`colon < 0` 決定主機的邊界、埠號 `> 5` 位數邊界），已在 `ChatHelperTest` 補「scheme 為空」「主機為空但有埠號」「五位數埠號」三個測試殺死。
+
+### Stryker 結果（`backend/core/push.js`）
+
+| 突變 | 殺死 | 存活 | 無覆蓋 | 突變分數 |
+|---|---|---|---|---|
+| 71 | 70 | 1 | 0 | 98.59% |
+
+| 存活突變 | 位置 | 判斷 |
+|---|---|---|
+| `catch (error) { return null }` 改成 `catch (error) {}` | `push.js` 的 `parseAccount` | 等價突變：回傳 `undefined` 與 `null` 在下一步 `account?.[field]` 的結果相同，都判定未設定 |
+
+首次執行有 5 個存活（`parseAccount` 內多餘的型別判斷），已把多餘判斷移除並在 `push-helper.test.js` 補「不是字串的輸入（陣列）」測試。
+
+### 建議新增的規格範例列
+
+無存活的非等價突變，因此 0 列。（可考慮：「聊天網址寫成 `https://別的網站@Worker B 網址` 時當作沒有設定」，目前只有輔助測試涵蓋。）

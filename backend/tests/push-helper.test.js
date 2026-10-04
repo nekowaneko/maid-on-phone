@@ -102,6 +102,9 @@ test('isPushConfigured：三個欄位與推播代碼都要有', () => {
   assert.equal(isPushConfigured(undefined, 'tok'), false)
   assert.equal(isPushConfigured('null', 'tok'), false)
   assert.equal(isPushConfigured('"字串"', 'tok'), false)
+  assert.equal(isPushConfigured('123', 'tok'), false)
+  // 不是字串的輸入一律不接受，即使轉成字串後剛好是合法的 JSON（陣列會被 JSON.parse 轉成字串）
+  assert.equal(isPushConfigured([ACCOUNT_TEXT], 'tok'), false)
   for (const field of Object.keys(ACCOUNT)) {
     assert.equal(isPushConfigured(JSON.stringify({ ...ACCOUNT, [field]: '' }), 'tok'), false, field)
     const { [field]: _removed, ...rest } = ACCOUNT

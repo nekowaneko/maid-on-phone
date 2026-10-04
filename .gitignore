@@ -36,3 +36,7 @@ backend/.dev.vars
 backend/assets/character/png/*.png
 backend/assets/icons/*.png
 worker.properties
+
+# M1.5：Stryker 突變測試的產物
+backend/reports/mutation/
+backend/.stryker-tmp/

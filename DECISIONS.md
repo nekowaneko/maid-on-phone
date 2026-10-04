@@ -90,3 +90,11 @@
 56. **V07 的 ChatActivity 檢查方式**：`ChatActivity.kt` 必須恰好有一行 `val url = normalizeChatUrl(BuildConfig.CHAT_URL)`，且所有 `loadUrl(...)` 的參數都只能是 `url`；懸浮窗照舊檢查本機資產開頭（排除 ChatActivity.kt）。
 57. **主畫面只顯示「已設定」與否**：聊天網址本身不顯示在主畫面，判斷用 `decideChat`，與「聊聊」按鈕的判斷一致（http 網址同樣顯示未設定）。
 58. **`worker.properties` 的值寫進 BuildConfig 前跳脫反斜線與雙引號**：避免使用者貼入的網址含引號時產生無法編譯的 BuildConfig。
+59. **Stryker 的產物不進 git**：報告輸出到 `backend/reports/mutation/`，暫存資料夾 `backend/.stryker-tmp/`，兩者加進 `.gitignore`；`stryker.config.json` 進 git，Stryker 沒有寫進 `package.json`（§7）。
+60. **V15 會在 `--full` 時同時跑 Pitest 與 Stryker**：Stryker 執行失敗時與 Pitest 相同，只印警告，再由報告檢查（待補欄位或四個範圍）決定 V15 是否通過。
+
+## 建議後續（M1.5，僅記錄，未實作）
+
+- V24 規格爭議：若決定強制走轉送服務，移除 `llm-client.js` 的直連備援並拿掉 verify.sh 的那行豁免。
+- 推播可以考慮讓 Worker B 記下最近送出的編號與結果（目前只看得到 `wrangler tail` 的成功／失敗），方便查「到底有沒有送出」。
+- 聊天畫面目前不支援檔案選擇（換背景），若要支援需實作 `WebChromeClient.onShowFileChooser`，並重新評估 A23。

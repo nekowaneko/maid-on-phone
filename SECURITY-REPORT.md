@@ -65,3 +65,26 @@ gitleaks 未安裝，改用計畫指定的 grep 樣式掃描所有追蹤檔：�
 - 一般通知的點擊使用 `FLAG_IMMUTABLE` 的 PendingIntent，只能叫出角色並帶入同一則文字。
 - 沒有新增 `@JavascriptInterface`（V08 仍為 2 個）。
 - Lint：`./gradlew :app:lintDebug` error 0 個、warning 16 個（與 M0 相同數量，M1 沒有新增 warning 類別）。
+
+## M1.5 架構約束檢查（verify.sh L1）
+
+| # | 結果 |
+|---|---|
+| A4（修訂）懸浮窗只載入本機資產；`ChatActivity` 只載入檢查後的聊天網址 | 通過（V07 修訂版） |
+| A5（修訂）`@JavascriptInterface` 恰好 3 個、`ChatActivity` 沒有 JS 介面 | 通過（V08 修訂版） |
+| A18 `googleapis.com` 只在 `fcm-client.js`；`backend/core/` 不連線、不碰 `crypto.subtle`、`env.` | 通過（V24），**但有一行豁免**：`llm-client.js` 原有的 Gemini 直連網址，見 BLOCKERS.md「規格爭議」 |
+| A19 金鑰只從 Worker 環境變數讀；`wrangler.toml` 沒有金鑰賦值；回應與日誌不含憑證 | 通過（V23）；輔助測試確認失敗回應不含推播代碼、服務帳戶欄位、權杖 |
+| A20 Worker B 與 accompany_bot 分開；立繪與圖示不進 git | 通過（M15-S03、V23） |
+| A21 推播失敗不重試、一次請求最多呼叫送出端點一次 | 通過（M15-S12、fcm-client 輔助測試） |
+| A22 聊天網址只從 `worker.properties` 讀；沒有檔案照常建置 | 本機沒有該檔案，`BuildConfig.CHAT_URL` 為空字串，建置通過 |
+| A23 `ChatActivity` `exported="false"`、不讀檔案、禁止混合內容、攔截子資源 | 通過（V25） |
+| A3 原始碼 Manifest 無 INTERNET | 通過（V03、S15）；聊天畫面的網路權限來自 Firebase 套件合併（見 CHECKLIST.md） |
+
+## M1.5 其他安全事項
+
+- 推播路由的日誌只有「推播送出成功」或「推播送出失敗：<代碼>」，不含文字內容、推播代碼、服務帳戶。
+- `fcm-client.js` 不寫任何日誌；私鑰匯入失敗時回傳 `INVALID_SERVICE_ACCOUNT`，不帶出例外內容。
+- 存取密鑰沿用 accompany_bot 的 `isAuthorized`（不提早跳出的逐字比對）；`/api/push` 在 `/api/` 前綴下，自動受授權中介保護。
+- 聊天網址解析不使用 `java.net`（V02）：帳密（`@`）、IPv6、非數字埠號一律視為無法解析，擋下 `https://evil.com@worker` 這類混淆網址。
+- 聊天網頁把存取密鑰存在 WebView 的 DOM storage（App 私有資料夾），與 accompany_bot 在瀏覽器中的做法相同；手機遺失時請到 Cloudflare 換一把 `APP_SECRET`。
+- CORS 沿用 accompany_bot 的 `access-control-allow-origin: *`；因為所有 `/api/` 都需要密鑰，未改動（安全邊界照 accompany_bot 現況，使用者 2026-10-04 決定）。

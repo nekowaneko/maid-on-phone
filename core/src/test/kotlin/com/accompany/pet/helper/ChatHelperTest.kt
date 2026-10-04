@@ -74,6 +74,21 @@ class ChatHelperTest {
     }
 
     @Test
+    fun `scheme 為空時即使自己比自己也不同源`() {
+        assertFalse(isSameOrigin("://pet.example.dev:1/", "://pet.example.dev:1/"))
+    }
+
+    @Test
+    fun `主機為空但有埠號時無法解析`() {
+        assertNull(normalizeChatUrl("https://:443/"))
+    }
+
+    @Test
+    fun `五位數埠號可以解析`() {
+        assertTrue(isSameOrigin("https://pet.example.dev:12345/", "https://pet.example.dev:12345/x"))
+    }
+
+    @Test
     fun `decideChat 有效網址開啟、空白網址提示`() {
         assertEquals(ChatAction.OPEN, decideChat(" https://pet.example.dev "))
         assertEquals(ChatAction.SHOW_NOT_SET, decideChat("   "))

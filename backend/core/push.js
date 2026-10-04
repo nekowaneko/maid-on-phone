@@ -43,12 +43,11 @@ export const buildFcmMessage = (deviceToken, id, text) => ({
   }
 })
 
-// 解析服務帳戶 JSON，失敗回傳 null
+// 解析服務帳戶 JSON；不是字串或解析失敗回傳 null（解析結果不是物件時，欄位檢查自然不會通過）
 const parseAccount = (serviceAccountText) => {
   if (typeof serviceAccountText !== 'string') return null
   try {
-    const parsed = JSON.parse(serviceAccountText)
-    return parsed !== null && typeof parsed === 'object' ? parsed : null
+    return JSON.parse(serviceAccountText)
   } catch (error) {
     return null
   }
@@ -58,6 +57,5 @@ const parseAccount = (serviceAccountText) => {
 export const isPushConfigured = (serviceAccountText, deviceToken) => {
   if (!isFilledText(deviceToken)) return false
   const account = parseAccount(serviceAccountText)
-  if (account === null) return false
-  return REQUIRED_ACCOUNT_FIELDS.every((field) => isFilledText(account[field]))
+  return REQUIRED_ACCOUNT_FIELDS.every((field) => isFilledText(account?.[field]))
 }

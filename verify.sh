@@ -210,8 +210,9 @@ pass "V13"
 ./gradlew :app:lintDebug -q || fail "V14 Lint 有 error"
 pass "V14"
 
-# V15：突變測試報告
+# V15：突變測試報告（Kotlin 用 Pitest；backend/core/push.js 用 Stryker，設定檔 backend/stryker.config.json）
 ./gradlew :core:pitest -q || echo "⚠️  pitest 執行失敗，檢查報告是否為待補狀態"
+(cd backend && npx --yes @stryker-mutator/core@10.0.0 run >/dev/null 2>&1) || echo "⚠️  Stryker 執行失敗，檢查報告是否為待補狀態"
 [ -f MUTATION-REPORT.md ] || fail "V15 缺少 MUTATION-REPORT.md"
 if grep -q '狀態：待補' MUTATION-REPORT.md; then
   for field in 未執行原因 預定範圍 程式版本 原工具補跑方式 替代品候選 搜尋紀錄; do
@@ -220,13 +221,15 @@ if grep -q '狀態：待補' MUTATION-REPORT.md; then
   grep -q '突變測試待補' CHECKLIST.md || fail "V15 CHECKLIST.md 缺少突變測試待補項"
 else
   grep -q '執行範圍' MUTATION-REPORT.md || fail "V15 報告缺少執行範圍"
-  grep -q 'core/permission' MUTATION-REPORT.md || fail "V15 執行範圍不含 core/permission"
+  for scope in core/permission core/reminder core/chat backend/core/push.js; do
+    grep -q "$scope" MUTATION-REPORT.md || fail "V15 執行範圍不含 $scope"
+  done
 fi
 pass "V15"
 
 # V16：高風險清單涵蓋 §2.1
 [ -f RISK-REVIEW.md ] || fail "V16 缺少 RISK-REVIEW.md"
-for name in exportCsv FilePositionStore PetBridge BatteryLogger FileReminderQueueStore FileSeenIdStore PetMessagingService ReminderDispatcher ForegroundDetector PushTokenStore; do
+for name in exportCsv FilePositionStore PetBridge BatteryLogger FileReminderQueueStore FileSeenIdStore PetMessagingService ReminderDispatcher ForegroundDetector PushTokenStore   fcm-client handlePush push.js ChatActivity onChatPressed wrangler.toml; do
   grep -q "$name" RISK-REVIEW.md || fail "V16 RISK-REVIEW.md 缺少 $name"
 done
 pass "V16"
