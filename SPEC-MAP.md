@@ -45,3 +45,25 @@ M0-S15 修訂版取代 `SpecTest.kt` 內的 S15，函式名稱開頭仍為 `S15`
 | M1-S14 | 自動＋手機 | `M1-S14 角色模式開關會被記住且關閉時提醒改成一般通知`；手機見 DEVICE-CHECKLIST-M1.md |
 | M1-S15 | 自動 | `M1-S15 排隊已有二十則又排進第二十一則會丟掉最舊的一則` |
 | M0-S15（修訂） | 自動 | `S15 App 只透過 Firebase 推播收資料不自行連其他外部服務` |
+
+## M1.5
+
+規格範例表 docs/M1.5-EXPENSIVE-PLAN.md §4.5 → 測試位置（T0b 後凍結）。
+- Kotlin：`core/src/test/kotlin/com/accompany/pet/spec/m15/M15SpecTest.kt`（類別 `M15SpecTest`）
+- JS：`backend/tests/spec/m15/push.test.js`、`backend/tests/spec/m15/config.test.js`
+
+| 編號 | 驗證 | 檔案與測試名稱 |
+|---|---|---|
+| M15-S01 | 自動 | push.test.js：`M15-S01 沒帶存取密鑰或密鑰錯誤時回覆未授權且不送出推播` |
+| M15-S02 | 自動 | push.test.js：`M15-S02 還沒設定推播代碼或服務帳戶時回覆尚未設定推播且不送出` |
+| M15-S03 | 自動 | config.test.js：`M15-S03 Worker B 名稱與資料庫名稱和 accompany_bot 不同` |
+| M15-S04 | 自動＋手機 | M15SpecTest.kt：`M15-S04 聊天畫面中點到不是 Worker B 網址的連結不在 App 裡開啟`；手機見 DEVICE-CHECKLIST-M1.5.md |
+| M15-S05 | 自動 | M15SpecTest.kt：`M15-S05 聊天網址是 http 開頭時當作沒有設定` |
+| M15-S06 | 自動＋手機 | M15SpecTest.kt：`M15-S06 還沒設定聊天網址時按聊聊不開聊天畫面並顯示提示`；手機見 DEVICE-CHECKLIST-M1.5.md |
+| M15-S07 | 自動 | push.test.js：`M15-S07 送出的推播只含 id 與 text、沒有通知欄位、優先順序為高，回覆成功與編號` |
+| M15-S08 | 自動 | push.test.js：`M15-S08 沒指定編號連送兩次，兩次各自產生不同的新編號` |
+| M15-S09 | 自動 | push.test.js：`M15-S09 指定編號 abc 時推播的 id 就是 abc` |
+| M15-S10 | 自動 | push.test.js：`M15-S10 內容空白、缺少內容或主體不是 JSON 時回覆格式錯誤且不送出` |
+| M15-S11 | 自動 | push.test.js：`M15-S11 內容超過 500 字時回覆訊息太長了且不送出，剛好 500 字可以送出` |
+| M15-S12 | 自動 | push.test.js：`M15-S12 Google 回覆錯誤時回覆失敗並附上錯誤代碼且不自動重試` |
+| M15-S13 | 自動＋手機 | M15SpecTest.kt：`M15-S13 泡泡裡在說話右邊多一顆聊聊按鈕且按下後開啟聊天畫面`；手機見 DEVICE-CHECKLIST-M1.5.md |
