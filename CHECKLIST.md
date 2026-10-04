@@ -44,3 +44,5 @@
 - [ ] 聊天網頁換成白髮女僕：另立一案（聊天網頁的換裝功能用的是黑髮角色的分層圖，換角色會牽動換裝）
 - [ ] 在聊天網頁換角色之前，聊天時 LLM 不會用到 `pout`、`shy`；懸浮窗的推播可以用
 - [ ] `shy.png` 若嬌的感覺不夠，用 Nano Banana 重生 `pet-art-original/face-shy.jpg` 後重跑 `python tools/make_expression_frames.py ../pet-art-original`
+- [ ] 關螢幕期間才收到的提醒，畫面恢復後是接著演（B 線決定）；若覺得應該直接跳到演完，告訴 Claude 另外調整
+- [ ] `tools/send_push.py --script` 時記得同時給 `--text`（純文字），否則通知欄會顯示預設句

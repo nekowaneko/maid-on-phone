@@ -12,3 +12,7 @@
 ## M1.5 貴批次
 
 - **規格爭議：V24／A18「googleapis.com 只能出現在 fcm-client.js」**（非斷路器觸發）：複製來的 `backend/worker/llm-client.js` 第 9 行原本就有 `const API_ORIGIN = 'https://generativelanguage.googleapis.com'`（沒設 `LLM_RELAY_ORIGIN` 時直連 Gemini 的備援）。這支檔案不在 §1 的修改範圍，改掉會改變 accompany_bot 原有行為；拆字串閃避檢查則等於改弱驗收。處理方式：V24 照原條件檢查，只豁免這一行的**完整原文**（任何新增的 googleapis 網址或該行被改動都會失敗）。請使用者決定：(a) 保留現狀；或 (b) 另立計畫移除直連備援，強制走轉送服務（`wrangler.toml` 已設定 `LLM_RELAY_ORIGIN`，部署環境本來就走轉送），之後拿掉豁免。
+
+## M1.6 貴批次
+
+- ✅ 已解決（2026-10-04）：B 線斷路器停在 V28（指紋 `5e3838ab558d`）。根因是 `verify.sh` 第 118 行 sed 的替換字串被寫成 0x01 位元組而不是 `\1`，只要角色頁載入任何 script 就一定失敗。B 線依契約沒有修改 verify.sh，以暫存副本佐證修正後全綠；規劃者整合時修正（`80f0d9d`）。

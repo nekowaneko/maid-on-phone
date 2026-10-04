@@ -91,3 +91,24 @@ T4 前曾有 3 個非等價存活（`sep <= 0` 邊界、`colon < 0` 決定主機
 ### 建議新增的規格範例列
 
 無存活的非等價突變，因此 0 列。（可考慮：「聊天網址寫成 `https://別的網站@Worker B 網址` 時當作沒有設定」，目前只有輔助測試涵蓋。）
+
+## M1.6
+
+- 執行範圍：`core/permission`、`core/reminder`、`core/chat`（Pitest）；`backend/core/push.js`（Stryker，`commandRunner` 追加 `tests/spec/m16/push.test.js tests/push-script.test.js`）。範圍與 M1.5 相同，未擴大。
+- 程式版本：整合 commit（合併 B 線之後）；規格測試凍結 commit `fbda387`。
+
+| 範圍 | 突變 | 殺死 | 存活 | 無覆蓋 |
+|---|---|---|---|---|
+| `core/reminder` | 106 | 100 | 6 | 0 |
+| `core/chat` | 55 | 44 | 8 | 3 |
+| `core/permission` | 1 | 1 | 0 | 0 |
+| `backend/core/push.js` | 82 | 81 | 1 | 0 |
+
+- `core/reminder` 的 6 個存活與 M1 相同（`Intrinsics` 空值檢查 3 個、`file.parentFile?.mkdirs()` 條件反轉 3 個，行號因新增程式往下移），皆為等價突變。M1.6 新增的 `pickScript`、`reportScript`、4 欄讀寫沒有存活突變。
+- `core/chat` 與 M1.5 相同（未改動）。
+- `push.js` 的 1 個存活與 M1.5 相同（`parseAccount` 的 `return null` 被移除，等價）。M1.6 新增的 `buildPushData` 沒有存活突變。
+- 角色頁的 `performance.js` 不在突變範圍（§2.2 未列；Stryker 的 `mutate` 只能指 `backend/` 內的檔案）。
+
+### 建議新增的規格範例列
+
+無存活的非等價突變，因此 0 列。

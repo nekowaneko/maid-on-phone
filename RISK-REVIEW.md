@@ -39,3 +39,22 @@
 | 23 | `ChatActivity`（`onCreate`、`ChatWebViewClient`） | `app/.../ChatActivity.kt` | 載入遠端內容 | 網址只來自 `normalizeChatUrl(BuildConfig.CHAT_URL)`；非同源導覽擋下、子資源 403；不讀本機檔案、禁止混合內容、沒有 JS 介面；SSL 錯誤沿用預設 |
 | 24 | `OverlayService.onChatPressed`／`PetBridge.onChatPressed` | `app/.../OverlayService.kt`、`PetBridge.kt` | 從懸浮窗開啟畫面 | 沒參數；未設定時只顯示提示；只開本 App 的 `ChatActivity` |
 | 25 | `wrangler.toml` | `backend/wrangler.toml` | 資料庫隔離設定 | 名稱 `pet-maid-api`、資料庫 `pet-maid-db`、`database_id` 由使用者自填（不得填 accompany_bot 的）；沒有任何金鑰賦值 |
+
+## M1.6（懸浮窗表情演出）
+
+依三條線紀錄檔的「高風險函式」段落匯整。§2.1 的四個模組都在表中。
+
+| # | 函式 | 檔案 | 風險類別 | 看什麼 |
+|---|---|---|---|---|
+| 26 | `FileReminderQueueStore` 的 `load`／`fromLine`／`save`／`toLine` | `core/.../reminder/Stores.kt` | 讀寫檔案、格式變更可能遺失資料 | 一律寫 4 欄；讀取時 3 欄（M1.5 舊格式，script＝text）與 4 欄都接受；其他欄數或 Base64 壞掉的行略過（不會把半壞資料演出來） |
+| 27 | `parseReminder`／`pickScript` | `core/.../reminder/Reminder.kt` | 外部輸入解析 | script trim 後非空且 ≤ 500 字才採用，否則整段改用 text（不截斷原文，避免切斷標籤） |
+| 28 | `reportScript` | `core/.../reminder/Queue.kt` | 外部文字組成演出原文 | 只做字串串接，每則與新內容前補 `[neutral]` |
+| 29 | `OverlayService.showScript`／`flushPending` | `app/.../OverlayService.kt` | 把外部文字送進 WebView 執行 | 原文經 `JSONObject.quote()` 跳脫後只當 `window.pet.say` 的字串參數（A26）；頁面載入前依到達順序暫存、載入後依序補送；無 Android 端自動測試，見 DEVICE-CHECKLIST-M1.6.md |
+| 30 | `handlePush`（修改）／`splitPushScript`（新增） | `backend/worker/handlers.js` | 外部輸入觸發對外寫入 | 授權 → 長度（以原文計）→ 剝標籤（沿用 stream-parser，不自寫正規式）→ 剝完為空回 400 不送出 → 設定檢查 → 送出一次；只有含標籤時才帶 script |
+| 31 | `buildFcmMessage`／`buildPushData` | `backend/core/push.js` | 組出對外訊息 | script 必須是非空字串才加入（A27）；本檔無任何 import（A29） |
+| 32 | `window.pet.say`／`startCurrent`／`applyStep` | `app/src/main/assets/pet/index.html` | 外部文字顯示在畫面上 | 台詞只經 `textContent` 寫入；空字串與非字串忽略 |
+| 33 | `skipToEnd`（收起泡泡、暫停、`showText` 共用） | `app/src/main/assets/pet/index.html` | 計時器殘留 | 清掉全部演出計時器；沒在演出時不動作 |
+| 34 | `setFace` | `app/src/main/assets/pet/index.html` | 外部標籤決定載入哪個檔案 | 檔名只來自 `frameFor` 查 `PetEmotionMap.frames`（白名單），標籤字串不會組進路徑；載入失敗保留舊臉；以請求序號擋掉晚到的舊圖 |
+| 35 | `performance.js` 的 `planTimeline`／`stageSkip` | `app/src/main/assets/pet/performance.js` | 解析外部文字 | 純函式、不改動傳入物件；解析程式為 vendor 照抄（A25） |
+| 36 | `buildVendor`／`main` | `tools/sync-overlay-vendor.mjs` | 寫入檔案 | 只寫 `vendor/stream-parser.js`；只去掉行首 `export ` 並包一層；`--check` 不寫檔 |
+| 37 | `build_data`／`build_message`（修改） | `tools/send_push.py` | 測試工具對外送推播 | 使用者手動執行才連 FCM；`--script` 沒給時與 M1.5 相同 |

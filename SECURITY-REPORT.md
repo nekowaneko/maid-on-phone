@@ -88,3 +88,11 @@ gitleaks 未安裝，改用計畫指定的 grep 樣式掃描所有追蹤檔：�
 - 聊天網址解析不使用 `java.net`（V02）：帳密（`@`）、IPv6、非數字埠號一律視為無法解析，擋下 `https://evil.com@worker` 這類混淆網址。
 - 聊天網頁把存取密鑰存在 WebView 的 DOM storage（App 私有資料夾），與 accompany_bot 在瀏覽器中的做法相同；手機遺失時請到 Cloudflare 換一把 `APP_SECRET`。
 - CORS 沿用 accompany_bot 的 `access-control-allow-origin: *`；因為所有 `/api/` 都需要密鑰，未改動（安全邊界照 accompany_bot 現況，使用者 2026-10-04 決定）。
+
+## M1.6
+
+- 推播原文進入 WebView 只有一條路：`OverlayService.showScript` 以 `JSONObject.quote()` 跳脫後當 `window.pet.say` 的字串參數，角色頁只以 `textContent` 顯示，不使用 `innerHTML`。
+- 表情標籤不會變成檔案路徑：角色頁的換臉只查 `emotion-map.js` 的白名單，標籤不在表內就用平常的臉。
+- 角色頁仍只從 `file:///android_asset/pet/` 載入本機 script（V28 檢查不用 module、不讀檔、不連外），`@JavascriptInterface` 維持 3 個（V08）。
+- Worker 的 `/api/push` 仍在 `/api/` 授權中介之後；剝標籤沿用 accompany_bot 的解析程式，不新增正規式；日誌不記內容。
+- 依賴套件：本案沒有新增任何 npm 或 Gradle 依賴。
