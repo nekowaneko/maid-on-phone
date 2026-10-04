@@ -85,6 +85,22 @@ if git ls-files | grep -E '\.jks$|frames/local/.*\.png$'; then fail "V06 追蹤�
 if git ls-files | grep -E '(^|/)(firebase\.properties|google-services\.json)$'; then fail "V06 追蹤了 Firebase 設定檔"; fi
 pass "V06"
 
+# V23：Worker B 與 accompany_bot 隔離、金鑰不寫進設定檔、立繪與本機變數不進 git（M1.5 A19、A20）
+TOML=backend/wrangler.toml
+grep -qE '^name = "pet-maid-api"$' "$TOML" || fail "V23 wrangler.toml 名稱不是 pet-maid-api"
+if grep -n 'neko-companion' "$TOML"; then fail "V23 wrangler.toml 含 neko-companion"; fi
+if grep -nE '^\s*(FCM_SERVICE_ACCOUNT|FCM_DEVICE_TOKEN|APP_SECRET|LLM_API_KEY)\s*=' "$TOML"; then fail "V23 wrangler.toml 含金鑰賦值"; fi
+if git ls-files backend | grep -E '\.png$|(^|/)\.dev\.vars$'; then fail "V23 backend 追蹤了立繪或 .dev.vars"; fi
+pass "V23"
+
+# V24：googleapis.com 只出現在 fcm-client.js；backend/core 不連線、不碰憑證與環境變數（M1.5 A18）
+# 例外：複製來的 llm-client.js 原有的 Gemini 直連網址那一行（規格爭議，見 BLOCKERS.md），只豁免這一行原文
+LLM_ORIGIN_LINE="backend/worker/llm-client.js:const API_ORIGIN = 'https://generativelanguage.googleapis.com'"
+GOOGLE_HITS=$(grep -rH 'googleapis\.com' backend/worker backend/core | grep -v '^backend/worker/fcm-client\.js:' | grep -vxF "$LLM_ORIGIN_LINE" || true)
+[ -z "$GOOGLE_HITS" ] || { echo "$GOOGLE_HITS"; fail "V24 googleapis.com 出現在 fcm-client.js 以外"; }
+if grep -rnE 'fetch\(|crypto\.subtle|env\.|eval\(|new Function\(' backend/core; then fail "V24 backend/core 含連線、憑證或環境變數存取"; fi
+pass "V24"
+
 if [ "$CORE_ONLY" -eq 0 ]; then
   # V07：loadUrl 只載入本機資產，且有攔截函式
   LOADS=$(grep -rhoE 'loadUrl\([^)]*\)' app/src || true)
@@ -149,6 +165,14 @@ pass "V11"
 # V12：app 可編譯
 ./gradlew :app:compileDebugKotlin -q || fail "V12 app 編譯失敗"
 pass "V12"
+
+# V26：backend 全部測試通過（原有 269 個＋規格 9 個＋輔助）
+NODE_OUT=$(cd backend && node --test "tests/**/*.test.js" 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
+NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')
+NODE_FAIL=$(echo "$NODE_OUT" | grep -E '^# fail ' | awk '{print $3}')
+[ "$NODE_FAIL" = "0" ] || fail "V26 backend 測試失敗 $NODE_FAIL 個"
+[ "$NODE_PASS" -ge 278 ] || fail "V26 backend 測試通過數 $NODE_PASS，應至少 278"
+pass "V26（通過 $NODE_PASS 個）"
 
 if [ "$FULL" -eq 0 ]; then
   echo "🎉 L1＋L2 全部通過"

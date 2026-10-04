@@ -65,3 +65,9 @@
 - 凍結 M1.5 規格測試 commit：`c119cfe56128d03e00dc983d6c8f7b484f2df8df`（Kotlin 28 個＝M0 10＋M1 14＋M1.5 4；JS 9 個）
 - 骨架狀態：JS 規格 9 個中 S01、S03 已通過（授權沿用既有中介、wrangler.toml 已由便宜批次設定），其餘 7 個因「尚未實作」失敗；Kotlin 規格可編譯。
 - 修正輪數：0；錯誤指紋：無
+
+### T1
+- 修正輪數：1
+- 錯誤指紋：`fp-b41341f6f5fc`（`java.lang.AssertionError / Assert.fail / Assert.assertTrue`，M15-S13 找不到 `id="chat"`：按鈕原排在 T3，改為在 T1 先加入 index.html 的「聊聊」按鈕）
+- 驗收項失敗次數：V11 ×1；其餘 0
+- 結果：L1＋L2 全綠；Kotlin 規格 28/28、JS 規格 9/9、backend 共 295 個通過

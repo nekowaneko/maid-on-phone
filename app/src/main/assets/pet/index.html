@@ -15,8 +15,10 @@
             font-size: 13px; line-height: 1.35; overflow-y: auto; }
   #bubble.show { display: flex; flex-direction: column; gap: 6px; }
   #text { white-space: pre-wrap; word-break: break-all; min-height: 1em; }
-  #mic { align-self: flex-start; border: none; border-radius: 16px; padding: 4px 12px;
-         background: #ff8fab; color: #fff; font-size: 13px; }
+  #actions { display: flex; flex-direction: row; gap: 6px; } /* 「說話」與「聊聊」同一列，聊聊在右 */
+  #mic, #chat { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
+  #mic { background: #ff8fab; }
+  #chat { background: #8fb8ff; }
   #pet { width: 96px; height: 108px; flex: 0 0 auto; position: relative; }
   #pet img { width: 100%; height: 100%; object-fit: contain; position: absolute; left: 0; top: 0;
              transform-origin: 50% 100%; }
@@ -25,7 +27,7 @@
 </style>
 </head>
 <body>
-  <div id="bubble"><div id="text"></div><button id="mic" type="button">🎤 說話</button></div>
+  <div id="bubble"><div id="text"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button></div></div>
   <div id="pet"><img id="idle" alt=""><img id="blink" alt=""></div>
 <script>
   // 常數定義
@@ -102,6 +104,7 @@
   loadFrame(document.getElementById('blink'), 'blink');
   document.getElementById('pet').addEventListener('click', function () { callBridge('onPetTapped'); });
   document.getElementById('mic').addEventListener('click', function () { callBridge('onMicPressed'); });
+  document.getElementById('chat').addEventListener('click', function () { callBridge('onChatPressed'); });
   window.pet.setRender('playing');
 </script>
 </body>

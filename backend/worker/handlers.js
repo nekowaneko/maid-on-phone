@@ -12,6 +12,16 @@ import { classifyFailure, shouldRetract, buildFallbackText } from '../core/failu
 import { zonedDateKey, nextResetMs, summarizeUsage } from '../core/quota.js'
 import { validatePersona } from '../core/persona.js'
 import { isMessageAcceptable, describeMessage } from '../core/message.js'
+import {
+  validatePushPayload,
+  newPushId,
+  buildFcmMessage,
+  isPushConfigured,
+  PUSH_FORMAT_MESSAGE,
+  PUSH_TOO_LONG_MESSAGE,
+  PUSH_NOT_CONFIGURED_MESSAGE,
+  PUSH_FAILED_MESSAGE
+} from '../core/push.js'
 
 // 常數定義
 const API_PREFIX = '/api/' // 授權只掛在這個前綴底下（架構約束 A8）
@@ -19,6 +29,10 @@ const SECRET_HEADER = 'x-app-secret'
 const CHAT_PATH = '/api/chat'
 const PERSONA_PATH = '/api/persona'
 const USAGE_PATH = '/api/usage'
+const PUSH_PATH = '/api/push' // M1.5：送一則純資料推播到手機
+const RANDOM_ID_LENGTH = 8 // 推播編號的亂數段取 randomUUID 前 8 碼
+const UNKNOWN_CODE = 'UNKNOWN'
+const PUSH_TOO_LONG_REASON = 'too_long'
 const RPM_WINDOW_MS = 60000 // 每分鐘請求數用 60 秒滑動窗
 // 小檔案存在 settings 表的這個 key，改動時間另外存一個 key，
 // 這樣儲存層的介面不必為了一個時間戳而多開一個方法
@@ -275,6 +289,43 @@ const handleUsage = async (deps, request) => {
   )
 }
 
+// 推播編號的亂數段：測試注入固定字串，真實環境用 randomUUID 的前 8 碼
+const readRandomText = (deps) =>
+  deps.randomText ? deps.randomText() : globalThis.crypto.randomUUID().slice(0, RANDOM_ID_LENGTH)
+
+// 呼叫推播客戶端恰好一次；客戶端自己丟例外時也當成失敗，不重試（架構約束 A21）
+const sendOnce = async (deps, message) => {
+  try {
+    return await deps.pusher(message)
+  } catch (error) {
+    return { ok: false, status: null, code: UNKNOWN_CODE }
+  }
+}
+
+// 送一則推播：順序固定為 內容檢查 → 是否已設定 → 組訊息 → 送出一次（§4.4）
+// 日誌只記成功或失敗與錯誤代碼，不記內容、推播代碼與服務帳戶（架構約束 A19）
+const handlePush = async (deps, request) => {
+  if (request.method !== POST_METHOD) return jsonResponse({ error: METHOD_NOT_ALLOWED_MESSAGE }, 405)
+  const checked = validatePushPayload(await readPayload(request))
+  if (!checked.ok) {
+    const error = checked.reason === PUSH_TOO_LONG_REASON ? PUSH_TOO_LONG_MESSAGE : PUSH_FORMAT_MESSAGE
+    return jsonResponse({ error }, 400)
+  }
+  const config = deps.pushConfig ?? {}
+  if (!isPushConfigured(config.serviceAccount, config.deviceToken)) {
+    return jsonResponse({ error: PUSH_NOT_CONFIGURED_MESSAGE }, 503)
+  }
+  const id = checked.id ?? newPushId(readNow(deps), readRandomText(deps))
+  const result = await sendOnce(deps, buildFcmMessage(config.deviceToken, id, checked.text))
+  if (result?.ok) {
+    console.log('推播送出成功')
+    return jsonResponse({ ok: true, id }, 200)
+  }
+  const code = typeof result?.code === 'string' && result.code.length > 0 ? result.code : UNKNOWN_CODE
+  console.error('推播送出失敗：', code)
+  return jsonResponse({ ok: false, error: PUSH_FAILED_MESSAGE, code }, 502)
+}
+
 // 把根路徑導到真正的入口頁，查詢字串（例如 ?debug=1）原封不動帶過去
 const redirectToApp = (url) => Response.redirect(new URL(APP_PATH + url.search, url.origin).href, 302)
 
@@ -282,7 +333,7 @@ const redirectToApp = (url) => Response.redirect(new URL(APP_PATH + url.search, 
 // 否則使用者連網頁都打不開，也就沒有地方可以輸入密鑰（架構約束 A8）。
 const needsSecret = (pathname) => pathname.startsWith(API_PREFIX)
 
-// 建立處理函式：只認 /api/chat 與根路徑，其餘路徑交還給靜態資源或回 404
+// 建立處理函式：只認 /api/chat、/api/persona、/api/usage、/api/push 與根路徑，其餘路徑交還給靜態資源或回 404
 export const createHandler = (deps) => async (request) => {
   const url = new URL(request.url)
   if (request.method === OPTIONS_METHOD) {
@@ -294,6 +345,9 @@ export const createHandler = (deps) => async (request) => {
   }
   if (url.pathname === PERSONA_PATH) {
     return handlePersona(deps, request)
+  }
+  if (url.pathname === PUSH_PATH) {
+    return handlePush(deps, request)
   }
   if (url.pathname === USAGE_PATH) {
     return handleUsage(deps, request)

@@ -78,3 +78,7 @@
 44. **V04／V05 同時涵蓋兩個 spec 目錄**：V04 對 `core/.../spec/` 與 `backend/tests/spec/` 一起做 `git diff --quiet`；V05 的 JS 部分以 `test('<編號> ` 計數，並掃 `test.skip`、`test.todo`、`.only`。
 45. **推播文字先修剪再送出**：`validatePushPayload` 以 trim 後的文字判斷空白與長度，送出的也是 trim 後的那一份，與 `handleChat`「驗哪一份就送哪一份」一致；長度以 Unicode 字元（code point）計算。
 46. **測試用服務帳戶只是假字串**：規格測試的 `private_key` 是 `test-only-private-key`，路由層只檢查欄位是否存在，不做簽章；避免在追蹤檔中出現私鑰樣式（V06）。
+47. **「聊聊」按鈕提前到 T1**：凍結的 M15-S13 會讀 index.html，T1 的完成條件又是「規格測試全部通過」，所以 index.html 的按鈕在 T1 先加；按鈕呼叫 `callBridge('onChatPressed')`，橋接方法在 T3 補上之前呼叫會被 `callBridge` 略過，不會出錯。
+48. **聊天網址解析的保守做法**：`parseOrigin` 遇到帳密（`@`）、IPv6（`[`）、埠號不是 1～5 位數字時一律視為無法解析（`normalizeChatUrl` 為 null、`isSameOrigin` 為 false）；只認 https 與 http 兩種 scheme 的預設埠號。
+49. **V24 的豁免**：見 BLOCKERS.md「規格爭議：V24／A18」。只豁免 llm-client.js 那一行完整原文，不放寬其他條件。
+50. **推播客戶端丟例外時**：路由層把例外當成失敗，回 502、code `UNKNOWN`，仍只呼叫一次；網路錯誤的 `NETWORK_ERROR` 由 fcm-client.js 自己判斷後回傳（§7）。

@@ -19,9 +19,9 @@ dependencies {
     testImplementation(libs.junit)
 }
 
-// 突變測試針對權限判斷與提醒分流（M1 計畫 §2.2）
+// 突變測試針對權限判斷、提醒分流與聊天網址白名單（M1.5 計畫 §2.2）
 pitest {
-    targetClasses.set(listOf("com.accompany.pet.core.permission.*", "com.accompany.pet.core.reminder.*"))
+    targetClasses.set(listOf("com.accompany.pet.core.permission.*", "com.accompany.pet.core.reminder.*", "com.accompany.pet.core.chat.*"))
     targetTests.set(listOf("com.accompany.pet.*"))  // 用全部測試（spec＋helper）去殺突變
     outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
