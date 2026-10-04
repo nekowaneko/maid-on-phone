@@ -1,6 +1,7 @@
 // 推播的純函式：檢查請求內容、產生編號、組出 FCM 訊息、判斷是否已設定。
 // 本檔案屬於純函式層，不讀檔也不連線，所有值都由呼叫端傳進來（架構約束 A1、A18）。
 // 文字原樣送出，不經過人設改寫（docs/M1.5-EXPENSIVE-PLAN.md §10）。
+// M1.6：標籤剝除由 handlers.js 組合 stream-parser.js 完成，本檔不 import 其他 core 模組（架構約束 A29）。
 
 // 常數定義
 export const MAX_PUSH_TEXT_LENGTH = 500
@@ -34,11 +35,15 @@ export const validatePushPayload = (payload) => {
 // 產生新編號：時間（36 進位）加上一段亂數文字
 export const newPushId = (nowMs, randomText) => `${PUSH_ID_PREFIX}${nowMs.toString(ID_RADIX)}-${randomText}`
 
-// 組出 FCM HTTP v1 的訊息：只有 token、data（id、text）與高優先順序，沒有 notification
-export const buildFcmMessage = (deviceToken, id, text) => ({
+// 組出推播的 data：script 為非空字串時才多帶 script 欄位（架構約束 A27，不含標籤時與 M1.5 逐字相同）
+const buildPushData = (id, text, script) =>
+  typeof script === 'string' && script.length > 0 ? { id, text, script } : { id, text }
+
+// 組出 FCM HTTP v1 的訊息：只有 token、data（id、text，必要時加 script）與高優先順序，沒有 notification
+export const buildFcmMessage = (deviceToken, id, text, script) => ({
   message: {
     token: deviceToken,
-    data: { id, text },
+    data: buildPushData(id, text, script),
     android: { priority: HIGH_PRIORITY }
   }
 })
