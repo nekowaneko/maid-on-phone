@@ -67,3 +67,26 @@ M0-S15 修訂版取代 `SpecTest.kt` 內的 S15，函式名稱開頭仍為 `S15`
 | M15-S11 | 自動 | push.test.js：`M15-S11 內容超過 500 字時回覆訊息太長了且不送出，剛好 500 字可以送出` |
 | M15-S12 | 自動 | push.test.js：`M15-S12 Google 回覆錯誤時回覆失敗並附上錯誤代碼且不自動重試` |
 | M15-S13 | 自動＋手機 | M15SpecTest.kt：`M15-S13 泡泡裡在說話右邊多一顆聊聊按鈕且按下後開啟聊天畫面`；手機見 DEVICE-CHECKLIST-M1.5.md |
+
+## M1.6
+
+規格範例表 docs/M1.6-EXPENSIVE-PLAN.md §4.5 → 測試位置。
+測試檔：`core/src/test/kotlin/com/accompany/pet/spec/m16/M16SpecTest.kt`、`backend/tests/spec/m16/push.test.js`、`backend/tests/spec/m16/overlay.test.js`（T0 後凍結）
+
+| 編號 | 驗證 | 檔案與測試名稱 |
+|---|---|---|
+| M16-S01 | 自動 | m16/push.test.js：`M16-S01 帶表情標籤的推播送到手機時有編號、去掉方括號的顯示用文字與原文三個欄位` |
+| M16-S02 | 自動 | m16/push.test.js：`M16-S02 內容只有標籤沒有台詞時回覆格式錯誤且不送出推播` |
+| M16-S03 | 自動＋手機 | M16SpecTest.kt：`M16-S03 角色模式關時通知欄顯示純文字看不到方括號`；手機見 DEVICE-CHECKLIST-M1.6.md |
+| M16-S04 | 自動 | M16SpecTest.kt：`M16-S04 角色模式開時角色演出用的是原文` |
+| M16-S05 | 自動 | M16SpecTest.kt：`M16-S05 舊格式推播照常處理且演出用同一段文字` |
+| M16-S06 | 自動 | M16SpecTest.kt：`M16-S06 原文超過500字時不閃退並改用顯示用文字演出` |
+| M16-S07 | 自動＋手機 | M16SpecTest.kt：`M16-S07 排隊兩則依收到順序報告且第二則換回平常的臉`；手機見 DEVICE-CHECKLIST-M1.6.md |
+| M16-S08 | 自動 | M16SpecTest.kt：`M16-S08 更新前的舊版排隊檔更新後照常報告一則都不少` |
+| M16-S09 | 手機 | 見 DEVICE-CHECKLIST-M1.6.md A 節 |
+| M16-S10 | 自動＋手機 | m16/overlay.test.js：`M16-S10 先換 pout 臉停 0.45 秒才出第一個字之後每 0.03 秒一個字打到第 9 個字時換 smile 臉` |
+| M16-S11 | 自動 | m16/overlay.test.js：`M16-S11 不在表情清單裡的標籤用平常的臉說而且泡泡裡看不到標籤` |
+| M16-S12 | 自動＋手機 | m16/overlay.test.js：`M16-S12 最後一個字出現後再過 3 秒換回平常的臉` |
+| M16-S13 | 自動＋手機 | m16/overlay.test.js：`M16-S13 演出中又來一則時第一則照常演完才開始演第二則` |
+| M16-S14 | 自動＋手機 | m16/overlay.test.js：`M16-S14 演出被打斷時直接跳到演完泡泡顯示全部完整台詞且換回平常的臉` |
+| M16-S15 | 自動 | m16/overlay.test.js：`M16-S15 同一句帶標籤的台詞懸浮窗和聊天網頁解析出的文字與換臉位置完全一樣`；另有 V27 |
