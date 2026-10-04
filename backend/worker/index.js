@@ -18,6 +18,8 @@ import { streamCompletion as realStream } from './llm-client.js'
 import { streamCompletion as stubStream } from './llm-client.stub.js'
 import { createStore as realStore } from './store.js'
 import { createStore as stubStore } from './store.stub.js'
+import { sendFcm as realPusher } from './fcm-client.js'
+import { sendFcm as stubPusher } from './fcm-client.stub.js'
 
 // 常數定義
 const STUB_FLAG = 'true'
@@ -29,6 +31,9 @@ const pickStreamer = (env) => (env?.USE_STUB === STUB_FLAG ? stubStream : realSt
 
 // 儲存層跟語言模型客戶端共用同一個開關，兩邊不會一真一假
 const pickStore = (env) => (env?.USE_STUB === STUB_FLAG ? stubStore : realStore)
+
+// 推播客戶端也跟同一個開關，Stub 模式下絕不連到 Google
+const pickPusher = (env) => (env?.USE_STUB === STUB_FLAG ? stubPusher : realPusher)
 
 // 組出這一次請求要用的相依。streamer 在這裡就把 env 綁好，
 // 路由層因此完全不必認識環境變數，也碰不到憑證。
@@ -43,7 +48,10 @@ const buildDeps = (env) => ({
   templateText,
   secret: env?.APP_SECRET,
   store: pickStore(env)(env),
-  streamer: (messages) => pickStreamer(env)(messages, env)
+  streamer: (messages) => pickStreamer(env)(messages, env),
+  // 推播：服務帳戶在這裡就綁好，路由層只把訊息交出去（M1.5 §4.4）
+  pusher: (message) => pickPusher(env)(message, env?.FCM_SERVICE_ACCOUNT),
+  pushConfig: { serviceAccount: env?.FCM_SERVICE_ACCOUNT, deviceToken: env?.FCM_DEVICE_TOKEN }
 })
 
 export default {

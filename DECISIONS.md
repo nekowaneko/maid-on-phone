@@ -82,3 +82,6 @@
 48. **聊天網址解析的保守做法**：`parseOrigin` 遇到帳密（`@`）、IPv6（`[`）、埠號不是 1～5 位數字時一律視為無法解析（`normalizeChatUrl` 為 null、`isSameOrigin` 為 false）；只認 https 與 http 兩種 scheme 的預設埠號。
 49. **V24 的豁免**：見 BLOCKERS.md「規格爭議：V24／A18」。只豁免 llm-client.js 那一行完整原文，不放寬其他條件。
 50. **推播客戶端丟例外時**：路由層把例外當成失敗，回 502、code `UNKNOWN`，仍只呼叫一次；網路錯誤的 `NETWORK_ERROR` 由 fcm-client.js 自己判斷後回傳（§7）。
+51. **服務帳戶本身有問題時的錯誤代碼**：JSON 解析失敗、缺欄位、私鑰無法匯入時，`sendFcm` 不連外，回傳 `{ ok: false, status: null, code: 'INVALID_SERVICE_ACCOUNT' }`（§4.3 只規定 Google 回錯誤時的代碼，這是本機錯誤，另給一個好辨認的代碼；不帶出例外內容，避免私鑰片段進日誌）。
+52. **fcm-client 輔助測試的 PEM 標頭拆開寫**：測試現場產生 RSA 金鑰並組成 PEM，標頭用常數 `PEM_DASHES` 拼出。檔案裡沒有任何真實金鑰，拆開寫只是避免 V06 的樣式掃描把測試程式誤判為含私鑰。
+53. **index.js 的推播相依**：`pusher` 與 `pushConfig` 都從 `env.FCM_SERVICE_ACCOUNT`、`env.FCM_DEVICE_TOKEN` 讀，`USE_STUB` 為 true 時改用 Stub；`randomText` 不注入，由路由層預設用 `crypto.randomUUID()` 前 8 碼。

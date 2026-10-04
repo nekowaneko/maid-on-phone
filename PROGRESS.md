@@ -71,3 +71,7 @@
 - 錯誤指紋：`fp-b41341f6f5fc`（`java.lang.AssertionError / Assert.fail / Assert.assertTrue`，M15-S13 找不到 `id="chat"`：按鈕原排在 T3，改為在 T1 先加入 index.html 的「聊聊」按鈕）
 - 驗收項失敗次數：V11 ×1；其餘 0
 - 結果：L1＋L2 全綠；Kotlin 規格 28/28、JS 規格 9/9、backend 共 295 個通過
+
+### T2
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0
+- 結果：L1＋L2 全綠；backend 共 306 個通過（新增 fcm-client 輔助測試 11 個）
