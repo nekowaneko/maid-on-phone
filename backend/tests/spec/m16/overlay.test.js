@@ -25,7 +25,8 @@ const loadPet = () => {
 // 跨 realm 的物件先轉成一般資料再比對
 const plain = (value) => JSON.parse(JSON.stringify(value))
 
-test('M16-S10 先換 pout 臉停 0.45 秒才出第一個字之後每 0.03 秒一個字打到第 9 個字時換 smile 臉', () => {
+// 2026-10-04 使用者實機看過後修訂節奏：每字 0.08 秒、句尾標點後多停 0.5 秒（原為每字 0.03 秒、不停頓），重新凍結
+test('M16-S10 先換 pout 臉停 0.45 秒才出第一個字之後每 0.08 秒一個字句尾多停 0.5 秒打到第 9 個字時換 smile 臉', () => {
   const pet = loadPet()
   const map = pet.PetEmotionMap
   const plan = plain(pet.PetPerformance.planTimeline(SAMPLE, map.frames, map.defaultEmotion))
@@ -33,10 +34,11 @@ test('M16-S10 先換 pout 臉停 0.45 秒才出第一個字之後每 0.03 秒一
   assert.deepEqual(plan.steps[0], { atMs: 0, face: 'pout' })
   const countAt = (count) => plan.steps.findIndex((step) => step.count === count)
   assert.equal(plan.steps[countAt(1)].atMs, 450)
-  assert.equal(plan.steps[countAt(2)].atMs, 480)
-  assert.equal(plan.steps[countAt(9)].atMs, 690)
+  assert.equal(plan.steps[countAt(2)].atMs, 530)
+  assert.equal(plan.steps[countAt(8)].atMs, 1010)
+  assert.equal(plan.steps[countAt(9)].atMs, 1590)
   const smileAt = plan.steps.findIndex((step) => step.face === 'smile')
-  assert.equal(plan.steps[smileAt].atMs, 690)
+  assert.equal(plan.steps[smileAt].atMs, 1590)
   assert.ok(smileAt < countAt(9))
   assert.ok(plan.steps.slice(0, countAt(9)).filter((step) => step.face === 'smile').length === 1)
   assert.ok(plan.steps.slice(1, smileAt).every((step) => step.face === undefined))
@@ -60,10 +62,10 @@ test('M16-S12 最後一個字出現後再過 3 秒換回平常的臉', () => {
   const map = pet.PetEmotionMap
   const plan = plain(pet.PetPerformance.planTimeline('[smile]你好呀', map.frames, map.defaultEmotion))
   const lastChar = plan.steps.find((step) => step.count === 3)
-  assert.equal(lastChar.atMs, 510)
-  assert.equal(plan.endMs, 3510)
-  assert.deepEqual(plan.steps[plan.steps.length - 1], { atMs: 3510, face: 'neutral' })
-  assert.ok(plan.steps.slice(0, -1).every((step) => step.atMs < 3510))
+  assert.equal(lastChar.atMs, 610)
+  assert.equal(plan.endMs, 3610)
+  assert.deepEqual(plan.steps[plan.steps.length - 1], { atMs: 3610, face: 'neutral' })
+  assert.ok(plan.steps.slice(0, -1).every((step) => step.atMs < 3610))
 })
 
 test('M16-S13 演出中又來一則時第一則照常演完才開始演第二則', () => {
