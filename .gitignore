@@ -28,3 +28,11 @@ keystore.properties
 firebase.properties
 google-services.json
 *firebase-adminsdk*.json
+
+# M1.5：Worker B（accompany_bot 副本）的本機檔案與角色立繪不進 git
+backend/node_modules/
+backend/.wrangler/
+backend/.dev.vars
+backend/assets/character/png/*.png
+backend/assets/icons/*.png
+worker.properties
