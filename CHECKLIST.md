@@ -36,3 +36,11 @@
 - [ ] V24 的規格爭議：決定是否移除 `backend/worker/llm-client.js` 的 Gemini 直連備援（見 BLOCKERS.md）
 - [ ] 部署前把 `backend/wrangler.toml` 的 `database_id` 換成 `pet-maid-db` 的編號（不得填 accompany_bot 的）
 - [ ] 突變報告中存活的等價突變（MUTATION-REPORT.md M1.5 段落）看一眼是否同意判斷
+
+## M1.6
+
+- [ ] 照 DEVICE-CHECKLIST-M1.6.md 實測
+- [ ] 讀 RISK-REVIEW.md 的 M1.6 段落
+- [ ] 聊天網頁換成白髮女僕：另立一案（聊天網頁的換裝功能用的是黑髮角色的分層圖，換角色會牽動換裝）
+- [ ] 在聊天網頁換角色之前，聊天時 LLM 不會用到 `pout`、`shy`；懸浮窗的推播可以用
+- [ ] `shy.png` 若嬌的感覺不夠，用 Nano Banana 重生 `pet-art-original/face-shy.jpg` 後重跑 `python tools/make_expression_frames.py ../pet-art-original`

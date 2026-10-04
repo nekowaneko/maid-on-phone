@@ -49,3 +49,15 @@ Invoke-RestMethod -Method Post -Uri "https://pet-maid-api.xxx.workers.dev/api/pu
   -Body ([Text.Encoding]::UTF8.GetBytes('{"text":"該喝水了"}'))
 ```
 成功時回覆 `ok: True` 與這則的編號，手機依角色模式與遊戲狀態出現角色、一般通知或排隊。
+
+## 7. 送一則帶表情的推播（M1.6 貴批次完成後才有這個功能）
+指令和第 6 節相同，只把 text 換成帶表情標籤的台詞：
+```powershell
+Invoke-RestMethod -Method Post -Uri "https://pet-maid-api.xxx.workers.dev/api/push" `
+  -Headers @{ "x-app-secret" = "你的存取密鑰" } -ContentType "application/json; charset=utf-8" `
+  -Body ([Text.Encoding]::UTF8.GetBytes('{"text":"[pout]真拿主人沒辦法。[smile]水記得喝。"}'))
+```
+- 可用的表情鍵：`neutral`、`laugh`、`smile`、`thinking`、`troubled`、`pout`（微傲）、`shy`（嬌），定義在 `app/src/main/assets/pet/emotion-map.js`。不在清單的標籤會用平常的臉。
+- 標籤寫在哪個字前面，角色就在逐字打到那個字時換臉；說完 3 秒回到平常的臉。
+- 角色模式關時，通知欄只顯示去掉標籤的文字；點通知叫出角色時才照原文演出。
+- 不帶標籤的推播和 M1.5 完全一樣。

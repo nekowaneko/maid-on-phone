@@ -34,3 +34,9 @@
 - `backend/`：Cloudflare Worker B（accompany_bot commit `54065e9` 的副本，來源見 backend/SOURCE.md）。聊天網頁、人設、表情標籤、角色小檔案沿用；M1.5 新增 `POST /api/push` 經 FCM 送純資料推播。
 - App：泡泡「聊聊」→ `ChatActivity`（WebView 只載入 `worker.properties` 設定的 https 網址，其他網址一律擋下）。
 - 與 accompany_bot 分開的東西：Worker 名稱、D1 資料庫、存取密鑰、Gemini 金鑰。共用的東西：Gemini 轉送服務。
+
+## M1.6 懸浮窗表情
+
+- 推播資料 `{id, text, script?}`：Worker B 收到帶標籤的台詞時，`text` 為去掉標籤的純文字（給通知欄），`script` 為原文（給角色演出）；沒有標籤時不帶 `script`，與 M1.5 相同。
+- 角色頁依序載入三支一般 script：`emotion-map.js`（表情鍵 → 整張表情圖）、`vendor/stream-parser.js`（由 `tools/sync-overlay-vendor.mjs` 從 `backend/core/stream-parser.js` 產生，不得手改）、`performance.js`（演出排程：逐字、換臉、排隊、跳到演完）。
+- 表情圖是整張替換，放在 `frames/local/`（不進 git），由 `tools/make_expression_frames.py` 從 Nano Banana 做的差分圖產生。
