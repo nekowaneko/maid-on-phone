@@ -32,6 +32,6 @@ done
 
 # backend 套件：每個 worktree 各自安裝
 if [ -f "$TARGET/backend/package.json" ] && [ ! -d "$TARGET/backend/node_modules" ]; then
-  (cd "$TARGET/backend" && npm install --no-audit --no-fund --silent) && echo "已安裝 backend 套件"
+  (cd "$TARGET/backend" && npm install --no-audit --no-fund --no-package-lock --silent) && echo "已安裝 backend 套件"
 fi
 echo "完成：$TARGET"
