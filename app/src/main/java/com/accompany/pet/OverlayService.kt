@@ -37,6 +37,9 @@ import com.accompany.pet.core.PetState
 import com.accompany.pet.core.Point
 import com.accompany.pet.core.RenderState
 import com.accompany.pet.core.Size
+import com.accompany.pet.core.chat.CHAT_NOT_SET_MESSAGE
+import com.accompany.pet.core.chat.ChatAction
+import com.accompany.pet.core.chat.decideChat
 import com.accompany.pet.core.clampInScreen
 import com.accompany.pet.core.initialPosition
 import com.accompany.pet.core.permission.MIC_DENIED_MESSAGE
@@ -290,7 +293,7 @@ class OverlayService : Service() {
         wv.settings.allowFileAccess = false       // android_asset 不受此設定影響
         wv.settings.allowContentAccess = false
         wv.webViewClient = PetWebViewClient()
-        wv.addJavascriptInterface(PetBridge(onTap = ::toggleBubble, onMic = ::onMicPressed), "PetBridge")
+        wv.addJavascriptInterface(PetBridge(onTap = ::toggleBubble, onMic = ::onMicPressed, onChat = ::onChatPressed), "PetBridge")
         wv.setOnTouchListener(DragHandler())
         wv.loadUrl("file:///android_asset/pet/index.html")
         // WebView 固定為「角色＋泡泡」寬，展開泡泡時只改外層容器大小，WebView 不必重新排版，避免先錯位再彈回
@@ -374,6 +377,18 @@ class OverlayService : Service() {
             return
         }
         speech.start()
+    }
+
+    // 按「聊聊」：沒設定聊天網址就在泡泡提示；有設定就收起泡泡、開啟聊天畫面（角色保留，閒置照常計時）
+    private fun onChatPressed() {
+        markInteraction()
+        when (decideChat(BuildConfig.CHAT_URL)) {
+            ChatAction.SHOW_NOT_SET -> showText(CHAT_NOT_SET_MESSAGE)  // 不開聊天畫面（M15-S06）
+            ChatAction.OPEN -> {
+                if (bubbleShown) toggleBubble()
+                startActivity(Intent(this, ChatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))  // 從服務開畫面需要新工作
+            }
+        }
     }
 
     // 在泡泡顯示文字（以 JSON 字串跳脫，避免注入）

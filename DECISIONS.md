@@ -85,3 +85,8 @@
 51. **服務帳戶本身有問題時的錯誤代碼**：JSON 解析失敗、缺欄位、私鑰無法匯入時，`sendFcm` 不連外，回傳 `{ ok: false, status: null, code: 'INVALID_SERVICE_ACCOUNT' }`（§4.3 只規定 Google 回錯誤時的代碼，這是本機錯誤，另給一個好辨認的代碼；不帶出例外內容，避免私鑰片段進日誌）。
 52. **fcm-client 輔助測試的 PEM 標頭拆開寫**：測試現場產生 RSA 金鑰並組成 PEM，標頭用常數 `PEM_DASHES` 拼出。檔案裡沒有任何真實金鑰，拆開寫只是避免 V06 的樣式掃描把測試程式誤判為含私鑰。
 53. **index.js 的推播相依**：`pusher` 與 `pushConfig` 都從 `env.FCM_SERVICE_ACCOUNT`、`env.FCM_DEVICE_TOKEN` 讀，`USE_STUB` 為 true 時改用 Stub；`randomText` 不注入，由路由層預設用 `crypto.randomUUID()` 前 8 碼。
+54. **ChatActivity 的系統列空間**：WebView 不吃 padding，外層包一個 FrameLayout 讓出狀態列、導覽列與鍵盤的空間（`enableEdgeToEdge` 之後必須自己處理）。
+55. **ChatActivity 渲染程序被收掉時結束畫面**：覆寫 `onRenderProcessGone` 回傳 true 並 `finish()`，避免整個 App（含懸浮角色）一起閃退；計畫書沒有規定，選較保守的做法。
+56. **V07 的 ChatActivity 檢查方式**：`ChatActivity.kt` 必須恰好有一行 `val url = normalizeChatUrl(BuildConfig.CHAT_URL)`，且所有 `loadUrl(...)` 的參數都只能是 `url`；懸浮窗照舊檢查本機資產開頭（排除 ChatActivity.kt）。
+57. **主畫面只顯示「已設定」與否**：聊天網址本身不顯示在主畫面，判斷用 `decideChat`，與「聊聊」按鈕的判斷一致（http 網址同樣顯示未設定）。
+58. **`worker.properties` 的值寫進 BuildConfig 前跳脫反斜線與雙引號**：避免使用者貼入的網址含引號時產生無法編譯的 BuildConfig。

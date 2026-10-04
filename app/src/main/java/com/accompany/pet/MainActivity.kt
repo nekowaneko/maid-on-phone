@@ -23,6 +23,9 @@ import androidx.core.content.FileProvider
 import com.accompany.pet.core.exportCsv
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.accompany.pet.core.chat.CHAT_NOT_SET_MESSAGE
+import com.accompany.pet.core.chat.ChatAction
+import com.accompany.pet.core.chat.decideChat
 import com.accompany.pet.core.permission.StartAction
 import com.accompany.pet.core.permission.decideStart
 
@@ -34,6 +37,7 @@ const val USAGE_ACCESS_HINT = "開啟後才能在玩遊戲時先不打擾"  // �
 const val NO_FIREBASE_HINT = "尚未設定 Firebase，見 docs/FIREBASE-SETUP.md"  // 沒有推播代碼時的說明
 const val TEST_PUSH_TEXT = "這是一則測試推播"  // 測試推播的內容
 const val PADDING_DP = 24  // 畫面四周留白
+const val CHAT_SET_TEXT = "聊天網址：已設定"  // 聊天網址已設定時的說明
 
 // 主畫面：權限說明、開始／停止
 class MainActivity : AppCompatActivity() {
@@ -44,6 +48,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var usageStatus: TextView   // 使用情形存取權說明
     private lateinit var usageButton: Button     // 前往開啟使用情形存取權
     private lateinit var pushCode: TextView      // 推播代碼
+    private lateinit var chatStatus: TextView    // 聊天網址是否已設定
     private lateinit var customGames: EditText   // 自訂遊戲清單輸入框
     private var lastTestId: String? = null       // 上一則測試推播的編號（供「重送上一則」）
 
@@ -141,10 +146,12 @@ class MainActivity : AppCompatActivity() {
             saveCustomGames(this, customGames.text.toString())
             status.text = "已儲存自訂遊戲清單"
         })
+        chatStatus = TextView(this).apply { textSize = 14f }
         root.addView(pushCode)
         root.addView(button("複製推播代碼") { copyPushCode() })
         root.addView(button("測試推播") { sendTestPush(newId = true) })
         root.addView(button("重送上一則") { sendTestPush(newId = false) })
+        root.addView(chatStatus)
     }
 
     // 複製推播代碼到剪貼簿
@@ -181,6 +188,7 @@ class MainActivity : AppCompatActivity() {
         usageStatus.text = if (usage) "使用情形存取權：已開啟" else USAGE_ACCESS_HINT
         usageButton.isEnabled = !usage
         pushCode.text = PushTokenStore(this).load()?.let { "推播代碼：$it" } ?: NO_FIREBASE_HINT
+        chatStatus.text = chatStatusText()
     }
 
     // 按「叫出角色」：沒權限就說明，有權限才啟動角色（S01）
@@ -228,6 +236,10 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(send, "分享耗電紀錄"))
     }
 
+
+    // 聊天網址是否已設定的說明（網址本身不顯示）
+    private fun chatStatusText(): String =
+        if (decideChat(BuildConfig.CHAT_URL) == ChatAction.OPEN) CHAT_SET_TEXT else CHAT_NOT_SET_MESSAGE
 
     // 耗電測試模式按鈕的文字
     private fun testModeLabel(): String =

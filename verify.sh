@@ -102,8 +102,11 @@ if grep -rnE 'fetch\(|crypto\.subtle|env\.|eval\(|new Function\(' backend/core; 
 pass "V24"
 
 if [ "$CORE_ONLY" -eq 0 ]; then
-  # V07：loadUrl 只載入本機資產，且有攔截函式
-  LOADS=$(grep -rhoE 'loadUrl\([^)]*\)' app/src || true)
+  # V07：懸浮窗 loadUrl 只載入本機資產；ChatActivity 只載入 normalizeChatUrl(BuildConfig.CHAT_URL) 的結果；兩支都有攔截函式（M1.5 A4 修訂）
+  CHAT_KT=app/src/main/java/com/accompany/pet/ChatActivity.kt
+  OVERLAY_KT=app/src/main/java/com/accompany/pet/OverlayService.kt
+  [ -f "$CHAT_KT" ] || fail "V07 找不到 ChatActivity.kt"
+  LOADS=$(grep -rhoE 'loadUrl\([^)]*\)' app/src --exclude=ChatActivity.kt || true)
   [ -n "$LOADS" ] || fail "V07 找不到 loadUrl"
   while IFS= read -r line; do
     case "$line" in
@@ -111,13 +114,30 @@ if [ "$CORE_ONLY" -eq 0 ]; then
       *) fail "V07 loadUrl 參數不是本機資產：$line" ;;
     esac
   done <<< "$LOADS"
-  grep -rq 'shouldOverrideUrlLoading' app/src || fail "V07 缺少 shouldOverrideUrlLoading"
+  grep -q 'normalizeChatUrl(BuildConfig.CHAT_URL)' "$CHAT_KT" || fail "V07 ChatActivity.kt 缺少 normalizeChatUrl(BuildConfig.CHAT_URL)"
+  [ "$(grep -cE '^\s*val url = normalizeChatUrl\(BuildConfig\.CHAT_URL\)$' "$CHAT_KT")" -eq 1 ] || fail "V07 ChatActivity.kt 的 url 不是只來自 normalizeChatUrl(BuildConfig.CHAT_URL)"
+  CHAT_LOADS=$(grep -oE 'loadUrl\([^)]*\)' "$CHAT_KT" || true)
+  [ -n "$CHAT_LOADS" ] || fail "V07 ChatActivity.kt 找不到 loadUrl"
+  while IFS= read -r line; do
+    [ "$line" = "loadUrl(url)" ] || fail "V07 ChatActivity.kt 的 loadUrl 參數不是檢查後的網址：$line"
+  done <<< "$CHAT_LOADS"
+  for f in "$OVERLAY_KT" "$CHAT_KT"; do
+    grep -q 'shouldOverrideUrlLoading' "$f" || fail "V07 $f 缺少 shouldOverrideUrlLoading"
+  done
   pass "V07"
 
-  # V08：@JavascriptInterface 恰好 2 次
+  # V08：@JavascriptInterface 恰好 3 次；ChatActivity 不得加 JS 介面（M1.5 A5 修訂）
   JS_COUNT=$(grep -rho '@JavascriptInterface' app/src | wc -l)
-  [ "$JS_COUNT" -eq 2 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次"
+  [ "$JS_COUNT" -eq 3 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次"
+  if grep -n 'addJavascriptInterface' "$CHAT_KT"; then fail "V08 ChatActivity.kt 含 addJavascriptInterface"; fi
   pass "V08"
+
+  # V25：聊天畫面不對外開放、不讀本機檔案、禁止混合內容、攔截子資源（M1.5 A23）
+  grep -A3 'android:name=".ChatActivity"' "$MANIFEST" | grep -q 'android:exported="false"' || fail "V25 ChatActivity 不是 exported=false"
+  for word in 'allowFileAccess = false' 'allowContentAccess = false' 'MIXED_CONTENT_NEVER_ALLOW' 'shouldInterceptRequest'; do
+    grep -qF "$word" "$CHAT_KT" || fail "V25 ChatActivity.kt 缺少 $word"
+  done
+  pass "V25"
 
   # V09：懸浮窗不得 MATCH_PARENT
   [ -f app/src/main/java/com/accompany/pet/OverlayService.kt ] || fail "V09 找不到 OverlayService.kt"

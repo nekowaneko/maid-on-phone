@@ -47,6 +47,13 @@
             </intent-filter>
         </activity>
 
+        <!-- 聊天畫面：只由懸浮角色的「聊聊」開啟，不讓其他 App 叫起（A23） -->
+        <activity
+            android:name=".ChatActivity"
+            android:exported="false"
+            android:label="聊聊"
+            android:windowSoftInputMode="adjustResize" />
+
         <service
             android:name=".OverlayService"
             android:exported="false"

@@ -13,6 +13,16 @@ val firebaseProps = Properties().apply {
 // 取得 Firebase 設定值並轉成 BuildConfig 用的字串字面值
 fun firebaseValue(key: String): String = "\"" + firebaseProps.getProperty(key, "").trim() + "\""
 
+// 讀入 worker.properties（不進 git，M1.5 A22）；不存在時聊天網址為空字串，建置照常
+val workerProps = Properties().apply {
+    val f = rootProject.file("worker.properties")
+    if (f.isFile) f.inputStream().use { load(it) }
+}
+
+// 取得 Worker B 設定值並轉成 BuildConfig 用的字串字面值（跳脫反斜線與雙引號）
+fun workerValue(key: String): String =
+    "\"" + workerProps.getProperty(key, "").trim().replace("\\", "\\\\").replace("\"", "\\\"") + "\""
+
 android {
     namespace = "com.accompany.pet"
     compileSdk {
@@ -32,6 +42,7 @@ android {
         buildConfigField("String", "FIREBASE_APPLICATION_ID", firebaseValue("applicationId"))
         buildConfigField("String", "FIREBASE_API_KEY", firebaseValue("apiKey"))
         buildConfigField("String", "FIREBASE_SENDER_ID", firebaseValue("senderId"))
+        buildConfigField("String", "CHAT_URL", workerValue("chatUrl"))
     }
 
     buildTypes {
