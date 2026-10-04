@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>圖示調整器</title>
+<!-- 調整 App 圖示用：圖片以相對路徑讀本機的角色圖（不內嵌），本檔可以進 git。
+     由專案上一層資料夾啟動靜態伺服器後開 /pet-maid/tools/icon-tuner.html（見 .claude/launch.json）。 -->
+<style>
+  :root {
+    --bg: #f6f5f3; --panel: #ffffff; --text: #1f1d1b; --muted: #6b6762; --line: #e3e0dc;
+    --accent: #d9577a; --wall-light: #e9eef3; --wall-dark: #1d2329;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #171615; --panel: #211f1e; --text: #ecebe9; --muted: #a29d97; --line: #34312e; --accent: #f08aa6;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #171615; --panel: #211f1e; --text: #ecebe9; --muted: #a29d97; --line: #34312e; --accent: #f08aa6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.6 system-ui, "Noto Sans TC", sans-serif; }
+  main { max-width: 1100px; margin: 0 auto; padding: 20px 16px 40px; display: grid; grid-template-columns: 340px 1fr; gap: 20px; }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+  h1 { font-size: 20px; font-weight: 600; margin: 0 0 4px; grid-column: 1 / -1; }
+  .sub { color: var(--muted); margin: 0 0 8px; grid-column: 1 / -1; font-size: 14px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  .field { margin-bottom: 14px; }
+  .field > label, .field > .label { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+  .field output { color: var(--text); font-variant-numeric: tabular-nums; }
+  input[type=range] { width: 100%; accent-color: var(--accent); }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 4px 10px; font: inherit; font-size: 13px; cursor: pointer; }
+  .chip[aria-pressed="true"] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+  .swatches { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .swatch { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); cursor: pointer; padding: 0; }
+  .swatch[aria-pressed="true"] { border-color: var(--accent); }
+  input[type=color] { width: 34px; height: 28px; border: none; background: none; padding: 0; cursor: pointer; }
+  .previews { display: grid; gap: 16px; }
+  .big { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+  .big figure { margin: 0; text-align: center; font-size: 13px; color: var(--muted); }
+  canvas { display: block; }
+  .homes { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .home { border-radius: 12px; padding: 18px 12px; display: flex; justify-content: space-around; align-items: flex-start; }
+  .home.light { background: var(--wall-light); color: #222; }
+  .home.dark { background: var(--wall-dark); color: #eee; }
+  .app { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 12px; }
+  .ghost { width: 56px; height: 56px; border-radius: 16px; background: rgba(127,127,127,.25); }
+  .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  button.primary { background: var(--accent); color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  button.plain { background: transparent; color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
+  pre { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 10px; font-size: 12px; white-space: pre-wrap; margin: 10px 0 0; }
+  .note { font-size: 12px; color: var(--muted); }
+  .error { color: #c0392b; font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>App 圖示調整器</h1>
+  <p class="sub">拖動左邊的設定，右邊即時預覽。虛線圈是「一定看得到」的範圍，圈外可能被手機的遮罩切掉。滿意後按「複製設定」貼給 Claude。</p>
+
+  <section class="panel" aria-label="設定">
+    <div class="field">
+      <div class="label">表情</div>
+      <div class="chips" id="faces"></div>
+    </div>
+    <div class="field">
+      <div class="label">來源</div>
+      <div class="chips" id="sources"></div>
+      <p class="note" id="sourceNote"></p>
+    </div>
+    <div class="field">
+      <label for="zoom">大小（數字越大角色越大）<output id="zoomOut"></output></label>
+      <input type="range" id="zoom" min="40" max="220" step="1">
+    </div>
+    <div class="field">
+      <label for="cx">左右位置<output id="cxOut"></output></label>
+      <input type="range" id="cx" step="1">
+    </div>
+    <div class="field">
+      <label for="cy">上下位置<output id="cyOut"></output></label>
+      <input type="range" id="cy" step="1">
+    </div>
+    <div class="field" id="bgField">
+      <div class="label">底色</div>
+      <div class="swatches" id="swatches"></div>
+    </div>
+    <div class="field">
+      <div class="label">其他</div>
+      <div class="chips">
+        <button class="chip" id="guide" type="button" aria-pressed="true">顯示可見範圍</button>
+        <button class="chip" id="reset" type="button">回到目前的設定</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="primary" id="copy" type="button">複製設定</button>
+      <span class="note" id="copied"></span>
+    </div>
+    <pre id="settings"></pre>
+    <p class="error" id="error" hidden></p>
+  </section>
+
+  <section class="previews" aria-label="預覽">
+    <div class="panel big" id="big"></div>
+    <div class="panel">
+      <div class="label note" style="margin-bottom:8px">桌面實際大小（約 56dp）</div>
+      <div class="homes">
+        <div class="home light" id="homeLight"></div>
+        <div class="home dark" id="homeDark"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+  // 常數定義
+  var FACES = [
+    { key: 'pout', name: 'pout 微傲' }, { key: 'shy', name: 'shy 嬌' }, { key: 'smile', name: 'smile' },
+    { key: 'thinking', name: 'thinking' }, { key: 'troubled', name: 'troubled' }, { key: 'idle', name: 'idle 平常' }
+  ];
+  // 來源：去背圖（300×349）或 Nano Banana 原圖（864×1229，含房間背景）
+  var SOURCES = {
+    cutout: {
+      name: '去背圖', w: 300, h: 349,
+      path: function (k) { return '../app/src/main/assets/pet/frames/local/' + k + '.png'; },
+      defaults: { zoom: 132, cx: 150, cy: 118 },
+      note: '背景透明，可以縮小讓整對貓耳入鏡；底色由下方決定。'
+    },
+    original: {
+      name: '原圖（含房間背景）', w: 864, h: 1229,
+      path: function (k) { return '../../pet-art-original/' + (k === 'idle' ? 'idle.jpg' : 'face-' + k + '.jpg'); },
+      defaults: { zoom: 237, cx: 432, cy: 230 },
+      note: '原圖上緣貼著貓耳尖，縮太小時上方會出現空白（以底色補）。'
+    }
+  };
+  var COLORS = ['#FFE8EF', '#FFFFFF', '#FDF1DC', '#E7F0FF', '#EDE7F6', '#2B2A33', '#F4C6D4'];
+  var MASKS = [
+    { key: 'circle', name: '圓形' },
+    { key: 'squircle', name: '方圓（vivo 常見）' },
+    { key: 'rounded', name: '圓角方形' }
+  ];
+  var BIG_SIZE = 180;   // 大預覽每格的像素
+  var HOME_SIZE = 56;   // 桌面預覽的大小（CSS px，約等於 56dp）
+  var CURRENT = { face: 'pout', source: 'cutout', zoom: 132, cx: 150, cy: 118, color: '#FFE8EF' }; // 目前腳本裡的設定
+
+  var state = Object.assign({}, CURRENT, { guide: true });
+  var images = {};
+
+  // 取得元素
+  function $(id) { return document.getElementById(id); }
+
+  // 載入一張圖（快取）
+  function loadImage(src) {
+    if (!images[src]) {
+      images[src] = new Promise(function (resolve, reject) {
+        var img = new Image();
+        img.onload = function () { resolve(img); };
+        img.onerror = function () { reject(new Error('讀不到圖片：' + src)); };
+        img.src = src;
+      });
+    }
+    return images[src];
+  }
+
+  // 依遮罩形狀在 (x, y, size) 方塊內畫出路徑
+  function maskPath(ctx, key, x, y, s) {
+    ctx.beginPath();
+    if (key === 'circle') {
+      ctx.arc(x + s / 2, y + s / 2, s / 2, 0, Math.PI * 2);
+    } else if (key === 'rounded') {
+      var r = s * 0.22;
+      ctx.moveTo(x + r, y); ctx.arcTo(x + s, y, x + s, y + s, r); ctx.arcTo(x + s, y + s, x, y + s, r);
+      ctx.arcTo(x, y + s, x, y, r); ctx.arcTo(x, y, x + s, y, r);
+    } else {
+      // 超橢圓 n = 4
+      var n = 4, cx = x + s / 2, cy = y + s / 2, a = s / 2;
+      for (var i = 0; i <= 64; i += 1) {
+        var t = (i / 64) * Math.PI * 2, c = Math.cos(t), si = Math.sin(t);
+        var px = cx + a * Math.sign(c) * Math.pow(Math.abs(c), 2 / n);
+        var py = cy + a * Math.sign(si) * Math.pow(Math.abs(si), 2 / n);
+        if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+      }
+    }
+    ctx.closePath();
+  }
+
+  // 畫一個圖示：size 為可見範圍（72dp 那一圈）的像素
+  function drawIcon(canvas, img, size, maskKey, showGuide) {
+    var dpr = window.devicePixelRatio || 1;
+    canvas.width = size * dpr; canvas.height = size * dpr;
+    canvas.style.width = size + 'px'; canvas.style.height = size + 'px';
+    var ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, size, size);
+    ctx.save();
+    maskPath(ctx, maskKey, 0, 0, size);
+    ctx.clip();
+    ctx.fillStyle = state.color;
+    ctx.fillRect(0, 0, size, size);
+    // 可見範圍的半徑 = size / 2，對應來源圖上的 zoom 像素
+    var scale = (size / 2) / state.zoom;
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(img, size / 2 - state.cx * scale, size / 2 - state.cy * scale, img.naturalWidth * scale, img.naturalHeight * scale);
+    ctx.restore();
+    if (showGuide && state.guide) {
+      // 安全區（66dp）：任何遮罩都一定看得到
+      ctx.setLineDash([4, 4]);
+      ctx.strokeStyle = 'rgba(217,87,122,.9)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(size / 2, size / 2, (size / 2) * (66 / 72), 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  // 依目前設定重畫所有預覽
+  function render() {
+    var source = SOURCES[state.source];
+    loadImage(source.path(state.face)).then(function (img) {
+      $('error').hidden = true;
+      var big = $('big');
+      big.textContent = '';
+      MASKS.forEach(function (m) {
+        var fig = document.createElement('figure');
+        var c = document.createElement('canvas');
+        drawIcon(c, img, BIG_SIZE, m.key, true);
+        var cap = document.createElement('figcaption');
+        cap.textContent = m.name;
+        fig.append(c, cap);
+        big.append(fig);
+      });
+      ['homeLight', 'homeDark'].forEach(function (id) {
+        var home = $(id);
+        home.textContent = '';
+        for (var i = 0; i < 4; i += 1) {
+          var app = document.createElement('div');
+          app.className = 'app';
+          if (i === 1) {
+            var c = document.createElement('canvas');
+            drawIcon(c, img, HOME_SIZE, 'squircle', false);
+            var label = document.createElement('span');
+            label.textContent = '手機女僕';
+            app.append(c, label);
+          } else {
+            var ghost = document.createElement('div');
+            ghost.className = 'ghost';
+            var label2 = document.createElement('span');
+            label2.textContent = ['相機', '', '設定', '時鐘'][i];
+            app.append(ghost, label2);
+          }
+          home.append(app);
+        }
+      });
+    }).catch(function (e) {
+      $('error').hidden = false;
+      $('error').textContent = e.message + '（請確認是用本機伺服器開啟，且圖已用 tools/make_expression_frames.py 產生）';
+    });
+    $('settings').textContent = settingsText();
+  }
+
+  // 要貼給 Claude 的設定文字
+  function settingsText() {
+    var s = SOURCES[state.source];
+    return [
+      '圖示設定',
+      '表情：' + state.face,
+      '來源：' + s.name + '（' + s.w + '×' + s.h + '）',
+      'VISIBLE_CENTER = (' + state.cx + ', ' + state.cy + ')',
+      'VISIBLE_RADIUS = ' + state.zoom,
+      'BACKGROUND_COLOR = "' + state.color + '"'
+    ].join('\n');
+  }
+
+  // 更新滑桿的範圍與數值
+  function syncSliders() {
+    var s = SOURCES[state.source];
+    var zoom = $('zoom'), cx = $('cx'), cy = $('cy');
+    zoom.min = Math.round(s.w * 0.15); zoom.max = Math.round(s.w * 0.8);
+    cx.min = 0; cx.max = s.w; cy.min = 0; cy.max = s.h;
+    zoom.value = state.zoom; cx.value = state.cx; cy.value = state.cy;
+    // 大小反過來顯示：zoom 越小角色越大
+    $('zoomOut').textContent = Math.round((s.defaults.zoom / state.zoom) * 100) + '%';
+    $('cxOut').textContent = state.cx;
+    $('cyOut').textContent = state.cy;
+    $('sourceNote').textContent = s.note;
+  }
+
+  // 建立一組切換鈕
+  function buildChips(container, items, getKey, getName, isOn, onPick) {
+    container.textContent = '';
+    items.forEach(function (item) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'chip';
+      b.textContent = getName(item);
+      b.setAttribute('aria-pressed', String(isOn(item)));
+      b.addEventListener('click', function () { onPick(item); refreshControls(); render(); });
+      container.append(b);
+    });
+  }
+
+  // 重建所有控制項的狀態
+  function refreshControls() {
+    buildChips($('faces'), FACES, function (f) { return f.key; }, function (f) { return f.name; },
+      function (f) { return f.key === state.face; }, function (f) { state.face = f.key; });
+    buildChips($('sources'), Object.keys(SOURCES), function (k) { return k; }, function (k) { return SOURCES[k].name; },
+      function (k) { return k === state.source; },
+      function (k) {
+        if (k === state.source) return;
+        state.source = k;
+        Object.assign(state, SOURCES[k].defaults);
+      });
+    var sw = $('swatches');
+    sw.textContent = '';
+    COLORS.forEach(function (c) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'swatch'; b.style.background = c;
+      b.title = c; b.setAttribute('aria-label', '底色 ' + c);
+      b.setAttribute('aria-pressed', String(c.toLowerCase() === state.color.toLowerCase()));
+      b.addEventListener('click', function () { state.color = c; refreshControls(); render(); });
+      sw.append(b);
+    });
+    var pick = document.createElement('input');
+    pick.type = 'color'; pick.value = state.color; pick.title = '自訂底色'; pick.setAttribute('aria-label', '自訂底色');
+    pick.addEventListener('input', function () { state.color = pick.value.toUpperCase(); render(); });
+    sw.append(pick);
+    $('guide').setAttribute('aria-pressed', String(state.guide));
+    syncSliders();
+  }
+
+  // 滑桿
+  ['zoom', 'cx', 'cy'].forEach(function (id) {
+    $(id).addEventListener('input', function () {
+      state[id] = Number($(id).value);
+      syncSliders();
+      render();
+    });
+  });
+  // 大小滑桿往右應該變大：反轉方向
+  $('zoom').style.direction = 'rtl';
+
+  $('guide').addEventListener('click', function () { state.guide = !state.guide; refreshControls(); render(); });
+  $('reset').addEventListener('click', function () { Object.assign(state, CURRENT); refreshControls(); render(); });
+  $('copy').addEventListener('click', function () {
+    var text = settingsText();
+    var done = function () { $('copied').textContent = '已複製'; setTimeout(function () { $('copied').textContent = ''; }, 1500); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, function () { $('copied').textContent = '請手動選取下方文字複製'; });
+    else $('copied').textContent = '請手動選取下方文字複製';
+  });
+
+  refreshControls();
+  render();
+</script>
+</body>
+</html>
