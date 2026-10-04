@@ -38,3 +38,9 @@ M0 只驗證懸浮角色能不能常駐、耗電多少。不接 AI、不連網�
 `backend/` 是 accompany_bot 的獨立副本（Worker B），提供聊天網頁與送推播，部署步驟見 docs/WORKER-SETUP.md。
 點角色展開泡泡，按「說話」右邊的「聊聊」開啟聊天畫面。
 角色立繪不在 git 裡，複製自本機的 accompany_bot。
+
+## M1.6：懸浮窗表情演出
+
+- 推播可以帶表情標籤，例如 `[pout]真拿主人沒辦法。[smile]水記得喝。`：角色模式開時，懸浮角色逐字說出並依標籤換整張表情圖；角色模式關時，通知欄只顯示純文字。送法見 docs/WORKER-SETUP.md 第 7 節（PowerShell 與 cmd 兩種）。
+- 表情圖由 `tools/make_expression_frames.py` 從 Nano Banana 做的差分圖產生，App 圖示由 `tools/make_app_icon.py` 用 pout 那張產生；兩者都只放在本機、不進 git。
+- 這個里程碑第一次把工作拆成三條線、同時派三個代理人在各自的 git worktree 開工，流程與經驗記在 docs/PARALLEL-AGENTS.md。

@@ -40,3 +40,6 @@ worker.properties
 # M1.5：Stryker 突變測試的產物
 backend/reports/mutation/
 backend/.stryker-tmp/
+
+# M1.6：App 圖示用角色立繪產生（tools/make_app_icon.py），只放在 debug 來源集，不進公開 repo
+app/src/debug/res/

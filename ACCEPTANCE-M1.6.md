@@ -42,3 +42,9 @@
 2. 把 APK 裝到手機，照 DEVICE-CHECKLIST-M1.6.md 實測
 3. 讀 RISK-REVIEW.md 的 M1.6 段落（第 26～37 項）
 4. 掃一遍 CHECKLIST.md 的 M1.6 段落
+
+## 實機結果（2026-10-04，V2503）
+
+- M16-S10：表情與換臉時機正確。使用者看過後調整節奏（每字 0.08 秒、句尾停 0.5 秒），M16-S10、S12 重新凍結，`./verify.sh --full` 全綠
+- Worker B 部署後，帶表情的推播送達並正確演出
+- DEVICE-CHECKLIST-M1.6.md 其餘項目尚待實測

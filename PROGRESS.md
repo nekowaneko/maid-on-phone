@@ -103,3 +103,10 @@
 - 修正 verify.sh 第 118 行 sed 替換字串誤成 0x01 位元組（B 線回報，`80f0d9d`）；worktree 準備腳本不再產生 package-lock.json（`4878f0a`）
 - 依序合併 D、C、B，三次合併皆無衝突
 - `./verify.sh --full` 第一次停在 V16（RISK-REVIEW.md 尚未寫 M1.6 段落，屬整合工作）；補齊報告後重跑
+
+### 實機（2026-10-04）
+- 以無線偵錯安裝 APK；表情與換臉時機正確（M16-S10）
+- 使用者看過後覺得換臉太快（pout 只停 0.69 秒），決定每字 0.08 秒＋句尾停 0.5 秒；重新凍結 M16-S10、S12（`7b7e6de`），`./verify.sh --full` 全綠，重新安裝
+- Worker B 部署後以 cmd（curl＋UTF-8 檔案）送帶表情推播成功；之前的 `error code: 1042` 是指令網址仍為範例的 `xxx`
+- App 圖示改用 pout 表情（debug 來源集，不進 git）
+- 平行分派代理人的流程整理成 docs/PARALLEL-AGENTS.md（本專案的里程碑）
