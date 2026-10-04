@@ -1,51 +1,64 @@
-# 用表情差分 face-pout.jpg 產生 App 圖示（只放在 debug 來源集，不進 git）。
+# 用懸浮窗的 pout 表情圖產生 App 圖示（只放在 debug 來源集，不進 git）。
 # 角色立繪不進公開 repo（規格書 §2.1），所以圖示產物放在 app/src/debug/res/，由 .gitignore 排除；
 # release 建置仍用 main 的預設圖示。
-# 用法：python tools/make_app_icon.py <原圖資料夾，含 face-pout.jpg>
+# 來源用已去背的 frames/local/pout.png（由 tools/make_expression_frames.py 產生）：
+# 原圖的貓耳尖幾乎貼著上緣，去背後放到透明畫布上縮小，上方才有空間把整對貓耳放進可見範圍。
+# 用法：python tools/make_app_icon.py
 
-import sys
 from pathlib import Path
 
 from PIL import Image
 
 # 常數定義
-SOURCE_NAME = "face-pout.jpg"
-SOURCE_WIDTH = 1728                 # 原圖全尺寸寬（face-*.jpg 可能是縮小版，依比例換算）
-FACE_CENTER = (864, 480)            # 裁切中心：臉與貓耳的中間（以 1728 寬的原圖座標）
-CROP_SIDE = 960                     # 108dp 前景對應的裁切邊長（上緣剛好貼齊原圖頂端；中間 72dp 可見區約為貓耳到下巴）
+ROOT = Path(__file__).resolve().parent.parent
+SOURCE = ROOT / "app/src/main/assets/pet/frames/local/pout.png"  # 300×349 去背圖
+VISIBLE_CENTER = (150, 118)          # 可見圓的中心（以 300×349 的座標）：臉與貓耳的中間
+VISIBLE_RADIUS = 132                 # 可見圓半徑：貓耳尖約 7 成以上在圈內
+CANVAS_SIDE = VISIBLE_RADIUS * 3     # 108dp 畫布中只有中間 72dp 看得到，所以畫布邊長是可見直徑的 1.5 倍
+BACKGROUND_COLOR = "#FFE8EF"         # 圖示底色（淡粉紅，配泡泡的「說話」按鈕）
 DENSITIES = {"mdpi": 108, "hdpi": 162, "xhdpi": 216, "xxhdpi": 324, "xxxhdpi": 432}
-DEBUG_RES = Path(__file__).resolve().parent.parent / "app/src/debug/res"
+DEBUG_RES = ROOT / "app/src/debug/res"
 FOREGROUND_NAME = "ic_launcher_pout.png"
 ADAPTIVE_XML = """<?xml version="1.0" encoding="utf-8"?>
 <!-- 由 tools/make_app_icon.py 產生（debug 專用，不進 git） -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@android:color/white" />
+    <background android:drawable="@color/ic_launcher_pout_background" />
     <foreground android:drawable="@mipmap/ic_launcher_pout" />
 </adaptive-icon>
 """
+COLOR_XML = f"""<?xml version="1.0" encoding="utf-8"?>
+<!-- 由 tools/make_app_icon.py 產生（debug 專用，不進 git） -->
+<resources>
+    <color name="ic_launcher_pout_background">{BACKGROUND_COLOR}</color>
+</resources>
+"""
 
 
-# 以臉為中心裁出正方形
-def crop_face(path):
-    image = Image.open(path).convert("RGB")
-    k = image.width / SOURCE_WIDTH
-    cx, cy, half = FACE_CENTER[0] * k, FACE_CENTER[1] * k, CROP_SIDE * k / 2
-    return image.crop((round(cx - half), round(cy - half), round(cx + half), round(cy + half)))
+# 把去背圖放到透明正方形畫布上，讓可見圓的中心落在畫布正中央
+def build_foreground():
+    face = Image.open(SOURCE).convert("RGBA")
+    canvas = Image.new("RGBA", (CANVAS_SIDE, CANVAS_SIDE), (0, 0, 0, 0))
+    offset = (CANVAS_SIDE // 2 - VISIBLE_CENTER[0], CANVAS_SIDE // 2 - VISIBLE_CENTER[1])
+    canvas.paste(face, offset, face)
+    return canvas
 
 
-# 產生各密度的前景圖與兩個自適應圖示設定
-def main(art_dir):
-    face = crop_face(art_dir / SOURCE_NAME)
+# 產生各密度的前景圖、底色與兩個自適應圖示設定
+def main():
+    foreground = build_foreground()
     for density, size in DENSITIES.items():
         folder = DEBUG_RES / f"mipmap-{density}"
         folder.mkdir(parents=True, exist_ok=True)
-        face.resize((size, size), Image.LANCZOS).save(folder / FOREGROUND_NAME)
+        foreground.resize((size, size), Image.LANCZOS).save(folder / FOREGROUND_NAME)
     anydpi = DEBUG_RES / "mipmap-anydpi"
     anydpi.mkdir(parents=True, exist_ok=True)
     for name in ("ic_launcher.xml", "ic_launcher_round.xml"):
         (anydpi / name).write_text(ADAPTIVE_XML, encoding="utf-8")
+    values = DEBUG_RES / "values"
+    values.mkdir(parents=True, exist_ok=True)
+    (values / "ic_launcher_pout.xml").write_text(COLOR_XML, encoding="utf-8")
     print(f"已產生圖示：{DEBUG_RES}")
 
 
 if __name__ == "__main__":
-    main(Path(sys.argv[1]))
+    main()

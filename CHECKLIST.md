@@ -46,5 +46,4 @@
 - [ ] `shy.png` 若嬌的感覺不夠，用 Nano Banana 重生 `pet-art-original/face-shy.jpg` 後重跑 `python tools/make_expression_frames.py ../pet-art-original`
 - [ ] 關螢幕期間才收到的提醒，畫面恢復後是接著演（B 線決定）；若覺得應該直接跳到演完，告訴 Claude 另外調整
 - [ ] `tools/send_push.py --script` 時記得同時給 `--text`（純文字），否則通知欄會顯示預設句
-- [ ] App 圖示只在 debug 建置是 pout 臉；換掉 `face-pout.jpg` 後重跑 `python tools/make_app_icon.py ../pet-art-original` 再建置
-- [ ] 圓形遮罩下貓耳尖會被切掉一點；若想看到完整貓耳，調整 `tools/make_app_icon.py` 的 `CROP_SIDE`
+- [ ] App 圖示只在 debug 建置是 pout 臉；pout 表情圖更新後重跑 `python tools/make_app_icon.py` 再建置（想調整大小改 `VISIBLE_RADIUS`）
