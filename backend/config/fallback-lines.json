@@ -4,27 +4,27 @@
   "lines": {
     "blocked": {
       "emotion": "troubled",
-      "text": "這個……我們聊點別的好不好？"
+      "text": "這種話我可不接喔。主人，我們換個話題吧。"
     },
     "quota": {
       "emotion": "troubled",
-      "text": "哥哥，人家想睡覺了，明天起床後再聊吧。哥哥晚安。"
+      "text": "哼，一下子問這麼多，我也要喘口氣的。主人等一下再來找我。"
     },
     "capped": {
       "emotion": "neutral",
-      "text": "今天講到這裡就好啦，我明天還在這裡喔。"
+      "text": "真拿主人沒辦法，今天已經聊得夠多了。明天我再陪你。"
     },
     "upstream": {
       "emotion": "thinking",
-      "text": "唔……我腦袋現在有點打結，等一下再跟我說一次好嗎？"
+      "text": "唔……我這邊突然卡住了，才不是偷懶。主人等一下再說一次。"
     },
     "empty": {
       "emotion": "thinking",
-      "text": "欸，我剛剛不小心放空了。再說一次嘛。"
+      "text": "欸，我剛剛不小心放空了……主人再說一次嘛。"
     },
     "unknown": {
       "emotion": "thinking",
-      "text": "我沒聽清楚欸……再說一次好不好？"
+      "text": "我沒聽清楚，主人再說一次好不好？"
     }
   }
 }

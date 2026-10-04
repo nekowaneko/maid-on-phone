@@ -98,7 +98,7 @@ test('buildSystemPrompt 套用真正的範本後不留任何未替換插槽', ()
   assert.ok(prompt.includes('剛剛才聊過。'))
   assert.ok(prompt.includes(buildEmotionList(CONFIG.emotionMap)))
   // 人設內容必須真的被帶進提示詞，否則角色會走鐘
-  assert.ok(prompt.includes('黑髮'))
+  assert.ok(prompt.includes(PERSONA.trim()))
 })
 
 test('buildSystemPrompt 缺任何一段素材都不會留下原始插槽', () => {
