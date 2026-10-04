@@ -12,8 +12,8 @@ from PIL import Image
 # 常數定義
 ROOT = Path(__file__).resolve().parent.parent
 SOURCE = ROOT / "app/src/main/assets/pet/frames/local/pout.png"  # 300×349 去背圖
-VISIBLE_CENTER = (150, 118)          # 可見圓的中心（以 300×349 的座標）：臉與貓耳的中間
-VISIBLE_RADIUS = 132                 # 可見圓半徑：貓耳尖約 7 成以上在圈內
+VISIBLE_CENTER = (154, 110)          # 可見圓的中心（以 300×349 的座標）：臉與貓耳的中間
+VISIBLE_RADIUS = 107                 # 可見圓半徑：貓耳尖約 7 成以上在圈內
 CANVAS_SIDE = VISIBLE_RADIUS * 3     # 108dp 畫布中只有中間 72dp 看得到，所以畫布邊長是可見直徑的 1.5 倍
 BACKGROUND_COLOR = "#FFE8EF"         # 圖示底色（淡粉紅，配泡泡的「說話」按鈕）
 DENSITIES = {"mdpi": 108, "hdpi": 162, "xhdpi": 216, "xxhdpi": 324, "xxxhdpi": 432}

@@ -124,7 +124,7 @@
     cutout: {
       name: '去背圖', w: 300, h: 349,
       path: function (k) { return '../app/src/main/assets/pet/frames/local/' + k + '.png'; },
-      defaults: { zoom: 132, cx: 150, cy: 118 },
+      defaults: { zoom: 107, cx: 154, cy: 110 },
       note: '背景透明，可以縮小讓整對貓耳入鏡；底色由下方決定。'
     },
     original: {
@@ -142,7 +142,7 @@
   ];
   var BIG_SIZE = 180;   // 大預覽每格的像素
   var HOME_SIZE = 56;   // 桌面預覽的大小（CSS px，約等於 56dp）
-  var CURRENT = { face: 'pout', source: 'cutout', zoom: 132, cx: 150, cy: 118, color: '#FFE8EF' }; // 目前腳本裡的設定
+  var CURRENT = { face: 'pout', source: 'cutout', zoom: 107, cx: 154, cy: 110, color: '#FFE8EF' }; // 目前腳本裡的設定
 
   var state = Object.assign({}, CURRENT, { guide: true });
   var images = {};
