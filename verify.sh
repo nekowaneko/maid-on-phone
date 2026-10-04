@@ -115,7 +115,7 @@ pass "V24"
 # V28：角色頁只載入本機相對路徑的一般 script，不用 module、不讀檔、不連外（M1.6 A24）
 PET_ASSETS=app/src/main/assets/pet
 if grep -rnE 'type="module"|fetch\(|XMLHttpRequest|import\(|https?://' "$PET_ASSETS" --include='*.html' --include='*.js'; then fail "V28 角色頁含 module、讀檔或外部網址"; fi
-SRCS=$(grep -oE '<script[^>]*src="[^"]*"' "$PET_ASSETS/index.html" | sed -E 's/.*src="([^"]*)"//' || true)
+SRCS=$(grep -oE '<script[^>]*src="[^"]*"' "$PET_ASSETS/index.html" | sed -E 's/.*src="([^"]*)"/\1/' || true)
 while IFS= read -r src; do
   [ -z "$src" ] && continue
   case "$src" in /*|*:*|*..*) fail "V28 script 來源不是本機相對路徑：$src" ;; esac
