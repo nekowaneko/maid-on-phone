@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200">
+  <!-- 佔位素材：後髮 -->
+  <rect x="250" y="120" width="300" height="500" fill="#2b2b33" opacity="0.6"/>
+  <text x="400" y="660" font-size="28" text-anchor="middle" fill="#fff">hair-back</text>
+</svg>

@@ -1,0 +1,8 @@
+# 複製成 .dev.vars 後填入真實金鑰，.dev.vars 已被 gitignore
+# 金鑰在 Google AI Studio 取得（https://aistudio.google.com/apikey），開頭是 AIza
+LLM_API_KEY=your-key-here
+# 這裡只影響本機；線上型號看 wrangler.toml 的 [vars]。不設定時程式會用 gemini-3.5-flash-lite
+LLM_MODEL=gemini-3.5-flash-lite
+# 存取密鑰：前端首次開啟時手動輸入一次，之後帶在 x-app-secret 標頭。
+# 線上用 wrangler secret put APP_SECRET 設定，不要寫進 wrangler.toml。
+APP_SECRET=your-shared-secret-here

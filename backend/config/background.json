@@ -1,0 +1,17 @@
+{
+  "_說明": "背景圖上傳、裁切與保存的限制。單張裁切後的大小上限、說明文字長度、輸出尺寸、縮放上限與 IndexedDB 的名稱都寫在這裡，改這裡就會同時改到前端與測試。",
+  "maxBytes": 1572864,
+  "minLabelChars": 1,
+  "maxLabelChars": 40,
+  "maxOutputWidth": 1440,
+  "_縮放說明": "maxZoom 是倍率硬上限；minCropWidth 是畫質保護，裁切框不得小於這個原圖像素寬度。實際上限取兩者較嚴格的那一個，所以小圖放不了那麼大。注意直式手機的裁切框天生就窄（橫幅照片只取得到高度那一邊），2400×1600 的圖在此設定下大約只能放到 1.8 倍；想放更大就把 minCropWidth 再調小，代價是背景會變軟。",
+  "maxZoom": 4,
+  "minCropWidth": 400,
+  "thumbnailWidth": 320,
+  "mimeType": "image/jpeg",
+  "qualitySteps": [0.9, 0.82, 0.72, 0.6, 0.45],
+  "thumbnailQuality": 0.7,
+  "databaseName": "companion-backgrounds",
+  "databaseVersion": 1,
+  "storeName": "backgrounds"
+}

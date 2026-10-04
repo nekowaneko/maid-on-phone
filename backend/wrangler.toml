@@ -1,0 +1,37 @@
+# Cloudflare Worker 設定。部署由使用者自行執行（本專案不代為部署）。
+# 本機開發：wrangler dev  →  同時提供靜態頁面與 /api/chat 端點。
+
+name = "neko-companion"
+main = "worker/index.js"
+compatibility_date = "2025-01-01"
+
+# 靜態資源以專案根目錄提供，讓 web/ 能以相對路徑取得 config/ 與 assets/。
+# 不需要上傳的檔案列在 .assetsignore。
+[assets]
+directory = "./"
+
+# 環境變數。真實金鑰請放在 .dev.vars（本機）或 wrangler secret（線上），
+# 絕對不要寫進這個檔案。
+[vars]
+USE_STUB = "false"
+# 型號不是機密，放這裡即可；線上以這個值為準，改完要重新 deploy 才生效。
+LLM_MODEL = "gemini-3.5-flash-lite"
+LLM_RELAY_ORIGIN = "https://gemini-relay-528597314139.us-central1.run.app"
+
+# 讓 wrangler 把人設與提示詞範本當成文字模組帶進 Worker，
+# 這樣 worker/index.js 不必在執行期讀檔或對外要資源。
+# glob 的比對基準是模組根目錄（預設為 main 所在的 worker/），
+# 所以這裡用 **/*.md 才吃得到 ../config/ 底下的檔案。
+[[rules]]
+type = "Text"
+globs = ["**/*.md"]
+fallthrough = false
+
+# D1 資料庫：存小檔案與用量計數。
+# database_id 要由使用者本人執行 wrangler d1 create 之後填進來
+# （代理人沒有 Cloudflare 帳號，不代為建立），建表語句見 worker/schema.sql。
+[[d1_databases]]
+binding = "DB"
+database_name = "datastore"
+database_id = "c41c7408-3a19-45e9-918d-da246739ac90"
+

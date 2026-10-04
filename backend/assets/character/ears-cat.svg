@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200">
+  <!-- 佔位素材：貓耳 -->
+  <rect x="280" y="60" width="240" height="140" fill="#1f1f26" opacity="0.6"/>
+  <text x="400" y="230" font-size="28" text-anchor="middle" fill="#fff">ears-cat</text>
+</svg>

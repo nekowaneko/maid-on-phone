@@ -1,0 +1,29 @@
+# 這些檔案不需要（也不應該）被當成公開靜態資源上傳
+.git
+.claude
+node_modules
+.wrangler
+tests
+worker
+core/*.test.js
+*.md
+*.sh
+*.toml
+package.json
+package-lock.json
+.dev.vars
+.dev.vars.example
+.gitignore
+.gitattributes
+.assetsignore
+
+# 素材工作原檔與產出工具：上線只用 assets/character/png/，
+# 原始 .jpg（約 20MB）與轉檔腳本不需要也不應該公開。
+assets/character/*.jpg
+tools
+reports
+docs
+__pycache__
+
+# 中繼站是獨立部署到 Cloud Run 的，不是 Worker 的靜態資源
+relay

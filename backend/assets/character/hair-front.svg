@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200">
+  <!-- 佔位素材：瀏海＋橫髮 -->
+  <rect x="270" y="150" width="260" height="220" fill="#3a3a45" opacity="0.6"/>
+  <text x="400" y="400" font-size="28" text-anchor="middle" fill="#fff">hair-front</text>
+</svg>

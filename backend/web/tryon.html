@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>試穿間</title>
+    <meta name="description" content="素材檢視頁：切換服裝與表情，確認圖層疊起來有沒有對齊。不是產品畫面。" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* 這頁只借用 style.css 的圖層與按鈕樣式，版面自己來：
+         舞台維持與正式畫面相同的直式比例，才看得準對齊。 */
+      #tryon-panel {
+        display: flex;
+        flex-direction: column;
+        gap: var(--gap);
+        padding-top: var(--gap);
+      }
+
+      .tryon-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+      }
+
+      .tryon-label {
+        min-width: 3.5em;
+        font-size: var(--echo-size);
+        color: var(--muted);
+      }
+
+      .tryon-pick {
+        padding: 6px 12px;
+        border: 2px solid var(--ink);
+        border-radius: var(--radius);
+        background: var(--panel);
+        color: var(--ink);
+        font: inherit;
+        font-size: var(--echo-size);
+        cursor: pointer;
+      }
+
+      /* 選中的那顆反白，一眼看出現在穿的是哪一套 */
+      .tryon-pick[aria-pressed="true"] {
+        background: var(--ink);
+        color: var(--panel);
+      }
+    </style>
+  </head>
+  <body>
+    <main id="app">
+      <!-- 角色舞台：沿用正式畫面的容器 id，renderer.js 才能照原樣疊圖層 -->
+      <section id="stage">
+        <div id="character"></div>
+      </section>
+
+      <section id="tryon-panel">
+        <div class="tryon-row">
+          <span class="tryon-label">服裝</span>
+          <span id="outfit-picks" class="tryon-row"></span>
+        </div>
+        <div class="tryon-row">
+          <span class="tryon-label">表情</span>
+          <span id="emotion-picks" class="tryon-row"></span>
+        </div>
+      </section>
+    </main>
+
+    <script type="module" src="tryon.js"></script>
+  </body>
+</html>

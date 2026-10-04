@@ -1,0 +1,14 @@
+{
+  "_說明": "自記估計值，官方數字以 Google Cloud console 為準。freeTier 的三個數字請自行從 https://ai.google.dev/gemini-api/docs/rate-limits 查證後填入。",
+  "timeZone": "Asia/Taipei",
+  "utcOffsetMinutes": 480,
+  "freeTier": {
+    "rpm": 15,
+    "rpd": 500,
+    "tpm": 250000
+  },
+  "selfCap": {
+    "dailyRequests": 200
+  },
+  "warnAtPercent": 80
+}

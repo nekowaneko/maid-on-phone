@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200">
+  <!-- 佔位素材：脖子＋洋裝 -->
+  <rect x="230" y="520" width="340" height="620" fill="#25396b" opacity="0.6"/>
+  <text x="400" y="1180" font-size="28" text-anchor="middle" fill="#fff">body</text>
+</svg>

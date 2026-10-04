@@ -1,0 +1,30 @@
+{
+  "_說明": "語言模型沒能正常回覆時，改由角色本人講的話。emotion 必須是 emotion-map.json 的 emotionMap 鍵。",
+  "defaultKind": "unknown",
+  "lines": {
+    "blocked": {
+      "emotion": "troubled",
+      "text": "這個……我們聊點別的好不好？"
+    },
+    "quota": {
+      "emotion": "troubled",
+      "text": "哥哥，人家想睡覺了，明天起床後再聊吧。哥哥晚安。"
+    },
+    "capped": {
+      "emotion": "neutral",
+      "text": "今天講到這裡就好啦，我明天還在這裡喔。"
+    },
+    "upstream": {
+      "emotion": "thinking",
+      "text": "唔……我腦袋現在有點打結，等一下再跟我說一次好嗎？"
+    },
+    "empty": {
+      "emotion": "thinking",
+      "text": "欸，我剛剛不小心放空了。再說一次嘛。"
+    },
+    "unknown": {
+      "emotion": "thinking",
+      "text": "我沒聽清楚欸……再說一次好不好？"
+    }
+  }
+}

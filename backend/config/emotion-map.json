@@ -1,0 +1,40 @@
+{
+  "name": "neko-companion-png",
+  "renderer": "layered-png",
+  "assetRoot": "assets/character/png",
+  "defaultEmotion": "neutral",
+  "zOrder": ["face", "body", "ears", "hair"],
+  "defaultOutfit": "dress",
+  "outfits": {
+    "dress": "body01.png",
+    "pajamas-cream": "body02.png",
+    "pajamas-rose": "body03.png",
+    "swimsuit-frill": "body04.png"
+  },
+  "outfitNames": {
+    "dress": "洋裝",
+    "pajamas-cream": "奶油白睡衣",
+    "pajamas-rose": "玫瑰粉睡衣",
+    "swimsuit-frill": "荷葉邊泳裝"
+  },
+  "layers": {
+    "body": "body01.png",
+    "ears": "ears-cat.png",
+    "hair": "hair.png"
+  },
+  "emotionMap": {
+    "neutral": "face-neutral.png",
+    "thinking": "face-thinking.png",
+    "smile": "face-smile.png",
+    "laugh": "face-laugh.png",
+    "troubled": "face-troubled.png"
+  },
+  "displayNames": {
+    "neutral": "平靜貌",
+    "thinking": "思考貌",
+    "smile": "微笑貌",
+    "laugh": "大笑貌",
+    "troubled": "困擾貌"
+  },
+  "thinkingEmotion": "thinking"
+}

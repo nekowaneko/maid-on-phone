@@ -1,0 +1,9 @@
+{
+  "tiers": [
+    { "maxMinutes": 30, "key": "just_now", "hint": "剛剛才聊過。" },
+    { "maxMinutes": 180, "key": "short", "hint": "距離上次對話過了幾小時。" },
+    { "maxMinutes": 720, "key": "half_day", "hint": "距離上次對話過了大半天。" },
+    { "maxMinutes": 2880, "key": "a_day", "hint": "距離上次對話過了一兩天。" },
+    { "maxMinutes": null, "key": "long", "hint": "距離上次對話已經很久了。" }
+  ]
+}

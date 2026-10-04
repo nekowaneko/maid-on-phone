@@ -1,0 +1,35 @@
+{
+  "_說明": "制式回覆對照表的說明文字。她講出 config/fallback-lines.json 裡的哪一句，就代表背後是哪一種問題。這個檔案只給「制式回覆」面板顯示用，程式不依它做任何判斷；台詞本身仍然只存在 fallback-lines.json，兩邊以 kind 對應。",
+  "guide": {
+    "blocked": {
+      "trigger": "你說的話、或她要說的話被安全過濾擋下",
+      "detail": "輸入被擋時 HTTP 是 200，錯誤藏在串流片段的 promptFeedback.blockReason；輸出被砍則是 candidates[0].finishReason 落在安全類清單",
+      "retry": "換個說法再試"
+    },
+    "quota": {
+      "trigger": "撞到 Gemini 那一側的速率或額度上限",
+      "detail": "HTTP 429。日誌代號 http:429",
+      "retry": "等一下再試"
+    },
+    "capped": {
+      "trigger": "今天的次數達到你自己在 config/quota.json 設的上限",
+      "detail": "由路由層在送出前擋下，根本沒送出任何對外請求，所以也不會增加計數",
+      "retry": "明天會自動歸零；要調整就改 quota.json 的 selfCap.dailyRequests"
+    },
+    "upstream": {
+      "trigger": "Gemini 回 5xx，對方自己出問題",
+      "detail": "日誌代號 http:5xx。跟你的設定無關，等對方恢復即可",
+      "retry": "等一下再試"
+    },
+    "empty": {
+      "trigger": "連線正常、串流也跑完，但一個字都沒有",
+      "detail": "HTTP 200 且沒有任何失敗訊號，就是整段沒有可顯示的文字",
+      "retry": "再說一次就好"
+    },
+    "unknown": {
+      "trigger": "不在以上任何一種的意外狀況",
+      "detail": "日誌會寫成 http:狀態碼/理由代號，例如 http:400/FAILED_PRECONDITION 是出口地區不支援、http:400/API_KEY_INVALID 是金鑰失效。先看代號再決定要不要去改設定",
+      "retry": "先翻日誌看代號；代號屬於設定或憑證問題的話，重試沒有用"
+    }
+  }
+}

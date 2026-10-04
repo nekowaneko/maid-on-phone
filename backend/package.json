@@ -1,0 +1,16 @@
+{
+  "name": "neko-companion-mvp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "陪伴型角色機器人 MVP：純函式核心、Cloudflare Worker SSE 代理、原生 ES Module 前端",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "preview": "node tools/preview-server.mjs",
+    "test": "node --test \"tests/*.test.js\"",
+    "verify": "bash verify.sh",
+    "verify:all": "bash verify.sh all"
+  }
+}

@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="1200" viewBox="0 0 800 1200">
+  <!-- 佔位素材：微笑貌 -->
+  <rect x="320" y="240" width="160" height="200" fill="#e0b98a" opacity="0.6"/>
+  <text x="400" y="470" font-size="28" text-anchor="middle" fill="#fff">face-smile</text>
+</svg>

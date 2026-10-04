@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8" />
+    <!-- 手機直式優先，允許畫面延伸到瀏海區 -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>陪伴角色</title>
+    <meta name="description" content="以角色介面呈現的陪伴型對話產品。手機瀏覽器直接開，免安裝。" />
+    <!-- 加到手機桌面之後看到的樣子：米色底、正中央一顆愛心，跟 --bg 同一個色 -->
+    <meta name="theme-color" content="#ece2cf" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link rel="icon" type="image/png" sizes="32x32" href="../assets/icons/icon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="../assets/icons/icon-192.png" />
+    <!-- iOS 不讀 manifest 的 icons，要另外給這一個 -->
+    <link rel="apple-touch-icon" sizes="180x180" href="../assets/icons/icon-180.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="陪伴角色" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <main id="app">
+      <!-- 她的台詞：漫畫對話框，固定兩行高，字多就在框內上下捲 -->
+      <section id="dialog">
+        <p id="line"></p>
+      </section>
+
+      <!-- 角色舞台：圖層由 renderer.js 依設定檔疊上去 -->
+      <section id="stage">
+        <div id="character"></div>
+
+        <!-- 右側工具列。收起時只留下開關本身，再按一次就還原 -->
+        <div id="tools">
+          <button id="tools-toggle" class="tool" type="button" aria-label="隱藏右側按鈕">»</button>
+          <button id="log-open" class="tool" type="button" aria-label="查看對話紀錄">☰</button>
+          <button id="persona-open" class="tool" type="button" aria-label="編輯小檔案">✎</button>
+          <button id="usage-open" class="tool" type="button" aria-label="查看用量">◔</button>
+          <button id="bg-new-open" class="tool" type="button" aria-label="上傳背景圖">⊕</button>
+          <button id="bg-list-open" class="tool" type="button" aria-label="更換背景圖">▦</button>
+          <button id="outfit-open" class="tool" type="button" aria-label="更換服裝">❖</button>
+          <button id="replies-open" class="tool" type="button" aria-label="查看制式回覆">⚑</button>
+        </div>
+      </section>
+
+      <!-- 你剛說的話放在角色腳下，緊鄰輸入列 -->
+      <p id="echo"></p>
+
+      <form id="composer" autocomplete="off">
+        <!-- textarea 而不是 input：手機上五十個字擠成一長串不好讀，要能換行。
+             rows=1 是起始高度，實際高度由 app.js 依內容算，超過上限就在框內捲動。 -->
+        <textarea id="message" name="message" rows="1" placeholder="想說點什麼？"></textarea>
+        <!-- 字數：平常留白只佔位，接近上限才顯示數字，版面不會因為它出現而抽動 -->
+        <span id="message-count" class="count" aria-live="polite"></span>
+        <button id="send" type="submit">送出</button>
+      </form>
+
+      <!-- 除錯面板：預設隱藏，網址加上 ?debug=1 才顯示 -->
+      <section id="debug" hidden>
+        <h2>除錯面板</h2>
+        <p>語言模型原始輸出</p>
+        <pre id="debug-raw"></pre>
+        <p>解析結果</p>
+        <pre id="debug-state"></pre>
+      </section>
+    </main>
+
+    <!-- 對話紀錄：從下方滑出的半高抽屜，蓋住下半部，角色還看得到 -->
+    <section id="log" aria-hidden="true" aria-label="對話紀錄">
+      <header id="log-head">
+        <h2>對話紀錄</h2>
+        <!-- 匯出成 .txt：畫面上看到的這幾輪原樣存下來，沒有對話時按不下去 -->
+        <div id="log-actions">
+          <button id="log-export" class="tool" type="button" aria-label="匯出對話紀錄為文字檔" disabled>⤓</button>
+          <button id="log-close" class="tool" type="button" aria-label="關閉對話紀錄">✕</button>
+        </div>
+      </header>
+      <div id="log-list"></div>
+    </section>
+
+    <!-- 用量：全部是自記估計值，官方數字以 Google Cloud console 為準 -->
+    <section id="usage" class="drawer" aria-hidden="true" aria-label="用量">
+      <header class="drawer-head">
+        <h2>用量</h2>
+        <button id="usage-close" class="tool" type="button" aria-label="關閉用量">✕</button>
+      </header>
+      <div class="drawer-body">
+        <p id="usage-note" class="drawer-hint"></p>
+        <div id="usage-list"></div>
+      </div>
+    </section>
+
+    <!-- 小檔案：改她的人設。存檔前會先檢查章節與字數，缺章節不讓存。 -->
+    <section id="persona" class="drawer" aria-hidden="true" aria-label="小檔案">
+      <header class="drawer-head">
+        <h2>小檔案</h2>
+        <button id="persona-close" class="tool" type="button" aria-label="關閉小檔案">✕</button>
+      </header>
+      <div class="drawer-body">
+        <p id="persona-state" class="drawer-hint"></p>
+        <textarea id="persona-text" class="drawer-area" rows="12" spellcheck="false"></textarea>
+        <p id="persona-errors" class="drawer-error"></p>
+        <div class="drawer-form">
+          <button id="persona-reset" type="button">還原預設</button>
+          <button id="persona-save" type="button">存檔</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 存取密鑰：沿用對話紀錄抽屜的外型，第一次沒有密鑰時會直接開著 -->
+    <section id="secret" class="drawer" aria-hidden="true" aria-label="App 存取密鑰">
+      <header class="drawer-head">
+        <h2>App 存取密鑰</h2>
+        <button id="secret-close" class="tool" type="button" aria-label="關閉 App 存取密鑰">✕</button>
+      </header>
+      <div class="drawer-body">
+        <p class="drawer-warn">這裡要填的是 <strong>App 存取密鑰</strong>，<strong>不是 Gemini API 金鑰</strong>。</p>
+        <p class="drawer-hint">
+          Gemini 金鑰只放在伺服器那一側，永遠不會、也不該貼進瀏覽器——這個網頁是公開的，
+          貼進來等於公開你的金鑰。
+        </p>
+        <form id="secret-form" class="drawer-form" autocomplete="off">
+          <input id="secret-input" name="secret" type="password" placeholder="貼上 App 存取密鑰" />
+          <button id="secret-save" type="submit">存起來</button>
+        </form>
+        <p id="secret-note" class="drawer-hint"></p>
+        <p class="drawer-hint">
+          密鑰去哪裡拿：本機用 <code>npm run preview</code> 時，它會印在啟動伺服器的終端機上；
+          線上則是你部署時自己設定的那一組。設定與輪替的步驟寫在
+          <code>docs/access-control.md</code>。
+        </p>
+        <p class="drawer-hint">輸入一次就記在這個瀏覽器裡，換瀏覽器要重新輸入。</p>
+      </div>
+    </section>
+
+    <!-- 上傳背景圖：選圖 → 滑動決定要留哪一塊 → 確認才裁切並換上，取消就整個作廢 -->
+    <section id="bg-new" class="drawer" aria-hidden="true" aria-label="上傳背景圖">
+      <header class="drawer-head">
+        <h2>上傳背景圖</h2>
+        <button id="bg-new-close" class="tool" type="button" aria-label="取消這次上傳">✕</button>
+      </header>
+      <div class="drawer-body">
+        <div class="drawer-form">
+          <label id="bg-file-button" class="drawer-file" for="bg-file">選一張圖片</label>
+          <input id="bg-file" type="file" accept="image/*" />
+          <span id="bg-file-name" class="drawer-hint"></span>
+        </div>
+        <input id="bg-label" type="text" maxlength="40" placeholder="這張背景是什麼？（之後用這行認出它）" />
+        <!-- 縮圖就是裁切結果本身：看到的形狀與內容，跟按下確認之後貼上去的一模一樣。
+             上面還會疊出角色與對話框、輸入列的位置，所以看得出臉會不會被壓在深色的地方。 -->
+        <div class="bg-preview-frame">
+          <canvas id="bg-preview"></canvas>
+        </div>
+        <!-- 縮放：上下限由 config/background.json 與這張圖的解析度決定，開圖時才算得出來 -->
+        <div class="bg-zoom">
+          <span class="drawer-hint">縮放</span>
+          <input id="bg-zoom" type="range" min="1" max="1" step="0.01" value="1" aria-label="背景圖縮放倍率" />
+          <span id="bg-zoom-value" class="drawer-hint"></span>
+        </div>
+        <p id="bg-new-hint" class="drawer-hint"></p>
+        <p id="bg-new-errors" class="drawer-error"></p>
+        <div class="drawer-form">
+          <button id="bg-cancel" type="button">取消</button>
+          <button id="bg-confirm" type="button">確認</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 更換背景圖：從存過的裡面挑一張。點一下會套上醒目外框，按「選擇」才真的換。 -->
+    <section id="bg-list" class="drawer" aria-hidden="true" aria-label="更換背景圖">
+      <header class="drawer-head">
+        <h2>更換背景圖</h2>
+        <button id="bg-list-close" class="tool" type="button" aria-label="取消更換背景圖">✕</button>
+      </header>
+      <div class="drawer-body">
+        <p id="bg-list-note" class="drawer-hint"></p>
+        <div id="bg-list-body" class="pick-grid"></div>
+        <!-- 刪除是兩段式的：按第一次只是把按鈕換成確認字樣，按第二次才真的刪掉 -->
+        <div class="drawer-form">
+          <button id="bg-delete" type="button" disabled>刪除</button>
+          <button id="bg-apply" type="button" disabled>選擇</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 更換服裝：從設定檔列出的幾套裡挑一套。互動與更換背景圖完全相同——
+         點一下只是選取，按「選擇」才真的換上。服裝是內建素材，所以沒有刪除。 -->
+    <section id="outfit-list" class="drawer" aria-hidden="true" aria-label="更換服裝">
+      <header class="drawer-head">
+        <h2>更換服裝</h2>
+        <button id="outfit-close" class="tool" type="button" aria-label="取消更換服裝">✕</button>
+      </header>
+      <div class="drawer-body">
+        <p id="outfit-note" class="drawer-hint"></p>
+        <div id="outfit-list-body" class="pick-grid"></div>
+        <div class="drawer-form">
+          <button id="outfit-apply" type="button" disabled>選擇</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 制式回覆對照表：她講出哪一句罐頭話，就代表背後是哪一種問題。
+         內容全部由 config/fallback-lines.json 算出來，這裡不寫死任何台詞（架構約束 A7）。 -->
+    <section id="replies" class="drawer" aria-hidden="true" aria-label="制式回覆對照表">
+      <header class="drawer-head">
+        <h2>制式回覆</h2>
+        <button id="replies-close" class="tool" type="button" aria-label="關閉制式回覆">✕</button>
+      </header>
+      <div class="drawer-body">
+        <p id="replies-note" class="drawer-hint"></p>
+        <div id="replies-list"></div>
+      </div>
+    </section>
+
+    <script type="module" src="app.js"></script>
+  </body>
+</html>
