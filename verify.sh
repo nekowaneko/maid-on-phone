@@ -3,10 +3,11 @@
 # 用法：./verify.sh          → L1＋L2
 #       ./verify.sh --full   → L1＋L2＋L3
 #       ./verify.sh --core-only → 只在 T1 使用：app 尚未實作，略過 V07～V10（見 DECISIONS.md）
+#       ./verify.sh --lane B|C|D → M1.6 平行開工：L1 全跑，L2 只跑該線負責的部分（docs/M1.6-EXPENSIVE-PLAN.md §0.4）
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="c119cfe56128d03e00dc983d6c8f7b484f2df8df"   # 凍結規格測試的 commit（M1.5 凍結版）
+FROZEN_HASH="fbda387281a50ca4dc4526d5b98ff67c03354d87"   # 凍結規格測試的 commit（M1.6 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"
@@ -14,17 +15,27 @@ ASSET_PREFIX="file:///android_asset/pet/"
 SPEC_IDS="S01 S02 S03 S07 S08 S09 S10 S13 S14 S15"
 M15_SPEC_IDS="M15-S04 M15-S05 M15-S06 M15-S13"  # M1.5 的 Kotlin 自動列
 M15_JS_SPEC_IDS="M15-S01 M15-S02 M15-S03 M15-S07 M15-S08 M15-S09 M15-S10 M15-S11 M15-S12"  # M1.5 的 JS 自動列
+M16_SPEC_IDS="M16-S03 M16-S04 M16-S05 M16-S06 M16-S07 M16-S08"  # M1.6 的 Kotlin 自動列
+M16_JS_SPEC_IDS="M16-S01 M16-S02 M16-S10 M16-S11 M16-S12 M16-S13 M16-S14 M16-S15"  # M1.6 的 JS 自動列
+OVERLAY_TESTS="tests/spec/m16/overlay.test.js tests/overlay-*.test.js"  # B 線（角色頁）的測試
 M1_SPEC_IDS="M1-S01 M1-S02 M1-S03 M1-S04 M1-S05 M1-S06 M1-S07 M1-S08 M1-S09 M1-S10 M1-S11 M1-S12 M1-S14 M1-S15"  # M1 自動列（計畫書寫 13 個但列了 14 列，見 DECISIONS.md）
 
 FULL=0
 CORE_ONLY=0
-for arg in "$@"; do
-  case "$arg" in
+LANE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
     --full) FULL=1 ;;
     --core-only) CORE_ONLY=1 ;;
-    *) echo "未知參數：$arg"; exit 2 ;;
+    --lane) shift; LANE="${1:-}"; case "$LANE" in B|C|D) ;; *) echo "--lane 只能是 B、C、D"; exit 2 ;; esac ;;
+    *) echo "未知參數：$1"; exit 2 ;;
   esac
+  shift
 done
+[ -z "$LANE" ] || [ "$FULL" -eq 0 ] || { echo "--lane 不能與 --full 同時使用"; exit 2; }
+
+# 這一層要不要跑：沒指定線就全跑，指定了只跑該線
+runs() { [ -z "$LANE" ] || [[ " $* " == *" $LANE "* ]]; }
 
 cd "$(dirname "$0")"
 
@@ -57,14 +68,14 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 
 [ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個規格測試、各列一次；JS M1.5 9 列各一次；沒有略過或獨跑標記
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 28 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 28"
-for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 34 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 34"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
-for id in $M15_JS_SPEC_IDS; do
+for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS; do
   n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -100,6 +111,17 @@ GOOGLE_HITS=$(grep -rH 'googleapis\.com' backend/worker backend/core | grep -v '
 [ -z "$GOOGLE_HITS" ] || { echo "$GOOGLE_HITS"; fail "V24 googleapis.com 出現在 fcm-client.js 以外"; }
 if grep -rnE 'fetch\(|crypto\.subtle|env\.|eval\(|new Function\(' backend/core; then fail "V24 backend/core 含連線、憑證或環境變數存取"; fi
 pass "V24"
+
+# V28：角色頁只載入本機相對路徑的一般 script，不用 module、不讀檔、不連外（M1.6 A24）
+PET_ASSETS=app/src/main/assets/pet
+if grep -rnE 'type="module"|fetch\(|XMLHttpRequest|import\(|https?://' "$PET_ASSETS" --include='*.html' --include='*.js'; then fail "V28 角色頁含 module、讀檔或外部網址"; fi
+SRCS=$(grep -oE '<script[^>]*src="[^"]*"' "$PET_ASSETS/index.html" | sed -E 's/.*src="([^"]*)"//' || true)
+while IFS= read -r src; do
+  [ -z "$src" ] && continue
+  case "$src" in /*|*:*|*..*) fail "V28 script 來源不是本機相對路徑：$src" ;; esac
+  [ -f "$PET_ASSETS/$src" ] || fail "V28 找不到 script：$src"
+done <<< "$SRCS"
+pass "V28"
 
 if [ "$CORE_ONLY" -eq 0 ]; then
   # V07：懸浮窗 loadUrl 只載入本機資產；ChatActivity 只載入 normalizeChatUrl(BuildConfig.CHAT_URL) 的結果；兩支都有攔截函式（M1.5 A4 修訂）
@@ -178,23 +200,43 @@ fi
 
 echo "===== L2 單元測試與編譯 ====="
 
-# V11：core 測試全部通過
-./gradlew :core:test -q || fail "V11 core 測試未通過"
-pass "V11"
+if runs C; then
+  # V11：core 測試全部通過
+  ./gradlew :core:test -q || fail "V11 core 測試未通過"
+  pass "V11"
 
-# V12：app 可編譯
-./gradlew :app:compileDebugKotlin -q || fail "V12 app 編譯失敗"
-pass "V12"
+  # V12：app 可編譯
+  ./gradlew :app:compileDebugKotlin -q || fail "V12 app 編譯失敗"
+  pass "V12"
+fi
 
-# V26：backend 全部測試通過（原有 269 個＋規格 9 個＋輔助）
-NODE_OUT=$(cd backend && node --test "tests/**/*.test.js" 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
-NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')
-NODE_FAIL=$(echo "$NODE_OUT" | grep -E '^# fail ' | awk '{print $3}')
-[ "$NODE_FAIL" = "0" ] || fail "V26 backend 測試失敗 $NODE_FAIL 個"
-[ "$NODE_PASS" -ge 278 ] || fail "V26 backend 測試通過數 $NODE_PASS，應至少 278"
-pass "V26（通過 $NODE_PASS 個）"
+if runs D; then
+  # V26：backend 全部測試通過（原有 269 個＋規格＋輔助）；D 線不跑角色頁的測試（屬 B 線）
+  if [ "$LANE" = "D" ]; then
+    NODE_FILES=$(cd backend && find tests -name '*.test.js' ! -path 'tests/spec/m16/overlay.test.js' ! -name 'overlay-*.test.js' | sort | tr '
+' ' ')
+    NODE_MIN=308
+  else
+    NODE_FILES="tests/**/*.test.js"
+    NODE_MIN=314
+  fi
+  NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
+  NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')
+  NODE_FAIL=$(echo "$NODE_OUT" | grep -E '^# fail ' | awk '{print $3}')
+  [ "$NODE_FAIL" = "0" ] || fail "V26 backend 測試失敗 $NODE_FAIL 個"
+  [ "$NODE_PASS" -ge "$NODE_MIN" ] || fail "V26 backend 測試通過數 $NODE_PASS，應至少 $NODE_MIN"
+  pass "V26（通過 $NODE_PASS 個）"
+fi
+
+if runs B; then
+  # V27：角色頁的解析程式與 backend 同一份（M1.6 A25），角色頁測試全部通過
+  node tools/sync-overlay-vendor.mjs --check || fail "V27 角色頁的 vendor 檔與 backend/core 不一致，請重跑 node tools/sync-overlay-vendor.mjs"
+  OVERLAY_OUT=$(cd backend && node --test $OVERLAY_TESTS 2>&1) || { echo "$OVERLAY_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V27 角色頁測試未通過"; }
+  pass "V27"
+fi
 
 if [ "$FULL" -eq 0 ]; then
+  [ -z "$LANE" ] || { echo "🎉 L1＋L2（$LANE 線）全部通過"; exit 0; }
   echo "🎉 L1＋L2 全部通過"
   exit 0
 fi
@@ -229,7 +271,7 @@ pass "V15"
 
 # V16：高風險清單涵蓋 §2.1
 [ -f RISK-REVIEW.md ] || fail "V16 缺少 RISK-REVIEW.md"
-for name in exportCsv FilePositionStore PetBridge BatteryLogger FileReminderQueueStore FileSeenIdStore PetMessagingService ReminderDispatcher ForegroundDetector PushTokenStore   fcm-client handlePush push.js ChatActivity onChatPressed wrangler.toml; do
+for name in exportCsv FilePositionStore PetBridge BatteryLogger FileReminderQueueStore FileSeenIdStore PetMessagingService ReminderDispatcher ForegroundDetector PushTokenStore   fcm-client handlePush push.js ChatActivity onChatPressed wrangler.toml   showScript performance.js; do
   grep -q "$name" RISK-REVIEW.md || fail "V16 RISK-REVIEW.md 缺少 $name"
 done
 pass "V16"
