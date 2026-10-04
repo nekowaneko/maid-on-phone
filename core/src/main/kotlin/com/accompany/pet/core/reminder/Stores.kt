@@ -4,6 +4,8 @@ import java.util.Base64
 
 // 常數定義
 private const val FIELD_SEPARATOR = "\t"  // 排隊檔案的欄位分隔
+private const val FIELD_COUNT = 4         // 排隊檔案每行的欄位數（M1.6 起含 script）
+private const val OLD_FIELD_COUNT = 3     // 舊版排隊檔案每行的欄位數（沒有 script）
 
 // 把文字編成 Base64（避免內容裡的換行、定位字元弄壞檔案格式）
 private fun encode(text: String): String = Base64.getEncoder().encodeToString(text.toByteArray(Charsets.UTF_8))
@@ -15,18 +17,19 @@ private fun decode(text: String): String? = try {
     null
 }
 
-// 把一則提醒轉成檔案裡的一行
+// 把一則提醒轉成檔案裡的一行（一律寫 4 欄：時間、id、text、script）
 private fun toLine(r: Reminder): String =
-    listOf(r.receivedAtMillis.toString(), encode(r.id), encode(r.text)).joinToString(FIELD_SEPARATOR)
+    listOf(r.receivedAtMillis.toString(), encode(r.id), encode(r.text), encode(r.script)).joinToString(FIELD_SEPARATOR)
 
-// 把檔案裡的一行還原成提醒；壞掉的行回傳 null
+// 把檔案裡的一行還原成提醒；3 欄（舊格式，script 等於 text）與 4 欄都接受，壞掉的行回傳 null
 private fun fromLine(line: String): Reminder? {
     val parts = line.split(FIELD_SEPARATOR)
-    if (parts.size != 3) return null
+    if (parts.size != OLD_FIELD_COUNT && parts.size != FIELD_COUNT) return null  // 其他欄數略過
     val at = parts[0].toLongOrNull() ?: return null
     val id = decode(parts[1]) ?: return null
     val text = decode(parts[2]) ?: return null
-    return Reminder(id, text, at)
+    val script = if (parts.size == FIELD_COUNT) (decode(parts[3]) ?: return null) else text  // 舊格式沒有原文
+    return Reminder(id, text, at, script)
 }
 
 // 排隊中提醒的存取介面

@@ -14,7 +14,7 @@ import com.accompany.pet.core.reminder.drainAlive
 import com.accompany.pet.core.reminder.enqueue
 import com.accompany.pet.core.reminder.isGaming
 import com.accompany.pet.core.reminder.parseReminder
-import com.accompany.pet.core.reminder.reportText
+import com.accompany.pet.core.reminder.reportScript
 
 // 常數定義
 const val QUEUE_FILE = "reminder-queue.txt"  // 排隊檔名
@@ -63,8 +63,8 @@ object ReminderDispatcher {
     private fun execute(context: Context, route: Route, r: Reminder, nowMillis: Long) {
         when (route) {
             Route.SHOW_PET -> {
-                // 沒有懸浮窗權限或被系統拒絕啟動時，改發一般通知
-                if (!hasOverlayPermission(context) || !startPetService(context, r.text)) showReminderNotification(context, r)
+                // 角色用原文演出；沒有懸浮窗權限或被系統拒絕啟動時，改發一般通知
+                if (!hasOverlayPermission(context) || !startPetService(context, r.script)) showReminderNotification(context, r)
             }
             Route.NOTIFY -> showReminderNotification(context, r)
             Route.QUEUE -> queueReminder(context, r, nowMillis)
@@ -80,13 +80,13 @@ object ReminderDispatcher {
         showQueueNotification(context, alive.size)
     }
 
-    // 角色出現時呼叫：取出排隊、丟掉過期的、清空排隊並取消靜音通知，回傳要說的話
-    fun takeReport(context: Context, newText: String?, nowMillis: Long = System.currentTimeMillis()): String =
+    // 角色出現時呼叫：取出排隊、丟掉過期的、清空排隊並取消靜音通知，回傳要演出的原文
+    fun takeReport(context: Context, newScript: String?, nowMillis: Long = System.currentTimeMillis()): String =
         synchronized(lock) {
             val store = FileReminderQueueStore(java.io.File(context.filesDir, QUEUE_FILE))
             val alive = drainAlive(store.load(), nowMillis)  // 先過濾過期再報告
             store.save(emptyList())
             cancelQueueNotification(context)
-            reportText(alive, newText)
+            reportScript(alive, newScript)  // 每則從平常的臉開始（M16-S07）
         }
 }

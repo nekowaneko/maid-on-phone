@@ -10,12 +10,12 @@ import androidx.core.content.ContextCompat
 
 // 常數定義
 const val ACTION_SHOW = "com.accompany.pet.SHOW"  // 叫出角色（可帶要說的話）
-const val EXTRA_TEXT = "text"                      // ACTION_SHOW 帶的提醒文字
+const val EXTRA_TEXT = "text"                      // ACTION_SHOW 帶的要演出的原文（可含表情標籤）
 
 // 是否有懸浮窗權限
 fun hasOverlayPermission(context: Context): Boolean = Settings.canDrawOverlays(context)
 
-// 啟動（叫出）角色服務，text 為角色要說的話；被系統拒絕（例如背景啟動限制）時回傳 false，不嘗試繞過
+// 啟動（叫出）角色服務，text 為角色要演出的原文（可含表情標籤）；被系統拒絕（例如背景啟動限制）時回傳 false，不嘗試繞過
 fun startPetService(context: Context, text: String? = null): Boolean = try {
     val intent = Intent(context, OverlayService::class.java).setAction(ACTION_SHOW)
     if (text != null) intent.putExtra(EXTRA_TEXT, text)

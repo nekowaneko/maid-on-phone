@@ -87,7 +87,7 @@ class OverlayService : Service() {
     private val idleHandler = Handler(Looper.getMainLooper())  // 閒置收起的計時
     @Volatile private var lastInteractionMillis = 0L           // 最後一次互動的時間（網頁橋接執行緒也會更新）
     private var pageReady = false                              // 角色頁是否載入完成
-    private var pendingText: String? = null                    // 頁面還沒載入完成時先存著的話
+    private val pending = mutableListOf<Pair<Boolean, String>>()  // 頁面還沒載入完成時先存著的話（true＝演出原文、false＝純文字），依到達順序
     private val idleCheck = Runnable { checkIdle() }           // 到期檢查
 
     // 接收螢幕開關事件
@@ -121,7 +121,7 @@ class OverlayService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val text = intent?.getStringExtra(EXTRA_TEXT)  // 提醒文字（沒有就只報告排隊）
+        val text = intent?.getStringExtra(EXTRA_TEXT)  // 要演出的原文（沒有就只報告排隊）
         if (state.service == com.accompany.pet.core.ServiceState.RUNNING) {
             startInForeground()  // 已在執行：重新宣告前景類型（剛取得麥克風權限時補上 microphone）
             ensureOverlay()
@@ -191,7 +191,7 @@ class OverlayService : Service() {
         webView = null
         container = null
         bubbleShown = false
-        pageReady = false
+        pageReady = false  // 暫存的話保留，重建後的頁面載入完成時補送（排隊已清空，不能丟）
     }
 
     // 確認懸浮窗還掛在畫面上，不在就重建
@@ -311,10 +311,10 @@ class OverlayService : Service() {
         lastInteractionMillis = System.currentTimeMillis()
     }
 
-    // 角色出現：重新計時、取出排隊內容與新提醒一起顯示
-    private fun presentReport(text: String?) {
+    // 角色出現：重新計時、取出排隊內容與新提醒一起演出
+    private fun presentReport(script: String?) {
         markInteraction()
-        showText(ReminderDispatcher.takeReport(this, text))
+        showScript(ReminderDispatcher.takeReport(this, script))  // 原文含表情標籤，交給角色頁演出
         idleHandler.removeCallbacks(idleCheck)
         idleHandler.postDelayed(idleCheck, IDLE_HIDE_MILLIS)
     }
@@ -394,11 +394,28 @@ class OverlayService : Service() {
     // 在泡泡顯示文字（以 JSON 字串跳脫，避免注入）
     fun showText(text: String) {
         if (!pageReady) {
-            pendingText = text  // 頁面還沒載入完成，等 onPageFinished 再顯示
+            pending.add(false to text)  // 頁面還沒載入完成，等 onPageFinished 再顯示
             return
         }
         callJs("window.pet.showText(${org.json.JSONObject.quote(text)})")
         if (!bubbleShown) toggleBubble()
+    }
+
+    // 讓角色依原文演出（換表情、逐字）；以 JSON 字串跳脫，避免注入（A26）
+    fun showScript(script: String) {
+        if (!pageReady) {
+            pending.add(true to script)  // 頁面還沒載入完成，等 onPageFinished 再演出
+            return
+        }
+        callJs("window.pet.say(${org.json.JSONObject.quote(script)})")  // 原文只當字串參數，不當程式
+        if (!bubbleShown) toggleBubble()
+    }
+
+    // 依到達順序補送頁面載入前暫存的話
+    private fun flushPending() {
+        val items = pending.toList()  // 先複製，補送時不會再進暫存（pageReady 已為 true）
+        pending.clear()
+        items.forEach { (isScript, value) -> if (isScript) showScript(value) else showText(value) }
     }
 
     // 呼叫網頁上的函式
@@ -474,7 +491,7 @@ class OverlayService : Service() {
         override fun onPageFinished(view: WebView, url: String) {
             if (view != webView) return
             pageReady = true
-            pendingText?.let { pendingText = null; showText(it) }
+            flushPending()
         }
 
         // 攔截頁面跳轉
