@@ -11,5 +11,12 @@ fun parseReminder(data: Map<String, String>, nowMillis: Long): Reminder? {
     val id = data["id"]?.trim().orEmpty()          // 提醒編號
     val text = data["text"]?.trim().orEmpty()      // 要說的話
     if (id.isEmpty() || text.isEmpty()) return null  // 缺任何一個就丟掉
-    return Reminder(id, text.take(MAX_TEXT_LENGTH), nowMillis)  // 過長截斷
+    val shown = text.take(MAX_TEXT_LENGTH)           // 過長截斷
+    return Reminder(id, shown, nowMillis, pickScript(data["script"], shown))
+}
+
+// 選出演出用原文：trim 後非空且不超過上限才採用，否則用顯示用文字
+fun pickScript(raw: String?, fallback: String): String {
+    val script = raw?.trim().orEmpty()  // 推播帶來的原文（沒有就是空字串）
+    return if (script.isNotEmpty() && script.length <= MAX_TEXT_LENGTH) script else fallback  // 不合格就退回純文字
 }

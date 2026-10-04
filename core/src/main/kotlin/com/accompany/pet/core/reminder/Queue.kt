@@ -27,4 +27,10 @@ fun reportText(alive: List<Reminder>, newText: String?): String {
 }
 
 // 角色出現時要演出的原文：每則改用 script，並在每則與新內容開頭補上平常的臉（M1.6，B/C 線介面見計畫書 §4.2）
-fun reportScript(alive: List<Reminder>, newScript: String?): String = TODO("尚未實作")
+fun reportScript(alive: List<Reminder>, newScript: String?): String {
+    val fresh = newScript.orEmpty()  // 新內容（沒有就是空字串）
+    if (alive.isEmpty()) return fresh.ifEmpty { DEFAULT_GREETING }
+    val lines = alive.joinToString("\n") { "${DEFAULT_EMOTION_TAG}・${it.script}" }  // 每則一行，開頭補平常的臉
+    val head = QUEUE_REPORT_HEADER + "\n" + lines                                      // 開頭加排隊內容
+    return if (fresh.isEmpty()) head else head + "\n\n" + DEFAULT_EMOTION_TAG + fresh  // 空一行再接新內容
+}
