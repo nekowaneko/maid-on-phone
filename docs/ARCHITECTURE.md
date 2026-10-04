@@ -28,3 +28,9 @@
 - 忽略（格式錯誤、重複）
 
 遊戲判斷只在收到推播的當下讀一次前景 App（`ForegroundDetector`，需要使用情形存取權），不常駐監看。
+
+## M1.5 架構
+
+- `backend/`：Cloudflare Worker B（accompany_bot commit `54065e9` 的副本，來源見 backend/SOURCE.md）。聊天網頁、人設、表情標籤、角色小檔案沿用；M1.5 新增 `POST /api/push` 經 FCM 送純資料推播。
+- App：泡泡「聊聊」→ `ChatActivity`（WebView 只載入 `worker.properties` 設定的 https 網址，其他網址一律擋下）。
+- 與 accompany_bot 分開的東西：Worker 名稱、D1 資料庫、存取密鑰、Gemini 金鑰。共用的東西：Gemini 轉送服務。

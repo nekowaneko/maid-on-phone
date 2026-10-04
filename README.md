@@ -32,3 +32,9 @@ M0 只驗證懸浮角色能不能常駐、耗電多少。不接 AI、不連網�
 
 出現後 3 分鐘沒互動會自動收起。玩遊戲時收到的提醒會先排隊，不出聲。
 推播設定見 docs/FIREBASE-SETUP.md。
+
+## M1.5：陪伴核心
+
+`backend/` 是 accompany_bot 的獨立副本（Worker B），提供聊天網頁與送推播，部署步驟見 docs/WORKER-SETUP.md。
+點角色展開泡泡，按「說話」右邊的「聊聊」開啟聊天畫面。
+角色立繪不在 git 裡，複製自本機的 accompany_bot。

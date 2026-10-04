@@ -23,3 +23,11 @@
 - [ ] 讀 M1 的 RISK-REVIEW.md 新增項目
 - [ ] 依賴套件稽核：Firebase Messaging 版本是否為最新穩定版（需要連網，自行查看）
 - [ ] 自訂遊戲清單填入自己常玩、但系統沒標成遊戲的 App
+
+## M1.5
+
+- [ ] 完成 docs/WORKER-SETUP.md，Worker B 已部署
+- [ ] 照 DEVICE-CHECKLIST-M1.5.md 實測
+- [ ] 讀 M1.5 的 RISK-REVIEW.md 新增項目
+- [ ] 依賴套件稽核：`backend/` 在 npm 上沒有依賴套件；wrangler 版本由 npx 取最新，自行留意
+- [ ] 聊天畫面改以角色頭貼呈現表情：與 Claude 討論後另立計畫
