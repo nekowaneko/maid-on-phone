@@ -1,8 +1,11 @@
-# 複製成 .dev.vars 後填入真實金鑰，.dev.vars 已被 gitignore
-# 金鑰在 Google AI Studio 取得（https://aistudio.google.com/apikey），開頭是 AIza
+# 本機開發用（npx wrangler dev）。複製成 .dev.vars 後填入真實值；.dev.vars 已被 gitignore。
+# Gemini 金鑰：到 https://aistudio.google.com/apikey 另開一把，不要和 accompany_bot 共用
 LLM_API_KEY=your-key-here
-# 這裡只影響本機；線上型號看 wrangler.toml 的 [vars]。不設定時程式會用 gemini-3.5-flash-lite
 LLM_MODEL=gemini-3.5-flash-lite
-# 存取密鑰：前端首次開啟時手動輸入一次，之後帶在 x-app-secret 標頭。
-# 線上用 wrangler secret put APP_SECRET 設定，不要寫進 wrangler.toml。
+# 轉送服務的密鑰：與 accompany_bot 相同
+LLM_RELAY_SECRET=your-relay-secret-here
+# 存取密鑰：聊天網頁第一次開啟時輸入一次
 APP_SECRET=your-shared-secret-here
+# 推播：服務帳戶金鑰 JSON 壓成一行、手機的推播代碼（本機開發通常不需要）
+FCM_SERVICE_ACCOUNT=
+FCM_DEVICE_TOKEN=
