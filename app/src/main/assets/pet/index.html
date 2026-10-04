@@ -29,6 +29,9 @@
 <body>
   <div id="bubble"><div id="text"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button></div></div>
   <div id="pet"><img id="idle" alt=""><img id="blink" alt=""></div>
+<script src="emotion-map.js"></script>
+<script src="vendor/stream-parser.js"></script>
+<script src="performance.js"></script>
 <script>
   // 常數定義
   var BLINK_MS = 150;        // 眨眼圖顯示時間
@@ -36,11 +39,19 @@
   var BLINK_MAX_MS = 6000;   // 眨眼最長間隔
   var BREATH_PERIOD_MS = 3000; // 呼吸週期
   var BREATH_FPS = 10;         // 呼吸每秒更新次數（CSS 動畫會以 60fps 持續重繪，耗電又容易被系統判定為高耗電）
-  var breathTimer = null;      // 呼吸計時器
+  var EMOTION_MAP = window.PetEmotionMap;   // 表情對照表（emotion-map.js，契約檔）
+  var PERF = window.PetPerformance;         // 演出排程（performance.js，純函式）
+  var IDLE_PLACEHOLDER = 'frames/placeholder-idle.svg'; // 平常的臉也載不到時的替代圖
 
+  var breathTimer = null;      // 呼吸計時器
   var blinkTimer = null;     // 下一次眨眼的計時器
   var unblinkTimer = null;   // 眨眼結束的計時器
   var playing = false;       // 目前是否播放中
+
+  var stage = PERF.createStage(); // 演出舞台：目前這一則與排在後面的
+  var perfTimers = [];            // 這一則演出排下的所有計時器
+  var shownFrame = EMOTION_MAP.idleFrame; // 畫面上正在顯示的表情圖檔名
+  var faceRequest = 0;            // 換臉請求序號：只套用最新一次的載入結果
 
   // 先載入 local 圖，失敗就改用 placeholder SVG（不顯示錯誤）
   function loadFrame(img, name) {
@@ -48,19 +59,35 @@
     img.src = 'frames/local/' + name + '.png';
   }
 
-  // 排定下一次眨眼
+  // 畫面上是否為待機圖（只有這時候才眨眼）
+  function isIdleShown() {
+    return shownFrame === EMOTION_MAP.idleFrame;
+  }
+
+  // 排定下一次眨眼（不是待機圖或沒在播放就不排）
   function scheduleBlink() {
+    if (!playing || !isIdleShown() || blinkTimer !== null) return;
     var wait = BLINK_MIN_MS + Math.random() * (BLINK_MAX_MS - BLINK_MIN_MS);
     blinkTimer = setTimeout(doBlink, wait);
   }
 
   // 切到眨眼圖 150 毫秒再切回來
   function doBlink() {
+    blinkTimer = null;
+    if (!isIdleShown()) return; // 換成其他表情時不眨眼
     document.getElementById('blink').style.visibility = 'visible';
     unblinkTimer = setTimeout(function () {
+      unblinkTimer = null;
       document.getElementById('blink').style.visibility = 'hidden';
-      if (playing) scheduleBlink();
+      scheduleBlink();
     }, BLINK_MS);
+  }
+
+  // 取消眨眼並收起眨眼圖
+  function cancelBlink() {
+    clearTimeout(blinkTimer); clearTimeout(unblinkTimer);
+    blinkTimer = null; unblinkTimer = null;
+    document.getElementById('blink').style.visibility = 'hidden';
   }
 
   // 依時間算出這一格的呼吸位移
@@ -70,11 +97,88 @@
     document.getElementById("pet").style.transform = "translateY(" + (-2 * k).toFixed(2) + "px) scaleY(" + (1 + 0.02 * k).toFixed(4) + ")";
   }
 
-  // 停掉所有計時器
+  // 停掉眨眼與呼吸的計時器
   function clearTimers() {
-    clearTimeout(blinkTimer); clearTimeout(unblinkTimer); clearInterval(breathTimer);
-    blinkTimer = null; unblinkTimer = null; breathTimer = null;
-    document.getElementById('blink').style.visibility = 'hidden';
+    cancelBlink();
+    clearInterval(breathTimer);
+    breathTimer = null;
+  }
+
+  // 新的臉真正顯示出來之後：記下檔名，依是否為待機圖決定眨不眨眼
+  function onFaceShown(file) {
+    shownFrame = file;
+    if (isIdleShown()) scheduleBlink(); else cancelBlink();
+  }
+
+  // 換整張表情圖：先在背景載入，成功才換上；失敗就保留上一張臉（不出現空白）
+  function setFace(emotion) {
+    var file = PERF.frameFor(emotion, EMOTION_MAP);
+    faceRequest += 1;
+    var request = faceRequest;
+    if (!file || file === shownFrame) return; // 同一張不必重載
+    var probe = new Image();
+    probe.onload = function () {
+      if (request !== faceRequest) return; // 已經有更新的換臉請求
+      document.getElementById('idle').src = probe.src;
+      onFaceShown(file);
+    };
+    probe.onerror = function () {
+      if (request !== faceRequest) return;
+      if (file !== EMOTION_MAP.idleFrame) return; // 保留上一張臉
+      document.getElementById('idle').src = IDLE_PLACEHOLDER; // 連平常的臉都載不到：退回 placeholder
+      onFaceShown(file);
+    };
+    probe.src = EMOTION_MAP.frameRoot + file;
+  }
+
+  // 泡泡捲到最底下（逐字時讓最新一行露出來）
+  function scrollBubbleToBottom() {
+    var bubble = document.getElementById('bubble');
+    bubble.scrollTop = bubble.scrollHeight;
+  }
+
+  // 清掉這一則演出排下的所有計時器
+  function clearPerformance() {
+    for (var i = 0; i < perfTimers.length; i += 1) clearTimeout(perfTimers[i]);
+    perfTimers = [];
+  }
+
+  // 執行演出的一個步驟：face 換臉，count 以 textContent 顯示前 count 個字
+  function applyStep(step, text) {
+    if (step.face !== undefined) { setFace(step.face); return; }
+    document.getElementById('text').textContent = text.slice(0, step.count); // 用 textContent，不解析 HTML
+    scrollBubbleToBottom();
+  }
+
+  // 依 planTimeline 排計時器開演目前這一則；演完接著演下一則
+  function startCurrent() {
+    clearPerformance();
+    if (stage.current === null) return;
+    var plan = PERF.planTimeline(stage.current, EMOTION_MAP.frames, EMOTION_MAP.defaultEmotion);
+    document.getElementById('text').textContent = '';
+    plan.steps.forEach(function (step) {
+      if (step.atMs === 0) { applyStep(step, plan.text); return; } // 開頭的臉立刻換，不等下一輪
+      perfTimers.push(setTimeout(function () { applyStep(step, plan.text); }, step.atMs));
+    });
+    perfTimers.push(setTimeout(finishCurrent, plan.endMs)); // 與結尾換臉同一時間，排在它之後
+  }
+
+  // 一則演完：換下一則上場
+  function finishCurrent() {
+    perfTimers = [];
+    stage = PERF.stageFinish(stage);
+    startCurrent();
+  }
+
+  // 跳到演完：清掉演出計時器，泡泡一次顯示全部完整台詞，臉換回平常的臉；沒在演就什麼都不做
+  function skipToEnd() {
+    if (stage.current === null) return;
+    clearPerformance();
+    var result = PERF.stageSkip(stage, EMOTION_MAP.frames, EMOTION_MAP.defaultEmotion);
+    stage = result.stage;
+    document.getElementById('text').textContent = result.text; // 用 textContent，不解析 HTML
+    document.getElementById('bubble').scrollTop = 0; // 完整台詞從頭讀起
+    setFace(result.face);
   }
 
   // 呼叫原生橋接（在瀏覽器測試時沒有 PetBridge 就略過）
@@ -84,18 +188,29 @@
 
   // 原生 → 網頁的介面
   window.pet = {
-    // 切換播放或暫停
+    // 切換播放或暫停；暫停（例如螢幕關閉）時演出直接跳到演完
     setRender: function (mode) {
+      if (mode === 'paused') skipToEnd();
       clearTimers();
       playing = (mode === 'playing');
       if (playing) { scheduleBlink(); breathTimer = setInterval(breathStep, 1000 / BREATH_FPS); }
     },
-    // 在泡泡裡顯示文字
-    showText: function (text) {
-      document.getElementById('text').textContent = String(text); // 用 textContent，不解析 HTML
+    // 演出一則帶表情標籤的台詞：沒在演就立刻開演，否則排在後面接著演
+    say: function (script) {
+      if (typeof script !== 'string' || script.length === 0) return; // 空字串忽略，不排隊
+      var wasIdle = stage.current === null;
+      stage = PERF.stageSay(stage, script);
+      if (wasIdle) startCurrent();
     },
-    // 顯示或收起泡泡
+    // 在泡泡裡顯示文字（系統訊息）：先跳到演完，再換成這段文字，臉為平常的臉
+    showText: function (text) {
+      skipToEnd();
+      document.getElementById('text').textContent = String(text); // 用 textContent，不解析 HTML
+      setFace(EMOTION_MAP.defaultEmotion);
+    },
+    // 顯示或收起泡泡；收起時演出直接跳到演完
     showBubble: function (show) {
+      if (!show) skipToEnd();
       document.getElementById('bubble').classList.toggle('show', !!show);
     }
   };
