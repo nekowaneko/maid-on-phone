@@ -1,0 +1,3 @@
+# App 的聊天網址設定範例。複製成 worker.properties 後填入（不會進 git）。
+# 必須是 https:// 開頭；沒填或不是 https 時，泡泡的「聊聊」會提示尚未設定。步驟見 docs/WORKER-SETUP.md
+chatUrl=
