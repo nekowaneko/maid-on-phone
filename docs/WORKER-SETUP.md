@@ -61,3 +61,12 @@ Invoke-RestMethod -Method Post -Uri "https://pet-maid-api.xxx.workers.dev/api/pu
 - 標籤寫在哪個字前面，角色就在逐字打到那個字時換臉；說完 3 秒回到平常的臉。
 - 角色模式關時，通知欄只顯示去掉標籤的文字；點通知叫出角色時才照原文演出。
 - 不帶標籤的推播和 M1.5 完全一樣。
+
+### 用 cmd 送（Windows 10 內建 curl）
+cmd 直接在指令裡打中文會被轉成 Big5 送出，Worker 收到亂碼。先把內容存成 UTF-8 檔案再送：
+1. 用記事本建立 `push.json`，內容 `{"text":"[pout]真拿主人沒辦法。[smile]水記得喝。"}`，存檔時編碼選「UTF-8」
+2. 在 `push.json` 所在的資料夾執行：
+```bat
+curl -X POST "https://pet-maid-api.xxx.workers.dev/api/push" -H "x-app-secret: 你的存取密鑰" -H "Content-Type: application/json; charset=utf-8" --data-binary @push.json
+```
+成功時回覆 `{"ok":true,"id":"push-..."}`。換台詞只要改 `push.json` 再執行同一行。
