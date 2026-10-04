@@ -12,6 +12,7 @@ import { classifyFailure, shouldRetract, buildFallbackText } from '../core/failu
 import { zonedDateKey, nextResetMs, summarizeUsage } from '../core/quota.js'
 import { validatePersona } from '../core/persona.js'
 import { isMessageAcceptable, describeMessage } from '../core/message.js'
+import { feedAll, finalize } from '../core/stream-parser.js'
 import {
   validatePushPayload,
   newPushId,
@@ -302,7 +303,16 @@ const sendOnce = async (deps, message) => {
   }
 }
 
-// 送一則推播：順序固定為 內容檢查 → 是否已設定 → 組訊息 → 送出一次（§4.4）
+// 把推播原文的表情標籤剝掉（M1.6）：與聊天網頁同一支解析程式，回傳 { text: trim 後的純文字, script }。
+// 剝完的純文字（trim 前）與原文相同就視為不含標籤，script 為 null，推播與 M1.5 逐字相同（架構約束 A27）
+const splitPushScript = (deps, original) => {
+  const emotionMap = deps.emotionConfig?.emotionMap
+  const defaultEmotion = deps.emotionConfig?.defaultEmotion
+  const plain = finalize(feedAll([original], emotionMap, defaultEmotion), defaultEmotion).text
+  return { text: plain.trim(), script: plain === original ? null : original }
+}
+
+// 送一則推播：順序固定為 內容檢查 → 剝標籤 → 是否已設定 → 組訊息 → 送出一次（M1.6 §4.2）
 // 日誌只記成功或失敗與錯誤代碼，不記內容、推播代碼與服務帳戶（架構約束 A19）
 const handlePush = async (deps, request) => {
   if (request.method !== POST_METHOD) return jsonResponse({ error: METHOD_NOT_ALLOWED_MESSAGE }, 405)
@@ -311,12 +321,15 @@ const handlePush = async (deps, request) => {
     const error = checked.reason === PUSH_TOO_LONG_REASON ? PUSH_TOO_LONG_MESSAGE : PUSH_FORMAT_MESSAGE
     return jsonResponse({ error }, 400)
   }
+  // 長度以原文計（上面已檢查），剝完標籤沒有台詞時一樣算格式錯誤，不送出
+  const split = splitPushScript(deps, checked.text)
+  if (split.text.length === 0) return jsonResponse({ error: PUSH_FORMAT_MESSAGE }, 400)
   const config = deps.pushConfig ?? {}
   if (!isPushConfigured(config.serviceAccount, config.deviceToken)) {
     return jsonResponse({ error: PUSH_NOT_CONFIGURED_MESSAGE }, 503)
   }
   const id = checked.id ?? newPushId(readNow(deps), readRandomText(deps))
-  const result = await sendOnce(deps, buildFcmMessage(config.deviceToken, id, checked.text))
+  const result = await sendOnce(deps, buildFcmMessage(config.deviceToken, id, split.text, split.script))
   if (result?.ok) {
     console.log('推播送出成功')
     return jsonResponse({ ok: true, id }, 200)
