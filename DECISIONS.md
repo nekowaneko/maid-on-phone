@@ -71,3 +71,10 @@
 40. **複製結果**：`git archive 54065e9` 共取出 87 個檔案，其中 16 個 `.png`（角色立繪與圖示）被 §3.1 的 `.gitignore` 擋下，只放本機；進 git 的 71 個檔案沒有 `.png` 與 `.dev.vars`。
 41. **各文件照抄追加**：README.md、docs/ARCHITECTURE.md、CHECKLIST.md 原本都沒有 M1.5 章節，`.gitignore` 原本也沒有 §3.1 的任何一行，均無重複。
 42. **驗收結果**：C1～C7 全數通過；C4 為 269 個通過、0 個失敗，C5 只看 V06（通過）。沒有寫入 BLOCKERS.md 的項目。
+
+## M1.5 貴批次
+
+43. **凍結 hash 分兩個 commit**（同第 32 項）：規格測試在 `c119cfe`，verify.sh 對新 hash 的引用另外 commit。
+44. **V04／V05 同時涵蓋兩個 spec 目錄**：V04 對 `core/.../spec/` 與 `backend/tests/spec/` 一起做 `git diff --quiet`；V05 的 JS 部分以 `test('<編號> ` 計數，並掃 `test.skip`、`test.todo`、`.only`。
+45. **推播文字先修剪再送出**：`validatePushPayload` 以 trim 後的文字判斷空白與長度，送出的也是 trim 後的那一份，與 `handleChat`「驗哪一份就送哪一份」一致；長度以 Unicode 字元（code point）計算。
+46. **測試用服務帳戶只是假字串**：規格測試的 `private_key` 是 `test-only-private-key`，路由層只檢查欄位是否存在，不做簽章；避免在追蹤檔中出現私鑰樣式（V06）。

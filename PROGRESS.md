@@ -54,3 +54,14 @@
 ### T4
 - `./verify.sh --full` 一次全綠；修正輪數 0；錯誤指紋無
 - M1 合計修正輪數 3（T1 兩輪、T2 一輪），匯總表見 ACCEPTANCE-M1.md
+
+## M1.5
+
+### T0a
+- M1.5 便宜批次 §2 的產出檔案全部存在且非空；README.md、docs/ARCHITECTURE.md、CHECKLIST.md 都含「M1.5」。
+- 開工時工作區只有 `.idea/` 未追蹤，不需另外 commit。
+
+### T0b
+- 凍結 M1.5 規格測試 commit：`c119cfe56128d03e00dc983d6c8f7b484f2df8df`（Kotlin 28 個＝M0 10＋M1 14＋M1.5 4；JS 9 個）
+- 骨架狀態：JS 規格 9 個中 S01、S03 已通過（授權沿用既有中介、wrangler.toml 已由便宜批次設定），其餘 7 個因「尚未實作」失敗；Kotlin 規格可編譯。
+- 修正輪數：0；錯誤指紋：無

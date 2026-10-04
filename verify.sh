@@ -6,11 +6,14 @@
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="4f9208aa29cd471cd64f499f1bbe86bc1db492d5"   # 凍結規格測試的 commit（M1 凍結版）
+FROZEN_HASH="c119cfe56128d03e00dc983d6c8f7b484f2df8df"   # 凍結規格測試的 commit（M1.5 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
+JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"
 ASSET_PREFIX="file:///android_asset/pet/"
 SPEC_IDS="S01 S02 S03 S07 S08 S09 S10 S13 S14 S15"
+M15_SPEC_IDS="M15-S04 M15-S05 M15-S06 M15-S13"  # M1.5 的 Kotlin 自動列
+M15_JS_SPEC_IDS="M15-S01 M15-S02 M15-S03 M15-S07 M15-S08 M15-S09 M15-S10 M15-S11 M15-S12"  # M1.5 的 JS 自動列
 M1_SPEC_IDS="M1-S01 M1-S02 M1-S03 M1-S04 M1-S05 M1-S06 M1-S07 M1-S08 M1-S09 M1-S10 M1-S11 M1-S12 M1-S14 M1-S15"  # M1 自動列（計畫書寫 13 個但列了 14 列，見 DECISIONS.md）
 
 FULL=0
@@ -50,18 +53,23 @@ if grep -n 'android.permission.INTERNET' "$MANIFEST"; then fail "V03 Manifest �
 pass "V03"
 
 # V04：規格測試未被改動（含未追蹤的新檔）
-git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" || fail "V04 spec 目錄與凍結版本不同"
-[ -z "$(git status --porcelain -- "$SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
+git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 目錄與凍結版本不同"
+[ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：M0 10 個＋M1 14 個規格測試、各列一次、沒有 @Ignore
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個規格測試、各列一次；JS M1.5 9 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 24 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 24"
-for id in $SPEC_IDS $M1_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 28 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 28"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
+for id in $M15_JS_SPEC_IDS; do
+  n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
+  [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
+done
 if grep -rn '@Ignore' "$SPEC_DIR"; then fail "V05 規格測試含 @Ignore"; fi
+if grep -rnE 'test\.skip|test\.todo|\.only' "$JS_SPEC_DIR"; then fail "V05 JS 規格測試含略過或獨跑標記"; fi
 pass "V05"
 
 # V06：沒有憑證與私人素材被追蹤
