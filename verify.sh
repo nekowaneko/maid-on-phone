@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="fbda387281a50ca4dc4526d5b98ff67c03354d87"   # 凍結規格測試的 commit（M1.6 凍結版）
+FROZEN_HASH="7b7e6de14b2ecc214380837f22ee9a6eafcf982d"   # 凍結規格測試的 commit（M1.6 凍結版，S10、S12 節奏修訂）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"

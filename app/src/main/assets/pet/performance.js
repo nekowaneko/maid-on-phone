@@ -1,10 +1,13 @@
 // 懸浮窗的演出排程（M1.6；介面見 docs/M1.6-EXPENSIVE-PLAN.md §4.3）。
 // 全部是純函式：不碰 DOM、不讀時間、不改動傳入的物件。index.html 依這裡排出的步驟設計時器。
-// 節奏照抄 accompany_bot 的聊天網頁：換臉後空 450 毫秒才出字、每 30 毫秒一個字、說完停 3 秒回平常的臉。
+// 節奏：換臉後空 450 毫秒才出字、每 80 毫秒一個字、句尾標點之後多停 500 毫秒、說完停 3 秒回平常的臉。
+// 換臉與停留照抄 accompany_bot；出字速度與句尾停頓是使用者 2026-10-04 實機看過後調整的（聊天網頁是每 30 毫秒、不停頓）。
 // 依賴 vendor/stream-parser.js 掛上的 PetStreamParser（需先載入）。
 (function (root) {
   // 常數定義
-  var TIMING = { leadMs: 450, charMs: 30, holdMs: 3000 }; // 照抄 LEAD_MS、TYPEWRITER_INTERVAL_MS、HOLD_MS
+  var TIMING = { leadMs: 450, charMs: 80, pauseMs: 500, holdMs: 3000 }; // pauseMs：句尾標點之後、下一個字之前多停的時間
+  var SENTENCE_ENDS = '。！？…!?';       // 句尾標點：出現後下一個字前要停頓
+  var TRAILING_MARKS = '」』）)"\'”’ \n'; // 句尾標點後面常跟著的收尾符號與空白，視為同一個句尾
   var EMPTY_TEXT = '';
   var SKIP_SEPARATOR = '\n\n'; // 跳到演完時，各則台詞之間空一行
 
@@ -15,9 +18,27 @@
     return parser.finalize(parser.feedAll([source], frames, defaultEmotion), defaultEmotion);
   }
 
-  // 第 k 個字（1 起算）出現的時間
-  function charTime(k) {
-    return TIMING.leadMs + (k - 1) * TIMING.charMs;
+  // 第 k 個字（1 起算，k ≥ 2）前面是不是剛結束一句：往前略過收尾符號，碰到句尾標點才算；
+  // 第 k 個字本身是標點或收尾符號時不停（連續的「！？」「。」」只在整串結束後停一次）
+  function endsSentenceBefore(text, k) {
+    var current = text.charAt(k - 1);
+    if (SENTENCE_ENDS.indexOf(current) >= 0 || TRAILING_MARKS.indexOf(current) >= 0) return false;
+    for (var i = k - 2; i >= 0; i -= 1) {
+      var ch = text.charAt(i);
+      if (SENTENCE_ENDS.indexOf(ch) >= 0) return true;
+      if (TRAILING_MARKS.indexOf(ch) < 0) return false;
+    }
+    return false;
+  }
+
+  // 每個字出現的時間：times[k] 為第 k 個字（1 起算）的毫秒數
+  function charTimes(text) {
+    var times = [0, TIMING.leadMs];
+    for (var k = 2; k <= text.length; k += 1) {
+      var pause = endsSentenceBefore(text, k) ? TIMING.pauseMs : 0;
+      times.push(times[k - 1] + TIMING.charMs + pause);
+    }
+    return times;
   }
 
   // 開頭的臉：index 0 的 cue（有多個時取最後一個，才是真正生效的表情），沒有就用預設表情
@@ -52,12 +73,13 @@
     var parsed = parseScript(script, frames, defaultEmotion);
     var text = parsed.text;
     var cues = parsed.cues;
+    var times = charTimes(text);
     var steps = [{ atMs: 0, face: firstFace(cues, defaultEmotion) }];
     for (var k = 1; k <= text.length; k += 1) {
-      if (k > 1) steps = steps.concat(faceStepsAt(cues, k - 1, charTime(k))); // 換臉排在同一時間的出字之前
-      steps.push({ atMs: charTime(k), count: k });
+      if (k > 1) steps = steps.concat(faceStepsAt(cues, k - 1, times[k])); // 換臉排在同一時間的出字之前
+      steps.push({ atMs: times[k], count: k });
     }
-    var lastMs = text.length > 0 ? charTime(text.length) : TIMING.leadMs; // 沒有字時以 leadMs 當最後一個字的時間
+    var lastMs = text.length > 0 ? times[text.length] : TIMING.leadMs; // 沒有字時以 leadMs 當最後一個字的時間
     steps = steps.concat(trailingFaceSteps(cues, text.length, lastMs)); // 標籤在最後：排在最後一個字之後
     var endMs = lastMs + TIMING.holdMs;
     steps.push({ atMs: endMs, face: defaultEmotion }); // 停留結束換回平常的臉

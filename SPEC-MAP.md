@@ -84,7 +84,7 @@ M0-S15 修訂版取代 `SpecTest.kt` 內的 S15，函式名稱開頭仍為 `S15`
 | M16-S07 | 自動＋手機 | M16SpecTest.kt：`M16-S07 排隊兩則依收到順序報告且第二則換回平常的臉`；手機見 DEVICE-CHECKLIST-M1.6.md |
 | M16-S08 | 自動 | M16SpecTest.kt：`M16-S08 更新前的舊版排隊檔更新後照常報告一則都不少` |
 | M16-S09 | 手機 | 見 DEVICE-CHECKLIST-M1.6.md A 節 |
-| M16-S10 | 自動＋手機 | m16/overlay.test.js：`M16-S10 先換 pout 臉停 0.45 秒才出第一個字之後每 0.03 秒一個字打到第 9 個字時換 smile 臉` |
+| M16-S10 | 自動＋手機 | m16/overlay.test.js：`M16-S10 先換 pout 臉停 0.45 秒才出第一個字之後每 0.08 秒一個字句尾多停 0.5 秒打到第 9 個字時換 smile 臉` |
 | M16-S11 | 自動 | m16/overlay.test.js：`M16-S11 不在表情清單裡的標籤用平常的臉說而且泡泡裡看不到標籤` |
 | M16-S12 | 自動＋手機 | m16/overlay.test.js：`M16-S12 最後一個字出現後再過 3 秒換回平常的臉` |
 | M16-S13 | 自動＋手機 | m16/overlay.test.js：`M16-S13 演出中又來一則時第一則照常演完才開始演第二則` |

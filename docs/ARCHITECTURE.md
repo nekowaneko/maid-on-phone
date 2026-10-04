@@ -38,5 +38,5 @@
 ## M1.6 懸浮窗表情
 
 - 推播資料 `{id, text, script?}`：Worker B 收到帶標籤的台詞時，`text` 為去掉標籤的純文字（給通知欄），`script` 為原文（給角色演出）；沒有標籤時不帶 `script`，與 M1.5 相同。
-- 角色頁依序載入三支一般 script：`emotion-map.js`（表情鍵 → 整張表情圖）、`vendor/stream-parser.js`（由 `tools/sync-overlay-vendor.mjs` 從 `backend/core/stream-parser.js` 產生，不得手改）、`performance.js`（演出排程：逐字、換臉、排隊、跳到演完）。
+- 角色頁依序載入三支一般 script：`emotion-map.js`（表情鍵 → 整張表情圖）、`vendor/stream-parser.js`（由 `tools/sync-overlay-vendor.mjs` 從 `backend/core/stream-parser.js` 產生，不得手改）、`performance.js`（演出排程：每字 80 毫秒、句尾停 500 毫秒、換臉、排隊、跳到演完）。
 - 表情圖是整張替換，放在 `frames/local/`（不進 git），由 `tools/make_expression_frames.py` 從 Nano Banana 做的差分圖產生。

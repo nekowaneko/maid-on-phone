@@ -43,9 +43,9 @@ const planOf = (script) => {
   return plain(pet.PetPerformance.planTimeline(script, map.frames, map.defaultEmotion))
 }
 
-test('TIMING 照抄聊天網頁的節奏', () => {
+test('TIMING：換臉與停留照抄聊天網頁，出字與句尾停頓依使用者調整', () => {
   const { PetPerformance: perf } = loadPet()
-  assert.deepEqual(plain(perf.TIMING), { leadMs: 450, charMs: 30, holdMs: 3000 })
+  assert.deepEqual(plain(perf.TIMING), { leadMs: 450, charMs: 80, pauseMs: 500, holdMs: 3000 })
 })
 
 test('planTimeline 的步驟依時間遞增排列，每個字恰好一個 count 步驟', () => {
@@ -60,16 +60,16 @@ test('planTimeline 的步驟依時間遞增排列，每個字恰好一個 count 
 test('沒有標籤時開頭與結尾都是平常的臉，中間沒有換臉', () => {
   const plan = planOf('該喝水了')
   const faces = plan.steps.filter((step) => step.face !== undefined)
-  assert.deepEqual(faces, [{ atMs: 0, face: 'neutral' }, { atMs: 540 + 3000, face: 'neutral' }])
-  assert.equal(plan.endMs, 3540)
+  assert.deepEqual(faces, [{ atMs: 0, face: 'neutral' }, { atMs: 690 + 3000, face: 'neutral' }])
+  assert.equal(plan.endMs, 3690)
 })
 
 test('標籤寫在最後一個字之後時，排在最後一個字的時間、count 之後', () => {
   const plan = planOf('你好[pout]')
   assert.equal(plan.text, '你好')
   const lastCount = plan.steps.findIndex((step) => step.count === 2)
-  assert.deepEqual(plan.steps[lastCount + 1], { atMs: 480, face: 'pout' })
-  assert.deepEqual(plan.steps[plan.steps.length - 1], { atMs: 3480, face: 'neutral' })
+  assert.deepEqual(plan.steps[lastCount + 1], { atMs: 530, face: 'pout' })
+  assert.deepEqual(plan.steps[plan.steps.length - 1], { atMs: 3530, face: 'neutral' })
 })
 
 test('空字串與只有標籤時，以 leadMs 當最後一個字的時間', () => {
@@ -95,7 +95,7 @@ test('排隊報告補的 [neutral] 讓每則從平常的臉開始', () => {
   const plan = planOf('[neutral]・[pout]第一則')
   assert.deepEqual(plan.steps[0], { atMs: 0, face: 'neutral' })
   const pout = plan.steps.find((step) => step.face === 'pout')
-  assert.equal(pout.atMs, 480) // 「第」是第 2 個字
+  assert.equal(pout.atMs, 530) // 「第」是第 2 個字
 })
 
 test('非字串的台詞當成空字串，不丟例外', () => {
@@ -160,6 +160,27 @@ test('同步腳本只去掉行首 export 並包一層，其餘逐字保留', () 
   assert.match(lines[5], /^root\.PetStreamParser = \{ createParserState, feedChunk, finalize, cuesReadyAt, feedAll, extractSseEvents \}$/)
   assert.equal(lines[6], '})(this)')
   assert.equal(lines.length, 8)
+})
+
+// 取出每個字出現的時間（count 1 起算的陣列）
+const charTimesOf = (script) => planOf(script).steps.filter((step) => step.count !== undefined).map((step) => step.atMs)
+
+test('句尾停頓：標點後接收尾符號時，整串結束後只停一次', () => {
+  // 好、。、」都不停；「嗯」前面是「。」」的句尾，多停 500
+  assert.deepEqual(charTimesOf('好。」嗯'), [450, 530, 610, 1190])
+})
+
+test('句尾停頓：連續的句尾標點只在整串結束後停一次', () => {
+  assert.deepEqual(charTimesOf('真的！？嗯'), [450, 530, 610, 690, 1270])
+})
+
+test('句尾停頓：最後一個字是標點時不延長結尾', () => {
+  const plan = planOf('好。')
+  assert.equal(plan.endMs, 530 + 3000)
+})
+
+test('句尾停頓：換行接在句尾後面也只停一次，逗號不停', () => {
+  assert.deepEqual(charTimesOf('好。\n嗯，對'), [450, 530, 610, 1190, 1270, 1350])
 })
 
 test('vendor 掛上的 PetStreamParser 與 backend 的匯出名稱一致', async () => {
