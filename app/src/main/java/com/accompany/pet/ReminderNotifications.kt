@@ -31,14 +31,14 @@ private fun ensureChannels(context: Context) {
     nm.createNotificationChannel(queue)
 }
 
-// 點通知後送給角色服務的 PendingIntent（text 為 null 表示只叫出角色、報告排隊）
-private fun showPending(context: Context, requestCode: Int, text: String?): PendingIntent {
+// 點通知後送給角色服務的 PendingIntent（script 為要演出的原文；null 表示只叫出角色、報告排隊）
+private fun showPending(context: Context, requestCode: Int, script: String?): PendingIntent {
     val intent = Intent(context, OverlayService::class.java).setAction(ACTION_SHOW)
-    if (text != null) intent.putExtra(EXTRA_TEXT, text)
+    if (script != null) intent.putExtra(EXTRA_TEXT, script)
     return PendingIntent.getForegroundService(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 }
 
-// 一般通知：頭像＋提醒文字，點一下叫出角色顯示同一則（M1 不加按鈕）
+// 一般通知：頭像＋提醒文字（純文字，看不到標籤），點一下叫出角色用原文演出同一則（M1 不加按鈕）
 fun showReminderNotification(context: Context, r: Reminder) {
     ensureChannels(context)
     val id = REMINDER_NOTIFICATION_BASE + (r.id.hashCode() and 0x0FFFFFFF)  // 同編號覆蓋同一則
@@ -47,7 +47,7 @@ fun showReminderNotification(context: Context, r: Reminder) {
         .setContentTitle("陪伴角色")
         .setContentText(r.text)
         .setStyle(NotificationCompat.BigTextStyle().bigText(r.text))
-        .setContentIntent(showPending(context, id, r.text))
+        .setContentIntent(showPending(context, id, r.script))  // 角色用原文演出（M16-S09）
         .setAutoCancel(true)
         .build()
     manager(context).notify(id, n)
