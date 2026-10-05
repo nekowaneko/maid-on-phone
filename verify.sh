@@ -3,11 +3,11 @@
 # 用法：./verify.sh          → L1＋L2
 #       ./verify.sh --full   → L1＋L2＋L3
 #       ./verify.sh --core-only → 只在 T1 使用：app 尚未實作，略過 V07～V10（見 DECISIONS.md）
-#       ./verify.sh --lane B|C|D → M1.6 平行開工：L1 全跑，L2 只跑該線負責的部分（docs/M1.6-EXPENSIVE-PLAN.md §0.4）
+#       ./verify.sh --lane B|C|D → 平行開工：L1 全跑，L2 只跑該線負責的部分（M2 範圍見 docs/M2-EXPENSIVE-PLAN.md §0.4）
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="7b7e6de14b2ecc214380837f22ee9a6eafcf982d"   # 凍結規格測試的 commit（M1.6 凍結版，S10、S12 節奏修訂）
+FROZEN_HASH="592f89e3a776ce41334d6e3f601a17816847a1e2"   # 凍結規格測試的 commit（M2 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"
@@ -17,7 +17,11 @@ M15_SPEC_IDS="M15-S04 M15-S05 M15-S06 M15-S13"  # M1.5 的 Kotlin 自動列
 M15_JS_SPEC_IDS="M15-S01 M15-S02 M15-S03 M15-S07 M15-S08 M15-S09 M15-S10 M15-S11 M15-S12"  # M1.5 的 JS 自動列
 M16_SPEC_IDS="M16-S03 M16-S04 M16-S05 M16-S06 M16-S07 M16-S08"  # M1.6 的 Kotlin 自動列
 M16_JS_SPEC_IDS="M16-S01 M16-S02 M16-S10 M16-S11 M16-S12 M16-S13 M16-S14 M16-S15"  # M1.6 的 JS 自動列
-OVERLAY_TESTS="tests/spec/m16/overlay.test.js tests/overlay-*.test.js"  # B 線（角色頁）的測試
+M2_SPEC_IDS="M2-S13"  # M2 的 Kotlin 自動列
+M2_JS_SPEC_IDS="M2-S01 M2-S02 M2-S03 M2-S04 M2-S05 M2-S06 M2-S07 M2-S08 M2-S09 M2-S10 M2-S11 M2-S12 M2-S14 M2-S15 M2-S16"  # M2 的 Worker 自動列
+M2_JS_B_SPEC_IDS="M2-S02-B M2-S04-B M2-S11-B M2-S16-B"  # M2 的懸浮窗網頁自動列
+OVERLAY_TESTS="tests/spec/m16/overlay.test.js tests/spec/m2/overlay-drink.test.js tests/overlay-*.test.js"  # B 線（角色頁）的測試
+WORKER_API_KT="app/src/main/java/com/accompany/pet/WorkerApi.kt"  # App 唯一可以連外的檔案（M2 A12 修訂）
 M1_SPEC_IDS="M1-S01 M1-S02 M1-S03 M1-S04 M1-S05 M1-S06 M1-S07 M1-S08 M1-S09 M1-S10 M1-S11 M1-S12 M1-S14 M1-S15"  # M1 自動列（計畫書寫 13 個但列了 14 列，見 DECISIONS.md）
 
 FULL=0
@@ -68,14 +72,14 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 
 [ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列各一次；沒有略過或獨跑標記
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 34 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 34"
-for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 35 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 35"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
-for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS; do
+for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS; do
   n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -148,9 +152,14 @@ if [ "$CORE_ONLY" -eq 0 ]; then
   done
   pass "V07"
 
-  # V08：@JavascriptInterface 恰好 3 次；ChatActivity 不得加 JS 介面（M1.5 A5 修訂）
+  # V08：@JavascriptInterface 恰好 4 次（M2 A5 修訂：加 onDrinkAction）；ChatActivity 不得加 JS 介面
+  # B、D 線的 worktree 不含 C 線的改動，仍是 3 個；只有 C 線與整合時要求 4 個
   JS_COUNT=$(grep -rho '@JavascriptInterface' app/src | wc -l)
-  [ "$JS_COUNT" -eq 3 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次"
+  if [ "$LANE" = "B" ] || [ "$LANE" = "D" ]; then
+    [ "$JS_COUNT" -eq 3 ] || [ "$JS_COUNT" -eq 4 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次"
+  else
+    [ "$JS_COUNT" -eq 4 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次，應為 4"
+  fi
   if grep -n 'addJavascriptInterface' "$CHAT_KT"; then fail "V08 ChatActivity.kt 含 addJavascriptInterface"; fi
   pass "V08"
 
@@ -176,9 +185,22 @@ if [ "$CORE_ONLY" -eq 0 ]; then
   grep -A5 'android:name=".PetTileService"' "$MANIFEST" | grep -q 'BIND_QUICK_SETTINGS_TILE' || fail "V19 PetTileService 缺少 BIND_QUICK_SETTINGS_TILE"
   pass "V19"
 
-  # V18：app 不自行連外（M1 A12）
-  if grep -rnE 'java\.net\.URL\(|HttpURLConnection|okhttp|retrofit|ktor' app/src/main; then fail "V18 app 含自行連外的程式"; fi
+  # V18：app 只有 WorkerApi.kt 可以連外，且不得用第三方連線程式庫（M2 A12 修訂）
+  if grep -rnE 'okhttp|retrofit|ktor' app/src/main; then fail "V18 app 含第三方連線程式庫"; fi
+  if grep -rnE 'java\.net\.URL\(|HttpURLConnection' app/src/main --exclude=WorkerApi.kt; then fail "V18 WorkerApi.kt 以外含自行連外的程式"; fi
   pass "V18"
+
+  # V29：WorkerApi.kt 只連 apiOrigin(BuildConfig.CHAT_URL)；API_SECRET 只在 WorkerApi.kt 使用；log 不含密鑰與回應內容（M2 A12、A33）
+  # B、D 線的 worktree 沒有 C 線的檔案，WorkerApi.kt 不存在時略過；C 線與整合時必須存在
+  if [ -f "$WORKER_API_KT" ]; then
+    grep -q 'apiOrigin(BuildConfig.CHAT_URL)' "$WORKER_API_KT" || fail "V29 WorkerApi.kt 的網址不是來自 apiOrigin(BuildConfig.CHAT_URL)"
+    if grep -nE 'https?://' "$WORKER_API_KT"; then fail "V29 WorkerApi.kt 寫死了網址"; fi
+    if grep -rn 'API_SECRET' app/src/main --exclude=WorkerApi.kt; then fail "V29 API_SECRET 出現在 WorkerApi.kt 以外"; fi
+    if grep -nE 'Log\.[a-z]\(.*([Ss]ecret|SECRET|[Bb]ody)' "$WORKER_API_KT"; then fail "V29 WorkerApi.kt 把密鑰或回應內容寫進 log"; fi
+  elif [ "$LANE" != "B" ] && [ "$LANE" != "D" ]; then
+    fail "V29 找不到 $WORKER_API_KT"
+  fi
+  pass "V29"
 
   # V20：PetMessagingService 不對外開放（M1 A14）
   grep -A3 'android:name=".PetMessagingService"' "$MANIFEST" | grep -q 'android:exported="false"' || fail "V20 PetMessagingService 不是 exported=false"
@@ -213,12 +235,12 @@ fi
 if runs D; then
   # V26：backend 全部測試通過（原有 269 個＋規格＋輔助）；D 線不跑角色頁的測試（屬 B 線）
   if [ "$LANE" = "D" ]; then
-    NODE_FILES=$(cd backend && find tests -name '*.test.js' ! -path 'tests/spec/m16/overlay.test.js' ! -name 'overlay-*.test.js' | sort | tr '
+    NODE_FILES=$(cd backend && find tests -name '*.test.js' ! -path 'tests/spec/m16/overlay.test.js' ! -path 'tests/spec/m2/overlay-drink.test.js' ! -name 'overlay-*.test.js' | sort | tr '
 ' ' ')
-    NODE_MIN=308
+    NODE_MIN=361   # M2 起跑前 346 個＋M2 Worker 規格 15 個
   else
     NODE_FILES="tests/**/*.test.js"
-    NODE_MIN=314
+    NODE_MIN=390   # 上一行的 361＋角色頁 25 個＋M2 網頁規格 4 個
   fi
   NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
   NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')
@@ -263,7 +285,7 @@ if grep -q '狀態：待補' MUTATION-REPORT.md; then
   grep -q '突變測試待補' CHECKLIST.md || fail "V15 CHECKLIST.md 缺少突變測試待補項"
 else
   grep -q '執行範圍' MUTATION-REPORT.md || fail "V15 報告缺少執行範圍"
-  for scope in core/permission core/reminder core/chat backend/core/push.js; do
+  for scope in core/permission core/reminder core/chat core/drink backend/core/push.js backend/core/drink.js; do
     grep -q "$scope" MUTATION-REPORT.md || fail "V15 執行範圍不含 $scope"
   done
 fi
@@ -271,7 +293,7 @@ pass "V15"
 
 # V16：高風險清單涵蓋 §2.1
 [ -f RISK-REVIEW.md ] || fail "V16 缺少 RISK-REVIEW.md"
-for name in exportCsv FilePositionStore PetBridge BatteryLogger FileReminderQueueStore FileSeenIdStore PetMessagingService ReminderDispatcher ForegroundDetector PushTokenStore   fcm-client handlePush push.js ChatActivity onChatPressed wrangler.toml   showScript performance.js; do
+for name in exportCsv FilePositionStore PetBridge BatteryLogger FileReminderQueueStore FileSeenIdStore PetMessagingService ReminderDispatcher ForegroundDetector PushTokenStore   fcm-client handlePush push.js ChatActivity onChatPressed wrangler.toml   showScript performance.js   handleDrinkConfirm handleDrinkResist handleDrinkUndo runScheduled addDrinkLog markDrinkUndone handleDrinkSettings WorkerApi DrinkActionReceiver onDrinkAction viewFor; do
   grep -q "$name" RISK-REVIEW.md || fail "V16 RISK-REVIEW.md 缺少 $name"
 done
 pass "V16"

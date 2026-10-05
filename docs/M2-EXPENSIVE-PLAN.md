@@ -31,7 +31,7 @@
 - **L2（十秒～一分鐘）**：只跑該線負責的部分
   - B：V27（`node tools/sync-overlay-vendor.mjs --check`＋`tests/spec/m16/overlay.test.js`＋`tests/spec/m2/overlay-drink.test.js`＋`tests/overlay-*.test.js`）
   - C：V11（`:core:test`）、V12（`:app:compileDebugKotlin`）
-  - D：V26（backend 測試，不含角色頁的三組測試；通過數下限由規劃者在凍結後填入）
+  - D：V26（backend 測試，不含角色頁的三組測試，通過數 ≥ 361）
 - **L3**：只在整合時由規劃者跑一次 `./verify.sh --full`。**各線不得執行 `--full`、`assembleDebug`、`pitest`、Stryker。**
 
 **各線只跑 `./verify.sh --lane <你的線>`。** 不得吞掉任何一層的失敗回傳碼。
@@ -366,10 +366,10 @@ App 端：
 |---|---|---|---|
 | V04（修訂） | L1 | 規格測試目錄與 M2 凍結版本相同 | `git diff --quiet <FROZEN_HASH>` |
 | V05（修訂） | L1 | Kotlin 規格加 M2-S13；JS 規格加 M2 的 Worker 列與 `-B` 列，各一次；沒有略過或獨跑標記 | grep 計數 |
-| V08（修訂） | L1 | `@JavascriptInterface` 恰好 4 次 | grep 計數 |
+| V08（修訂） | L1 | `@JavascriptInterface` 恰好 4 次（`--lane B`、`--lane D` 的 worktree 沒有 C 線的改動，3 或 4 次都算通過） | grep 計數 |
 | V18（修訂） | L1 | `HttpURLConnection`、`java.net.URL(` 只出現在 `WorkerApi.kt`；仍不得有 okhttp、retrofit、ktor | grep |
-| V29 | L1 | A12、A33：`WorkerApi.kt` 的網址只來自 `apiOrigin(BuildConfig.CHAT_URL)`；`API_SECRET` 只出現在 `WorkerApi.kt` 與 `build.gradle.kts`；`Log.` 那一行不含 `secret`／`SECRET`／`body` | grep |
-| V26（修訂） | L2 | backend 測試全過；`--lane D` 不含角色頁三組測試；通過數下限由規劃者凍結後填入 | 讀輸出 |
+| V29 | L1 | A12、A33：`WorkerApi.kt` 含 `apiOrigin(BuildConfig.CHAT_URL)`，且全檔（含註解）不得出現 `http://`、`https://`；`app/src/main` 中 `API_SECRET` 只出現在 `WorkerApi.kt`；`WorkerApi.kt` 的 `Log.` 那一行不含 `secret`／`Secret`／`SECRET`／`body`／`Body`。`WorkerApi.kt` 不存在時：`--lane B`、`--lane D` 略過，其餘失敗 | grep |
+| V26（修訂） | L2 | backend 測試全過；`--lane D` 不含角色頁三組測試且通過數 ≥ 361；不分線時通過數 ≥ 390 | 讀輸出 |
 | V27（修訂） | L2 | 加跑 `tests/spec/m2/overlay-drink.test.js` | 回傳碼 |
 | V15、V16（修訂） | L3 | 突變範圍加 `core/drink`、`backend/core/drink.js`；RISK-REVIEW 加 §2.1 的 M2 模組 | grep |
 
