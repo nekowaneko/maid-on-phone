@@ -208,7 +208,9 @@ stats = { weekCups, monthCups, monthResists, savedCups, monthSavedMoney, payback
 - `confirm`、`choose`、`saved`、`undone`、`other`（與飲料無關）、每日詢問的台詞，由語言模型依人設產生（提示詞 `drink-script-prompt.md`，系統提示沿用 `buildSystemPrompt` 帶 `persona.md`，再附上這次要說的事實與數字）。
 - `checkScriptNumbers(script, required) → boolean`（`drink.js`，純函式）：先剝掉表情標籤；取出所有阿拉伯數字串（去掉千分位逗號後轉整數）；**通過條件**＝每個 `required` 數字都出現至少一次，且出現的每個數字都在 `required` 之中。
 - 各情境的 `required`：`confirm` → `[kcal]`（有價格再加 `price`）；`choose`、`already`、`other`、詢問 → `[]`；`saved`、`undone` → `[weekCups, monthSavedMoney, paybackPct, monthSavedKcal]`。
-- 不通過 → 再呼叫一次；仍不通過、或語言模型失敗、或用量到頂 → 從 `drink-lines.json` 對應的鍵取第一句，佔位符以規則算出的值填入（`{size}`、`{sugar}`、`{ice}` 填名稱；`assumed` 有值時句尾接 `labels`）。
+- 不通過 → 再呼叫一次；仍不通過、或語言模型失敗、或用量到頂 → 從 `drink-lines.json` 對應的鍵取第一句，佔位符以規則算出的值填入（`{size}`、`{sugar}`、`{ice}` 填名稱）。`confirm` 用 `confirm`、有價格用 `confirmWithPrice`、`source:'table'` 用 `confirmTable`；`saved` 在 drink 用 `saved`、resist 用 `resisted`。
+- `assumed` 有值時，不論台詞來自語言模型或預設台詞，Worker 都在最後接上 `drink-lines.json` 的 `labels.assumedSize`／`labels.assumedSugar`（依序；這兩句不含數字，不參與 `checkScriptNumbers`）。
+- 最終台詞不含任何合法表情標籤（剝標籤後與原文相同）時，Worker 在開頭補 `[pout]`，確保角色是演出、不是平鋪直述。
 - 每一次語言模型呼叫都照 `handleChat` 記入用量（`recordUsage`）。
 
 #### 4.1.5 每日詢問（排程）
@@ -227,11 +229,13 @@ stats = { weekCups, monthCups, monthResists, savedCups, monthSavedMoney, payback
 
 #### 4.1.7 設定驗證
 
-`subscriptionName`：trim 後 1～30 字；`monthlyFee`：1～100000 的整數；`resistValue`：0～10000 的整數；`monthlyQuota`：0～300 的整數；`askTime`：`/^([01]\d|2[0-3]):00$/`。任一欄位不合 → 400 `{ error: '設定值不正確：<中文欄位名>' }`，五個欄位都不寫入。
+`subscriptionName`：trim 後 1～30 字；`monthlyFee`：1～100000 的整數；`resistValue`：0～10000 的整數；`monthlyQuota`：0～300 的整數；`askTime`：`/^([01]\d|2[0-3]):00$/`。任一欄位不合 → 400 `{ error: '設定值不正確：<中文欄位名>' }`，五個欄位都不寫入。中文欄位名依序為「訂閱名稱」「月費」「忍住一杯的入帳金額」「每月額度」「每天詢問時間」；多個欄位不合時只報第一個。
 
 #### 4.1.8 deps 新增（`index.js` 組裝，測試直接注入）
 
-`drinkModel`（drink-model.json）、`starbucksTable`（starbucks.json）、`drinkDefaults`（drink-defaults.json）、`drinkLines`（drink-lines.json）、`drinkPrompts: { parse, script }`（兩份 .md 的文字）。語言模型沿用 `deps.streamer`：把串流的 `text` 事件串起來當作一次完整回覆。
+`drinkModel`（drink-model.json）、`starbucksTable`（starbucks.json）、`drinkDefaults`（drink-defaults.json）、`drinkLines`（drink-lines.json）、`drinkPrompts: { parse, script }`（兩份 .md 的文字）。語言模型沿用 `deps.streamer`：把串流的 `text` 事件串起來當作一次完整回覆；`streamer` 丟例外即視為語言模型失敗。
+
+**規格測試靠以下兩點分辨呼叫種類（必須遵守）**：解析的那一次呼叫，訊息內容（所有 `content` 串起來）包含 `deps.drinkPrompts.parse` 全文、不含 `deps.drinkPrompts.script`；每一次產生台詞的呼叫（含每日詢問、與飲料無關時的回話），訊息內容包含 `deps.drinkPrompts.script` 全文、不含 `deps.drinkPrompts.parse`。儲存層一律用 `createStore` 回傳的介面（測試注入 `store.stub.js`）。`runScheduled(deps, nowMs)` 送推播用 `deps.pusher`、`deps.pushConfig`，與 `handlePush` 相同。
 
 ### 4.2 推播（D 送出、C 解析）
 
