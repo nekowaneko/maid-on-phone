@@ -110,3 +110,26 @@
 - Worker B 部署後以 cmd（curl＋UTF-8 檔案）送帶表情推播成功；之前的 `error code: 1042` 是指令網址仍為範例的 `xxx`
 - App 圖示改用 pout 表情（debug 來源集，不進 git）
 - 平行分派代理人的流程整理成 docs/PARALLEL-AGENTS.md（本專案的里程碑）
+
+## M2
+
+### T0（規劃者，2026-10-05）
+- 交接文件與計畫書 `f797ee6`；規格範例表 S01～S16、預設值表經使用者確認 `0207b41`
+- 便宜批次 `4d4e097`、`d900dc0`；凍結規格測試 `592f89e`；`verify.sh` 換成 M2 範圍（V29）`862196d`
+
+### 平行三條線（完整紀錄在 lanes/M2-B.md、M2-C.md、M2-D.md）
+
+19:44 同時開工。
+
+| 線 | 時間 | 修正輪數 | 錯誤指紋 | 各驗收項失敗次數 |
+|---|---|---|---|---|
+| B 懸浮窗網頁 | 約 4 分鐘 | 1 | `6e399546ec7f`（輔助測試比對跨執行環境的陣列） | V27：1 |
+| C Kotlin | 約 10 分鐘 | 1 | `802d2c9ca582`（M0 的 S15 和 A12 修訂衝突，規格爭議） | V11：1 |
+| D Worker | 約 12 分鐘 | 0 | 無 | 無 |
+
+### T4（規劃者整合）
+- 依 D、C、B 的順序合併，三次都沒有衝突
+- V18 加嚴（`java.net.`、`HttpsURLConnection`、`openConnection`），已用會觸發的輸入實際跑過；Pitest 範圍加 `core.drink`；Stryker 改成只跑 `spec/m2/drink.test.js`（`overlay-drink.test.js` 在沙盒裡讀不到角色頁）
+- `wrangler deploy --dry-run` 打包成功
+- `./verify.sh --full` 第一次就全綠（backend 454 個測試）；寫 ACCEPTANCE-M2、RISK-REVIEW（第 38～54 項）、MUTATION-REPORT 的 M2 段落
+- 等使用者處理：S15 規格爭議；建議新增的 M2-S17～S19；部署與手機實測

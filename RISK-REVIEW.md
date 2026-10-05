@@ -58,3 +58,27 @@
 | 35 | `performance.js` 的 `planTimeline`／`stageSkip` | `app/src/main/assets/pet/performance.js` | 解析外部文字 | 純函式、不改動傳入物件；解析程式為 vendor 照抄（A25） |
 | 36 | `buildVendor`／`main` | `tools/sync-overlay-vendor.mjs` | 寫入檔案 | 只寫 `vendor/stream-parser.js`；只去掉行首 `export ` 並包一層；`--check` 不寫檔 |
 | 37 | `build_data`／`build_message`（修改） | `tools/send_push.py` | 測試工具對外送推播 | 使用者手動執行才連 FCM；`--script` 沒給時與 M1.5 相同 |
+
+## M2（戒飲記錄 F1）
+
+依三條線紀錄檔（`lanes/M2-B.md`、`M2-C.md`、`M2-D.md`）的「高風險函式」段落匯整。§2.1 的十個模組都在表中。D1 的 SQL（`store.js`）沒有自動測試，規劃者在整合時逐行看過：全部是參數化查詢（`?1`…），沒有拼接字串；撤銷是條件式 UPDATE（`AND undone = 0`），不刪資料。整合時也用 `wrangler deploy --dry-run` 確認 Worker 打包得起來。
+
+| # | 函式 | 檔案 | 風險類別 | 看什麼 |
+|---|---|---|---|---|
+| 38 | `handleDrinkConfirm` | `backend/worker/handlers.js` | 對外部儲存寫入（D1） | 授權在前；Worker 自己 `resolveDraft` 重算熱量，App 送來的熱量和多餘欄位一律不採用（A30）；驗證不過回 `choose`，不寫入；`logId` 由 Worker 產生 |
+| 39 | `handleDrinkResist` | `backend/worker/handlers.js` | 對外部儲存寫入（D1） | `canResist`：同一時段已經有「沒喝」，或今天已經喝過，就回 `already`，不寫入；日期和時段一律用台北時間 |
+| 40 | `handleDrinkUndo` | `backend/worker/handlers.js` | 對外部儲存寫入（D1） | `logId` 必須是非空字串；`canUndo`（存在、還沒撤銷、7 天內）加上儲存層的條件式 UPDATE，兩道都過才算撤銷 |
+| 41 | `handleDrinkSettings`（PUT，函式名 `handleDrinkSettingsWrite`） | `backend/worker/handlers.js` | 覆寫使用者設定 | `validateDrinkSettings` 全部通過才開始寫；有一項不合就回 400，一個欄位都不寫；只寫五個固定的 `drink.` 鍵 |
+| 42 | `runScheduled` | `backend/worker/handlers.js` | 定時對外寫入（推播） | `shouldAsk`（整點、今天還沒問過、詢問時段沒有紀錄）；推播沒設定就不做事；只送一次，不重試；推播成功才寫 `drink.askedOn`；整段包在 try/catch 裡，日誌不記內容 |
+| 43 | `handleDrinkParse`、`generateScript`／`finishScript` | `backend/worker/handlers.js` | 外部文字交給語言模型；語言模型的輸出顯示給使用者 | 1～200 字；用量到上限就不呼叫；只取九個欄位，數字欄位丟掉（A30）；`checkScriptNumbers` 不通過就重試 1 次，再不通過改用預設台詞（A31）。中文數字（例如「五百」）擋不到，要靠手機實測 |
+| 44 | `addDrinkLog`、`markDrinkUndone`（另有 `listDrinkLogs`、`findDrinkLog`） | `backend/worker/store.js` | 寫入資料庫；SQL 無法離線測試 | 見本段開頭；配料存成 JSON 文字，讀回時解析失敗就當空陣列 |
+| 45 | `resolveDraft`、`checkScriptNumbers`、`statsOf`、`validateDrinkSettings`、`shouldAsk` | `backend/core/drink.js` | 純函式（決定寫入什麼內容、什麼時候推播） | 不讀時間、不改傳入的物件；熱量只來自 `calorie.js`（A32）；在 Stryker 範圍內 |
+| 46 | `buildFcmMessage`（修改） | `backend/core/push.js` | 組出對外訊息 | 第 5 個參數 `actions` 必須是非空字串才加進去，其餘與 M1.6 逐字相同 |
+| 47 | `WorkerApi.send`／`request`／`targetUrl` | `app/.../WorkerApi.kt` | 讀憑證（`API_SECRET`）、對外連線 | 網址只來自 `apiOrigin(BuildConfig.CHAT_URL)`；只用 `HttpsURLConnection`（不是 https 就不送，密鑰不走明文）；不跟隨轉址；逾時 15 秒；回應上限 64 KB；log 只記方法、路徑、狀態碼（V29） |
+| 48 | `DrinkActionReceiver.sendResist`／`openAndListen` | `app/.../DrinkActionReceiver.kt` | 通知按鈕觸發對外寫入 | Manifest `exported=false`；只認 `resist`、`speak`；送出的內容固定是 `{}`；沒有懸浮窗權限時只發通知提示，不繞過權限 |
+| 49 | `PetBridge.onDrinkAction` → `OverlayService.onDrinkAction`／`drinkRequestBody` | `app/.../PetBridge.kt`、`OverlayService.kt` | 網頁傳入的資料觸發對外寫入 | 超過 16 KB 就略過；動作白名單（`drinkEndpointFor`）；只取 `draft`（物件）和 `logId`（非空字串）；Worker 端會重算熱量 |
+| 50 | `OverlayService.callWorker`／`showDrink`／`thinking`／`onSpeechResult` | `app/.../OverlayService.kt` | 外部文字送進 WebView；使用者語音送到外部 | 回應原文經 `JSONObject.quote()` 跳脫後只當字串（A26）；`thinking` 只傳布林值，`true` 時順便打開泡泡；語音只送辨識成功的結果，最多 200 字 |
+| 51 | `DrinkSettingsActivity.saveSettings` | `app/.../DrinkSettingsActivity.kt` | 覆寫使用者設定 | 讀到目前的設定之前不能儲存；數字欄位送 JSON 數字；驗證只在 Worker 做 |
+| 52 | `apiOrigin`、`parseDrinkActions` | `core/.../drink/Drink.kt` | 決定連線目的地；解析外部輸入 | 只接受 https，拒絕帳密、IPv6、空白、奇怪的埠號；`actions` 白名單只有 `resist`、`speak` |
+| 53 | `PetDrinkView.viewFor`／`applyChoice` | `app/src/main/assets/pet/drink-view.js` | 外部文字顯示在畫面上；產生要寫入的草稿 | 純函式，不碰 DOM；按鈕文字由 `showDrinkButtons` 用 `textContent` 設定；草稿每次都複製一份，最後由 Worker 重新驗證 |
+| 54 | `window.pet.showDrink`、`showDrinkButtons`／`sendDrinkAction` | `app/src/main/assets/pet/index.html` | 外部 JSON 進入網頁；網頁按鈕觸發寫入 | `JSON.parse` 失敗就忽略；按下後整組按鈕清掉，避免重複送出；撤銷按鈕 60 秒後移除 |

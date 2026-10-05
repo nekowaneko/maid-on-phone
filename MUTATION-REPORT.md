@@ -112,3 +112,47 @@ T4 前曾有 3 個非等價存活（`sep <= 0` 邊界、`colon < 0` 決定主機
 ### 建議新增的規格範例列
 
 無存活的非等價突變，因此 0 列。
+
+## M2
+
+- 執行範圍：`core/permission`、`core/reminder`、`core/chat`、`core/drink`（Pitest，`targetClasses` 加上 `com.accompany.pet.core.drink.*`）；`backend/core/push.js`、`backend/core/drink.js`（Stryker）。
+- Stryker 的 `commandRunner` 改成跑 `tests/spec/m2/drink.test.js`，不用計畫書寫的 `tests/spec/m2/*.test.js`。原因是同目錄的 `overlay-drink.test.js` 會讀 `backend/` 以外的角色頁檔案，Stryker 的沙盒裡沒有這些檔案，初始執行會有 4 個測試失敗。角色頁本來就不在突變範圍。
+- 程式版本：整合 commit（合併 B 線之後）；規格測試凍結 commit `592f89e`。
+
+| 範圍 | 突變 | 殺死 | 存活 | 無覆蓋 |
+|---|---|---|---|---|
+| `core/drink`（新增） | 68 | 59 | 8 | 1 |
+| `core/reminder` | 107 | 101 | 6 | 0 |
+| `core/chat` | 55 | 44 | 8 | 3 |
+| `core/permission` | 1 | 1 | 0 | 0 |
+| `backend/core/push.js` | 85 | 84 | 1 | 0 |
+| `backend/core/drink.js`（新增） | 565 | 500＋逾時 2 | 63 | 0 |
+
+- `core/reminder`、`core/chat`、`push.js` 的存活與 M1.6 相同，都是等價突變。M2 在 `push.js` 新增的 `actions` 參數沒有存活突變。
+- `core/drink` 的 8 個存活：
+  - `Intrinsics` 空值檢查 4 個：等價突變。
+  - `parseDrinkActions` 把 `emptyList()` 換成 `Collections.emptyList` 1 個：等價突變。
+  - `isPlainAuthority` 第 48 行的邊界 3 個（埠號最多 5 位、`'0'..'9'`）：不是等價突變，測試沒有涵蓋 6 位數的埠號。
+  - 沒有覆蓋的是 `PUSH_ACTIONS` 的 getter，只是常數。
+- `backend/core/drink.js` 的 63 個存活，分類如下：
+  - 等價或防禦性寫法，約 50 個：
+    - 模型或清單缺漏時的 `?.`、`Array.isArray` 後備值（`OptionalChaining` 23 個、`ArrayDeclaration` 6 個）。設定檔是固定的，走不到這些分支。
+    - 提示詞裡的標題字串（`StringLiteral`，第 395～403 行）。
+    - `parseLlmJson` 的掃描邊界（第 129～150 行），結果相同。
+    - `shouldAsk` 第 380 行：`askHour` 是 `null` 時，`hour !== askHour` 本來就成立。
+    - `statsOf` 第 271 行的 `date <= todayKey`：不會有未來日期的紀錄。
+    - `canResist` 第 291 行的 `log.type === RESIST_TYPE`：紀錄只有「喝了」和「沒喝」兩種，「喝了」在前一個條件就已經擋下。「不同時段可以再按」由 M2-S08 涵蓋，整合時手動把 `log.slot === slot` 換成 `true`，M2-S08 確實會失敗。
+  - 不是等價突變，測試沒有涵蓋：
+    1. `DATE_KEY_PATTERN`、`ASK_TIME_PATTERN` 的 `^`、`$` 錨點（第 44、45 行）：拿掉後，設定 `askTime` 時「`15:00x`」「`115:00`」這類值也會通過驗證。
+    2. `normalizeToppings` 第 96 行：配料編號是空字串或不是字串時的過濾。
+    3. `isPlainObject` 第 80 行的 `typeof value === 'object'`：拿掉後，字串或數字也會被當成物件。
+
+### 建議新增的規格範例列
+
+以下 3 列要先給使用者確認，再加入下一版凍結規格。
+
+| 建議編號 | 輸入 | 期望 |
+|---|---|---|
+| M2-S17 | `PUT /api/drink/settings` 的 `askTime` 是 `15:00x` 或 `115:00` | 回 400，五個欄位都不寫入 |
+| M2-S18 | 解析結果的 `toppingIds` 是 `["", 3, "boba"]` | 只留下 `boba` |
+| M2-S19 | `apiOrigin("https://example.com:123456")` | 回 `null` |

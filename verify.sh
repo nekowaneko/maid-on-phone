@@ -187,7 +187,7 @@ if [ "$CORE_ONLY" -eq 0 ]; then
 
   # V18：app 只有 WorkerApi.kt 可以連外，且不得用第三方連線程式庫（M2 A12 修訂）
   if grep -rnE 'okhttp|retrofit|ktor' app/src/main; then fail "V18 app 含第三方連線程式庫"; fi
-  if grep -rnE 'java\.net\.URL\(|HttpURLConnection' app/src/main --exclude=WorkerApi.kt; then fail "V18 WorkerApi.kt 以外含自行連外的程式"; fi
+  if grep -rnE 'java\.net\.|HttpURLConnection|HttpsURLConnection|openConnection' app/src/main --exclude=WorkerApi.kt; then fail "V18 WorkerApi.kt 以外含自行連外的程式"; fi
   pass "V18"
 
   # V29：WorkerApi.kt 只連 apiOrigin(BuildConfig.CHAT_URL)；API_SECRET 只在 WorkerApi.kt 使用；log 不含密鑰與回應內容（M2 A12、A33）
