@@ -15,10 +15,15 @@
             font-size: 13px; line-height: 1.35; overflow-y: auto; }
   #bubble.show { display: flex; flex-direction: column; gap: 6px; }
   #text { white-space: pre-wrap; word-break: break-all; min-height: 1em; }
-  #actions { display: flex; flex-direction: row; gap: 6px; } /* 「說話」與「聊聊」同一列，聊聊在右 */
-  #mic, #chat { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
+  #actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; } /* 「說話」「聊聊」「沒喝」依序排，放不下就換行 */
+  #mic, #chat, #resist { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
   #mic { background: #ff8fab; }
   #chat { background: #8fb8ff; }
+  #resist { background: #8fd3a8; }
+  #drinkActions { display: none; flex-direction: row; flex-wrap: wrap; gap: 4px; } /* 戒飲記錄的按鈕（複述、選項、撤銷） */
+  #drinkActions.show { display: flex; }
+  #drinkActions button { border: 1px solid #ffb3c6; border-radius: 12px; padding: 3px 8px; background: #fff;
+                         color: #222; font-size: 12px; }
   #pet { width: 96px; height: 108px; flex: 0 0 auto; position: relative; }
   #pet img { width: 100%; height: 100%; object-fit: contain; position: absolute; left: 0; top: 0;
              transform-origin: 50% 100%; }
@@ -27,11 +32,13 @@
 </style>
 </head>
 <body>
-  <div id="bubble"><div id="text"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button></div></div>
+  <div id="bubble"><div id="text"></div><div id="drinkActions"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button><button id="resist" type="button">沒喝</button></div></div>
   <div id="pet"><img id="idle" alt=""><img id="blink" alt=""></div>
 <script src="emotion-map.js"></script>
 <script src="vendor/stream-parser.js"></script>
 <script src="performance.js"></script>
+<script src="drink-labels.js"></script>
+<script src="drink-view.js"></script>
 <script>
   // 常數定義
   var BLINK_MS = 150;        // 眨眼圖顯示時間
@@ -42,6 +49,15 @@
   var EMOTION_MAP = window.PetEmotionMap;   // 表情對照表（emotion-map.js，契約檔）
   var PERF = window.PetPerformance;         // 演出排程（performance.js，純函式）
   var IDLE_PLACEHOLDER = 'frames/placeholder-idle.svg'; // 平常的臉也載不到時的替代圖
+  var DRINK_LABELS = window.PetDrinkLabels;  // 戒飲記錄的文字（drink-labels.js，契約檔）
+  var DRINK_VIEW = window.PetDrinkView;      // 戒飲記錄的台詞與按鈕（drink-view.js，純函式）
+  var THINKING_EMOTION = 'thinking';         // 等待 Worker 回應時的臉
+  var THINKING_TEXT = '…';                   // 等待 Worker 回應時泡泡裡的字
+  var RESIST_ACTION = { action: 'resist' };  // 泡泡上「沒喝」交給原生的動作
+
+  var drinkDraft = null;       // 目前這組戒飲按鈕對應的草稿（改甜度時用）
+  var drinkGroup = 0;          // 戒飲按鈕組的序號：撤銷計時只收掉自己那一組
+  var undoTimer = null;        // 撤銷按鈕自動移除的計時器
 
   var breathTimer = null;      // 呼吸計時器
   var blinkTimer = null;     // 下一次眨眼的計時器
@@ -186,6 +202,49 @@
     if (window.PetBridge && window.PetBridge[name]) window.PetBridge[name]();
   }
 
+  // 把戒飲動作交給原生（PetBridge.onDrinkAction，參數是 JSON 字串；沒有這個方法就略過）
+  function sendDrinkAction(action) {
+    if (window.PetBridge && window.PetBridge.onDrinkAction) window.PetBridge.onDrinkAction(JSON.stringify(action));
+  }
+
+  // 收掉目前這組戒飲按鈕與撤銷計時
+  function clearDrinkButtons() {
+    clearTimeout(undoTimer);
+    undoTimer = null;
+    drinkGroup += 1;
+    var box = document.getElementById('drinkActions');
+    while (box.firstChild) box.removeChild(box.firstChild);
+    box.classList.remove('show');
+  }
+
+  // 按下一顆戒飲按鈕：先收掉這組；改甜度換成 5 顆糖度，其餘交給原生
+  function onDrinkButton(action) {
+    clearDrinkButtons();
+    if (action.local === 'sugarMenu') { showDrinkButtons(DRINK_VIEW.sugarMenu(drinkDraft, DRINK_LABELS)); return; }
+    sendDrinkAction(action);
+  }
+
+  // 放上一組新的戒飲按鈕（取代舊的一組）；含撤銷時排定自動移除
+  function showDrinkButtons(buttons) {
+    clearDrinkButtons();
+    var box = document.getElementById('drinkActions');
+    var hasUndo = false;
+    buttons.forEach(function (item) {
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.textContent = item.label; // 用 textContent，不解析 HTML
+      el.addEventListener('click', function () { onDrinkButton(item.action); });
+      box.appendChild(el);
+      if (item.action.action === 'undo') hasUndo = true;
+    });
+    box.classList.toggle('show', buttons.length > 0);
+    if (hasUndo) {
+      var group = drinkGroup;
+      undoTimer = setTimeout(function () { if (group === drinkGroup) clearDrinkButtons(); }, DRINK_LABELS.undoMs);
+    }
+    scrollBubbleToBottom();
+  }
+
   // 原生 → 網頁的介面
   window.pet = {
     // 切換播放或暫停；暫停（例如螢幕關閉）時演出直接跳到演完
@@ -212,6 +271,26 @@
     showBubble: function (show) {
       if (!show) skipToEnd();
       document.getElementById('bubble').classList.toggle('show', !!show);
+    },
+    // 等待 Worker 回應：true 時換思考的臉、泡泡顯示「…」；false 時換回平常的臉
+    thinking: function (on) {
+      if (on) {
+        skipToEnd();
+        document.getElementById('text').textContent = THINKING_TEXT;
+        setFace(THINKING_EMOTION);
+        return;
+      }
+      setFace(EMOTION_MAP.defaultEmotion);
+    },
+    // 顯示戒飲記錄的回應（Worker 回應原文或 App 組的 ask）：台詞交給 say 演出，按鈕取代舊的一組；解析失敗就忽略
+    showDrink: function (jsonText) {
+      var resp;
+      try { resp = JSON.parse(jsonText); } catch (e) { return; }
+      if (!resp || typeof resp !== 'object') return;
+      var view = DRINK_VIEW.viewFor(resp, DRINK_LABELS);
+      drinkDraft = resp.draft || null;
+      showDrinkButtons(view.buttons);
+      window.pet.say(view.script);
     }
   };
 
@@ -220,6 +299,7 @@
   document.getElementById('pet').addEventListener('click', function () { callBridge('onPetTapped'); });
   document.getElementById('mic').addEventListener('click', function () { callBridge('onMicPressed'); });
   document.getElementById('chat').addEventListener('click', function () { callBridge('onChatPressed'); });
+  document.getElementById('resist').addEventListener('click', function () { sendDrinkAction(RESIST_ACTION); });
   window.pet.setRender('playing');
 </script>
 </body>
