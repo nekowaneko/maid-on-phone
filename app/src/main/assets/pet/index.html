@@ -5,23 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
 <title>AccompanyPet</title>
 <style>
-  /* 常數定義：角色 96×108、泡泡寬 160（單位為 CSS px＝dp） */
+  /* 常數定義：角色 96×108、泡泡寬 160、泡泡最高 240（與 OverlayService 的 BUBBLE_MAX_HEIGHT_DP 相同；單位為 CSS px＝dp） */
   html, body { margin: 0; padding: 0; background: transparent; overflow: hidden; height: 100%; }
   body { display: flex; flex-direction: row; justify-content: flex-end; align-items: flex-end;
          font-family: sans-serif; user-select: none; -webkit-user-select: none; }
   html[data-side="left"] body { flex-direction: row-reverse; } /* 角色在左邊時泡泡放右側 */
-  #bubble { display: none; box-sizing: border-box; width: 156px; max-height: 108px; margin: 0 4px;
+  html[data-grow="down"] body { align-items: flex-start; } /* 角色太靠近螢幕頂端時，泡泡往下長 */
+  #bubble { display: none; box-sizing: border-box; width: 156px; max-height: 240px; margin: 0 4px;
             padding: 6px 8px; background: rgba(255,255,255,0.95); border-radius: 12px; color: #222;
-            font-size: 13px; line-height: 1.35; overflow-y: auto; }
+            font-size: 13px; line-height: 1.35; overflow: hidden; }
   #bubble.show { display: flex; flex-direction: column; gap: 6px; }
-  #text { white-space: pre-wrap; word-break: break-all; min-height: 1em; }
-  #actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; } /* 「說話」「聊聊」「沒喝」依序排，放不下就換行 */
+  /* 只有台詞區捲動；戒飲按鈕與「說話」「聊聊」「沒喝」固定在泡泡底部 */
+  #text { white-space: pre-wrap; word-break: break-all; min-height: 1em; flex: 1 1 auto; overflow-y: auto; }
+  #actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; } /* 「說話」「聊聊」「沒喝」依序排，放不下就換行 */
   #mic, #chat, #resist { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
   #mic { background: #ff8fab; }
   #chat { background: #8fb8ff; }
   #resist { background: #8fd3a8; }
   #drinkActions { display: none; flex-direction: row; flex-wrap: wrap; gap: 4px; } /* 戒飲記錄的按鈕（複述、選項、撤銷） */
-  #drinkActions.show { display: flex; }
+  #drinkActions.show { display: flex; flex: 0 0 auto; }
   #drinkActions button { border: 1px solid #ffb3c6; border-radius: 12px; padding: 3px 8px; background: #fff;
                          color: #222; font-size: 12px; }
   #pet { width: 96px; height: 108px; flex: 0 0 auto; position: relative; }
@@ -147,10 +149,10 @@
     probe.src = EMOTION_MAP.frameRoot + file;
   }
 
-  // 泡泡捲到最底下（逐字時讓最新一行露出來）
+  // 台詞區捲到最底下（逐字時讓最新一行露出來；按鈕固定在泡泡底部，不跟著捲）
   function scrollBubbleToBottom() {
-    var bubble = document.getElementById('bubble');
-    bubble.scrollTop = bubble.scrollHeight;
+    var text = document.getElementById('text');
+    text.scrollTop = text.scrollHeight;
   }
 
   // 清掉這一則演出排下的所有計時器
@@ -193,7 +195,7 @@
     var result = PERF.stageSkip(stage, EMOTION_MAP.frames, EMOTION_MAP.defaultEmotion);
     stage = result.stage;
     document.getElementById('text').textContent = result.text; // 用 textContent，不解析 HTML
-    document.getElementById('bubble').scrollTop = 0; // 完整台詞從頭讀起
+    document.getElementById('text').scrollTop = 0; // 完整台詞從頭讀起
     setFace(result.face);
   }
 

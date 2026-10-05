@@ -67,6 +67,7 @@ const val ACTION_APPLY_SETTINGS = "com.accompany.pet.APPLY_SETTINGS"  // 主畫�
 const val PET_WIDTH_DP = 96                           // 角色寬
 const val PET_HEIGHT_DP = 108                         // 角色高
 const val BUBBLE_WIDTH_DP = 164                       // 泡泡寬（含間距）
+const val BUBBLE_MAX_HEIGHT_DP = 240                  // 泡泡最高（與 index.html 的 #bubble max-height 相同）；展開時視窗長到這個高度
 const val TAP_SLOP_PX = 10                            // 移動小於這個距離視為點擊
 const val CHANNEL_ID = "pet_overlay"                  // 通知頻道
 const val NOTIFICATION_ID = 1                         // 常駐通知編號
@@ -323,7 +324,7 @@ class OverlayService : Service() {
         wv.loadUrl("file:///android_asset/pet/index.html")
         // WebView 固定為「角色＋泡泡」寬，展開泡泡時只改外層容器大小，WebView 不必重新排版，避免先錯位再彈回
         val box = android.widget.FrameLayout(this)
-        box.addView(wv, android.widget.FrameLayout.LayoutParams(pet.w + dp(BUBBLE_WIDTH_DP), pet.h))
+        box.addView(wv, android.widget.FrameLayout.LayoutParams(pet.w + dp(BUBBLE_WIDTH_DP), dp(BUBBLE_MAX_HEIGHT_DP)))
         windowManager.addView(box, lp)
         container = box
         webView = wv
@@ -401,9 +402,11 @@ class OverlayService : Service() {
         val box = container ?: return
         val pet = petSize()
         val extra = if (bubbleShown) dp(BUBBLE_WIDTH_DP) else 0
+        val extraHeight = if (bubbleShown) dp(BUBBLE_MAX_HEIGHT_DP) - pet.h else 0  // 泡泡比角色高出的部分
+        val growDown = petPos.y < extraHeight                                       // 上方空間不夠時，泡泡往下長
         val right = isOnRightSide()
         lp.width = pet.w + extra
-        lp.height = pet.h
+        lp.height = pet.h + extraHeight
         // 在右邊時以螢幕右緣為基準：視窗變寬只往左長，右緣與角色位置不動，展開泡泡時角色不會跳
         if (right) {
             lp.gravity = Gravity.TOP or Gravity.END
@@ -412,7 +415,7 @@ class OverlayService : Service() {
             lp.gravity = Gravity.TOP or Gravity.START
             lp.x = petPos.x
         }
-        lp.y = petPos.y
+        lp.y = if (growDown) petPos.y else petPos.y - extraHeight  // 往上長時視窗上緣往上移，角色留在原位
         // 耗電測試模式：角色在畫面上時保持螢幕亮著（只影響本 App 的懸浮窗，不改系統設定）
         lp.flags = if (isBatteryTestMode(this)) {
             lp.flags or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
@@ -420,8 +423,11 @@ class OverlayService : Service() {
             lp.flags and WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON.inv()
         }
         callJs("document.documentElement.dataset.side='${if (right) "right" else "left"}'")
-        // WebView 在容器內靠角色那一側對齊，被裁掉的是泡泡那一側
-        (wv.layoutParams as android.widget.FrameLayout.LayoutParams).gravity = if (right) Gravity.END else Gravity.START
+        callJs("document.documentElement.dataset.grow='${if (growDown) "down" else "up"}'")
+        // WebView 在容器內靠角色那一側對齊，被裁掉的是泡泡那一側；上下則靠角色所在的那一邊（往上長時靠底）
+        val horizontal = if (right) Gravity.END else Gravity.START
+        val vertical = if (growDown) Gravity.TOP else Gravity.BOTTOM
+        (wv.layoutParams as android.widget.FrameLayout.LayoutParams).gravity = horizontal or vertical
         wv.requestLayout()
         windowManager.updateViewLayout(box, lp)
     }
