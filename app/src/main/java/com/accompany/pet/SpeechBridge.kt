@@ -25,7 +25,12 @@ fun speechErrorMessage(error: Int): String = when (error) {
 }
 
 // SpeechRecognizer → 文字。呼叫端須先確認已有麥克風權限；所有方法都在主執行緒呼叫
-class SpeechBridge(private val context: Context, private val onText: (String) -> Unit) {
+// onResult 只收成功辨識出的文字（M2 送去解析）；onStatus 收「我在聽…」與各種錯誤提示（只顯示）
+class SpeechBridge(
+    private val context: Context,
+    private val onResult: (String) -> Unit,
+    private val onStatus: (String) -> Unit,
+) {
 
     private var recognizer: SpeechRecognizer? = null  // 辨識器（用到才建立）
 
@@ -33,7 +38,7 @@ class SpeechBridge(private val context: Context, private val onText: (String) ->
     fun start() {
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
             android.util.Log.w(LOG_TAG, "找不到語音辨識服務")
-            onText("$MIC_UNAVAILABLE_MESSAGE（找不到語音辨識服務）")
+            onStatus("$MIC_UNAVAILABLE_MESSAGE（找不到語音辨識服務）")
             return
         }
         val r = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also {
@@ -44,11 +49,11 @@ class SpeechBridge(private val context: Context, private val onText: (String) ->
             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, SPEECH_LANGUAGE)  // 不設 EXTRA_PREFER_OFFLINE，由系統決定
         }
-        onText(LISTENING_MESSAGE)
+        onStatus(LISTENING_MESSAGE)
         try {
             r.startListening(intent)
         } catch (e: SecurityException) {
-            onText(MIC_UNAVAILABLE_MESSAGE)  // 系統拒絕時只提示，不繞過
+            onStatus(MIC_UNAVAILABLE_MESSAGE)  // 系統拒絕時只提示，不繞過
         }
     }
 
@@ -60,16 +65,16 @@ class SpeechBridge(private val context: Context, private val onText: (String) ->
 
     // 接收辨識結果
     private inner class Listener : RecognitionListener {
-        // 辨識完成：顯示第一個結果
+        // 辨識完成：有文字就交給 onResult，沒有就提示再說一次
         override fun onResults(results: Bundle?) {
             val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
-            onText(if (text.isNullOrBlank()) NOT_HEARD_MESSAGE else text)
+            if (text.isNullOrBlank()) onStatus(NOT_HEARD_MESSAGE) else onResult(text.trim())  // 只有成功的結果送解析
         }
 
         // 辨識失敗：顯示對應提示
         override fun onError(error: Int) {
             android.util.Log.w(LOG_TAG, "語音辨識錯誤 $error")
-            onText(speechErrorMessage(error))
+            onStatus(speechErrorMessage(error))
         }
 
         override fun onReadyForSpeech(params: Bundle?) {}

@@ -63,8 +63,10 @@ object ReminderDispatcher {
     private fun execute(context: Context, route: Route, r: Reminder, nowMillis: Long) {
         when (route) {
             Route.SHOW_PET -> {
-                // 角色用原文演出；沒有懸浮窗權限或被系統拒絕啟動時，改發一般通知
-                if (!hasOverlayPermission(context) || !startPetService(context, r.script)) showReminderNotification(context, r)
+                // 角色用原文演出（帶按鈕的每日詢問改用 ask）；沒有懸浮窗權限或被系統拒絕啟動時，改發一般通知（通知會帶按鈕）
+                val started = hasOverlayPermission(context) &&
+                    if (r.actions.isNotEmpty()) startPetService(context, askScript = r.script) else startPetService(context, r.script)
+                if (!started) showReminderNotification(context, r)
             }
             Route.NOTIFY -> showReminderNotification(context, r)
             Route.QUEUE -> queueReminder(context, r, nowMillis)
@@ -88,5 +90,15 @@ object ReminderDispatcher {
             store.save(emptyList())
             cancelQueueNotification(context)
             reportScript(alive, newScript)  // 每則從平常的臉開始（M16-S07）
+        }
+
+    // 角色出現時呼叫（M2 每日詢問、開始聆聽）：同 takeReport，但沒有排隊內容時回 null，不說預設招呼
+    fun takeQueuedReport(context: Context, nowMillis: Long = System.currentTimeMillis()): String? =
+        synchronized(lock) {
+            val store = FileReminderQueueStore(java.io.File(context.filesDir, QUEUE_FILE))
+            val alive = drainAlive(store.load(), nowMillis)  // 先過濾過期再報告
+            store.save(emptyList())
+            cancelQueueNotification(context)
+            if (alive.isEmpty()) null else reportScript(alive, null)
         }
 }

@@ -41,6 +41,16 @@ import com.accompany.pet.core.chat.CHAT_NOT_SET_MESSAGE
 import com.accompany.pet.core.chat.ChatAction
 import com.accompany.pet.core.chat.decideChat
 import com.accompany.pet.core.clampInScreen
+import com.accompany.pet.core.drink.ACTION_CONFIRM
+import com.accompany.pet.core.drink.ACTION_PREVIEW
+import com.accompany.pet.core.drink.ACTION_RESIST
+import com.accompany.pet.core.drink.ACTION_SPEAK
+import com.accompany.pet.core.drink.ACTION_UNDO
+import com.accompany.pet.core.drink.PARSE_PATH
+import com.accompany.pet.core.drink.drinkEndpointFor
+import com.accompany.pet.core.drink.workerErrorMessage
+import org.json.JSONException
+import org.json.JSONObject
 import com.accompany.pet.core.initialPosition
 import com.accompany.pet.core.permission.MIC_DENIED_MESSAGE
 import com.accompany.pet.core.reminder.idleDeadline
@@ -64,8 +74,21 @@ const val POSITION_FILE = "pet-position.txt"          // 位置檔名
 const val LOG_TAG = "AccompanyPet"                    // logcat 標籤
 const val ASSET_ROOT = "file:///android_asset/pet/"   // WebView 唯一允許的網址開頭
 
+const val PARSE_MAX_CHARS = 200                       // 送去解析的文字最多幾字（Worker 超過回 400）
+
+// 頁面載入前暫存的呼叫種類
+enum class PendingKind { SCRIPT, TEXT, DRINK, THINKING }
+
 // 判斷網址是否為角色頁的本機資產（架構約束 A4）
 fun isAllowedUrl(url: String): Boolean = url.startsWith(ASSET_ROOT)
+
+// 依網頁按鈕動作組送給 Worker 的內容（§4.3）；只取固定欄位，缺欄位或型別不對回 null
+fun drinkRequestBody(action: String, obj: JSONObject): String? = when (action) {
+    ACTION_CONFIRM, ACTION_PREVIEW -> obj.optJSONObject("draft")?.let { JSONObject().put("draft", it).toString() }
+    ACTION_UNDO -> (obj.opt("logId") as? String)?.takeIf { it.isNotBlank() }?.let { JSONObject().put("logId", it).toString() }
+    ACTION_RESIST -> "{}"
+    else -> null
+}
 
 // 前景服務：顯示懸浮角色、處理拖曳、螢幕開關與通知
 class OverlayService : Service() {
@@ -82,12 +105,12 @@ class OverlayService : Service() {
     private var bubbleShown = false                      // 泡泡是否展開
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private val positionStore by lazy { FilePositionStore(java.io.File(filesDir, POSITION_FILE)) }
-    private val speech by lazy { SpeechBridge(this, ::showText) }
+    private val speech by lazy { SpeechBridge(this, onResult = ::onSpeechResult, onStatus = ::showText) }
     private val batteryLogger by lazy { BatteryLogger(this) { state.render == RenderState.PLAYING } }
     private val idleHandler = Handler(Looper.getMainLooper())  // 閒置收起的計時
     @Volatile private var lastInteractionMillis = 0L           // 最後一次互動的時間（網頁橋接執行緒也會更新）
     private var pageReady = false                              // 角色頁是否載入完成
-    private val pending = mutableListOf<Pair<Boolean, String>>()  // 頁面還沒載入完成時先存著的話（true＝演出原文、false＝純文字），依到達順序
+    private val pending = mutableListOf<Pair<PendingKind, String>>()  // 頁面還沒載入完成時先存著的呼叫，依到達順序
     private val idleCheck = Runnable { checkIdle() }           // 到期檢查
 
     // 接收螢幕開關事件
@@ -121,11 +144,10 @@ class OverlayService : Service() {
             stopSelf()
             return START_NOT_STICKY
         }
-        val text = intent?.getStringExtra(EXTRA_TEXT)  // 要演出的原文（沒有就只報告排隊）
         if (state.service == com.accompany.pet.core.ServiceState.RUNNING) {
             startInForeground()  // 已在執行：重新宣告前景類型（剛取得麥克風權限時補上 microphone）
             ensureOverlay()
-            presentReport(text)
+            presentIntent(intent)
             return START_NOT_STICKY
         }
         startInForeground()
@@ -139,7 +161,7 @@ class OverlayService : Service() {
         running = true
         refreshTile(this)
         batteryLogger.start()  // 螢幕關閉時也不停（S14 優先）
-        presentReport(text)
+        presentIntent(intent)
         return START_NOT_STICKY
     }
 
@@ -293,7 +315,10 @@ class OverlayService : Service() {
         wv.settings.allowFileAccess = false       // android_asset 不受此設定影響
         wv.settings.allowContentAccess = false
         wv.webViewClient = PetWebViewClient()
-        wv.addJavascriptInterface(PetBridge(onTap = ::toggleBubble, onMic = ::onMicPressed, onChat = ::onChatPressed), "PetBridge")
+        wv.addJavascriptInterface(
+            PetBridge(onTap = ::toggleBubble, onMic = ::onMicPressed, onChat = ::onChatPressed, onDrink = ::onDrinkAction),
+            "PetBridge",
+        )
         wv.setOnTouchListener(DragHandler())
         wv.loadUrl("file:///android_asset/pet/index.html")
         // WebView 固定為「角色＋泡泡」寬，展開泡泡時只改外層容器大小，WebView 不必重新排版，避免先錯位再彈回
@@ -311,10 +336,42 @@ class OverlayService : Service() {
         lastInteractionMillis = System.currentTimeMillis()
     }
 
+    // 依啟動指令決定角色出現後做什麼：每日詢問（帶按鈕）、開始聆聽、或一般的演出與排隊報告
+    private fun presentIntent(intent: Intent?) {
+        val ask = intent?.getStringExtra(EXTRA_ASK_SCRIPT)               // 每日詢問的原文（M2）
+        val listen = intent?.getBooleanExtra(EXTRA_LISTEN, false) == true  // 通知按「有喝，用說的」（M2）
+        when {
+            ask != null -> presentAsk(ask)
+            listen -> {
+                presentQueued()
+                onMicPressed()  // 沒有麥克風權限時照現有提示
+            }
+            else -> presentReport(intent?.getStringExtra(EXTRA_TEXT))  // 要演出的原文（沒有就只報告排隊）
+        }
+    }
+
     // 角色出現：重新計時、取出排隊內容與新提醒一起演出
     private fun presentReport(script: String?) {
         markInteraction()
         showScript(ReminderDispatcher.takeReport(this, script))  // 原文含表情標籤，交給角色頁演出
+        restartIdleTimer()
+    }
+
+    // 角色出現：只在有排隊內容時報告（不說預設招呼），重新計時
+    private fun presentQueued() {
+        markInteraction()
+        ReminderDispatcher.takeQueuedReport(this)?.let { showScript(it) }
+        restartIdleTimer()
+    }
+
+    // 每日詢問：先報告排隊內容，再以 ask 的形式交給角色頁（帶「沒喝／有喝，用說的」按鈕）
+    private fun presentAsk(script: String) {
+        presentQueued()
+        showDrink(JSONObject().put("kind", "ask").put("script", script).toString())  // 用 JSONObject 組，避免注入
+    }
+
+    // 閒置計時從現在重新開始
+    private fun restartIdleTimer() {
         idleHandler.removeCallbacks(idleCheck)
         idleHandler.postDelayed(idleCheck, IDLE_HIDE_MILLIS)
     }
@@ -391,10 +448,67 @@ class OverlayService : Service() {
         }
     }
 
+    // 語音辨識成功的文字：送 Worker 解析（M2；「我在聽…」與錯誤提示不會進來）
+    private fun onSpeechResult(text: String) {
+        markInteraction()
+        callWorker(PARSE_PATH, JSONObject().put("text", text.take(PARSE_MAX_CHARS)).toString())
+    }
+
+    // 網頁的戒飲按鈕（§4.3）：只解析固定欄位，不認得的動作略過
+    private fun onDrinkAction(json: String) {
+        markInteraction()  // 包含「取消」：只記一次互動
+        val obj = try {
+            JSONObject(json)
+        } catch (e: JSONException) {
+            return  // 不是 JSON 物件就略過
+        }
+        val action = obj.opt("action") as? String ?: return
+        if (action == ACTION_SPEAK) {
+            onMicPressed()  // 同按「說話」
+            return
+        }
+        val path = drinkEndpointFor(action) ?: return       // cancel 與不認得的動作不連線
+        val body = drinkRequestBody(action, obj) ?: return  // 缺欄位或型別不對就略過
+        callWorker(path, body)
+    }
+
+    // 呼叫 Worker：先換思考的臉，拿到回應後交給角色頁；失敗顯示固定提示
+    private fun callWorker(path: String, body: String) {
+        thinking(true)
+        WorkerApi.post(path, body) { result ->
+            if (state.service != com.accompany.pet.core.ServiceState.RUNNING) return@post  // 角色已收起，不再演出
+            markInteraction()
+            thinking(false)
+            val message = workerErrorMessage(result.status)
+            if (message != null) showText(message) else showDrink(result.text)
+        }
+    }
+
+    // 把 Worker 回應（或 App 組的 ask）交給角色頁；以 JSON 字串跳脫，只當資料（A26）
+    fun showDrink(json: String) {
+        if (!pageReady) {
+            pending.add(PendingKind.DRINK to json)  // 頁面還沒載入完成，等 onPageFinished 再交
+            return
+        }
+        val arg = org.json.JSONObject.quote(json)
+        callJs("window.pet.showDrink&&window.pet.showDrink($arg)")  // 網頁沒有這個方法時略過（M1.5 決定 47）
+        if (!bubbleShown) toggleBubble()
+    }
+
+    // 切換思考的臉（true 時泡泡顯示「…」）
+    fun thinking(on: Boolean) {
+        if (!pageReady) {
+            pending.add(PendingKind.THINKING to on.toString())  // 頁面還沒載入完成，等 onPageFinished 再切
+            return
+        }
+        callJs("window.pet.thinking&&window.pet.thinking($on)")  // 只傳布林值
+        if (on && !bubbleShown) toggleBubble()
+    }
+
     // 在泡泡顯示文字（以 JSON 字串跳脫，避免注入）
     fun showText(text: String) {
         if (!pageReady) {
-            pending.add(false to text)  // 頁面還沒載入完成，等 onPageFinished 再顯示
+            pending.add(PendingKind.TEXT to text)  // 頁面還沒載入完成，等 onPageFinished 再顯示
             return
         }
         callJs("window.pet.showText(${org.json.JSONObject.quote(text)})")
@@ -404,7 +518,7 @@ class OverlayService : Service() {
     // 讓角色依原文演出（換表情、逐字）；以 JSON 字串跳脫，避免注入（A26）
     fun showScript(script: String) {
         if (!pageReady) {
-            pending.add(true to script)  // 頁面還沒載入完成，等 onPageFinished 再演出
+            pending.add(PendingKind.SCRIPT to script)  // 頁面還沒載入完成，等 onPageFinished 再演出
             return
         }
         callJs("window.pet.say(${org.json.JSONObject.quote(script)})")  // 原文只當字串參數，不當程式
@@ -415,7 +529,14 @@ class OverlayService : Service() {
     private fun flushPending() {
         val items = pending.toList()  // 先複製，補送時不會再進暫存（pageReady 已為 true）
         pending.clear()
-        items.forEach { (isScript, value) -> if (isScript) showScript(value) else showText(value) }
+        items.forEach { (kind, value) ->
+            when (kind) {
+                PendingKind.SCRIPT -> showScript(value)
+                PendingKind.TEXT -> showText(value)
+                PendingKind.DRINK -> showDrink(value)
+                PendingKind.THINKING -> thinking(value.toBoolean())
+            }
+        }
     }
 
     // 呼叫網頁上的函式

@@ -43,6 +43,7 @@ android {
         buildConfigField("String", "FIREBASE_API_KEY", firebaseValue("apiKey"))
         buildConfigField("String", "FIREBASE_SENDER_ID", firebaseValue("senderId"))
         buildConfigField("String", "CHAT_URL", workerValue("chatUrl"))
+        buildConfigField("String", "API_SECRET", workerValue("apiSecret"))  // 呼叫 Worker 的密鑰（M2，只給 WorkerApi.kt 用）
     }
 
     buildTypes {
