@@ -113,6 +113,7 @@ class MainActivity : AppCompatActivity() {
         root.addView(button("叫出角色") { onStartPressed() })
         root.addView(button("收起角色") { stopPet() })
         root.addView(button("允許麥克風（用說的）") { requestRuntimePermissions() })
+        root.addView(button("戒飲設定") { startActivity(Intent(this, DrinkSettingsActivity::class.java)) })  // M2
         addReminderSection(root)
         root.addView(button("匯出耗電紀錄") { exportAndShare() })
         testModeButton = button(testModeLabel()) {

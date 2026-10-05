@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import com.accompany.pet.core.drink.pushActionLabel
 import com.accompany.pet.core.reminder.Reminder
 import com.accompany.pet.core.reminder.queueNoticeText
 
@@ -15,6 +16,7 @@ const val CHANNEL_REMINDERS = "reminders"   // 一般提醒頻道
 const val CHANNEL_QUEUE = "queue"           // 靜音排隊頻道
 const val QUEUE_NOTIFICATION_ID = 2         // 排隊通知固定編號（之後只更新數字）
 const val REMINDER_NOTIFICATION_BASE = 100  // 一般提醒通知編號的起點
+const val DRINK_REQUEST_CODE_STEP = 0x10000000  // 通知按鈕 requestCode 的間隔（通知編號小於這個數）
 
 // 取得通知管理員
 private fun manager(context: Context) = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -38,19 +40,56 @@ private fun showPending(context: Context, requestCode: Int, script: String?): Pe
     return PendingIntent.getForegroundService(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 }
 
-// 一般通知：頭像＋提醒文字（純文字，看不到標籤），點一下叫出角色用原文演出同一則（M1 不加按鈕）
+// 提醒通知的編號：同編號覆蓋同一則
+fun reminderNotificationId(reminderId: String): Int = REMINDER_NOTIFICATION_BASE + (reminderId.hashCode() and 0x0FFFFFFF)
+
+// 通知按鈕送給 DrinkActionReceiver 的 PendingIntent；每則通知、每個按鈕的 requestCode 都不同
+private fun drinkActionPending(context: Context, notificationId: Int, action: String, index: Int): PendingIntent {
+    val intent = Intent(context, DrinkActionReceiver::class.java)
+        .setAction(ACTION_DRINK_BUTTON)
+        .putExtra(EXTRA_DRINK_ACTION, action)
+        .putExtra(EXTRA_NOTIFICATION_ID, notificationId)
+    val requestCode = notificationId + (index + 1) * DRINK_REQUEST_CODE_STEP  // 與點通知本身的 requestCode 錯開
+    return PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+}
+
+// 一般通知：頭像＋提醒文字（純文字，看不到標籤），點一下叫出角色用原文演出同一則
+// M2：帶 actions 時加上「沒喝」「有喝，用說的」按鈕（不認得的已在 parseReminder 略過）
 fun showReminderNotification(context: Context, r: Reminder) {
     ensureChannels(context)
-    val id = REMINDER_NOTIFICATION_BASE + (r.id.hashCode() and 0x0FFFFFFF)  // 同編號覆蓋同一則
-    val n: Notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
+    val id = reminderNotificationId(r.id)
+    val builder = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
         .setSmallIcon(R.drawable.ic_launcher_foreground)
         .setContentTitle("陪伴角色")
         .setContentText(r.text)
         .setStyle(NotificationCompat.BigTextStyle().bigText(r.text))
         .setContentIntent(showPending(context, id, r.script))  // 角色用原文演出（M16-S09）
         .setAutoCancel(true)
+    r.actions.forEachIndexed { index, action ->
+        val label = pushActionLabel(action) ?: return@forEachIndexed  // 保險：不認得的按鈕略過
+        builder.addAction(0, label, drinkActionPending(context, id, action, index))
+    }
+    manager(context).notify(id, builder.build())
+}
+
+// 按通知按鈕後的結果通知：取代原通知，顯示回應的 text；點一下叫出角色用原文演出
+fun showDrinkResultNotification(context: Context, notificationId: Int, text: String, script: String?) {
+    ensureChannels(context)
+    val n: Notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
+        .setSmallIcon(R.drawable.ic_launcher_foreground)
+        .setContentTitle("陪伴角色")
+        .setContentText(text)
+        .setStyle(NotificationCompat.BigTextStyle().bigText(text))
+        .setContentIntent(showPending(context, notificationId, script?.takeIf { it.isNotBlank() } ?: text))
+        .setOnlyAlertOnce(true)
+        .setAutoCancel(true)
         .build()
-    manager(context).notify(id, n)
+    manager(context).notify(notificationId, n)
+}
+
+// 取消一則提醒通知
+fun cancelReminderNotification(context: Context, notificationId: Int) {
+    manager(context).cancel(notificationId)
 }
 
 // 靜音通知：「有 N 則提醒等你」，點一下叫出角色並報告排隊內容

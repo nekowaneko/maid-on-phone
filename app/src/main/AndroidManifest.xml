@@ -54,6 +54,18 @@
             android:label="聊聊"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- 戒飲設定：只由主畫面的「戒飲設定」按鈕開啟（M2） -->
+        <activity
+            android:name=".DrinkSettingsActivity"
+            android:exported="false"
+            android:label="戒飲設定"
+            android:windowSoftInputMode="adjustResize" />
+
+        <!-- 通知按鈕「沒喝」「有喝，用說的」：只接受本 App 通知送來的廣播（M2） -->
+        <receiver
+            android:name=".DrinkActionReceiver"
+            android:exported="false" />
+
         <service
             android:name=".OverlayService"
             android:exported="false"
