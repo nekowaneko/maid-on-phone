@@ -21,6 +21,10 @@ USE_STUB = "false"
 LLM_MODEL = "gemini-3.5-flash-lite"
 LLM_RELAY_ORIGIN = "https://gemini-relay-528597314139.us-central1.run.app"
 
+# M2 每日詢問：每個整點觸發一次排程，由 runScheduled 判斷是不是使用者設定的詢問時間（UTC 整點即台北整點）。
+[triggers]
+crons = ["0 * * * *"]
+
 # 讓 wrangler 把人設與提示詞範本當成文字模組帶進 Worker。
 [[rules]]
 type = "Text"

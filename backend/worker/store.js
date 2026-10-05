@@ -22,8 +22,51 @@ const READ_DAILY_SQL = 'SELECT requests, prompt_tokens, output_tokens FROM daily
 const LOG_REQUEST_SQL = 'INSERT INTO request_log (ts) VALUES (?1) ON CONFLICT(ts) DO NOTHING'
 const COUNT_SINCE_SQL = 'SELECT COUNT(*) AS total FROM request_log WHERE ts > ?1'
 const PRUNE_REQUEST_SQL = 'DELETE FROM request_log WHERE ts <= ?1'
+// M2 戒飲記錄：撤銷只把 undone 改成 1，不刪除；UPDATE 帶 undone = 0 條件，重複撤銷不會改到任何列
+const ADD_DRINK_LOG_SQL = `INSERT INTO drink_logs
+(id, date, slot, type, name, price, kcal, source, ice, size_id, sugar_level_id, base_id, topping_ids, starbucks_id, created_at, undone)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 0)`
+const LIST_DRINK_LOGS_SQL = 'SELECT * FROM drink_logs WHERE undone = 0 ORDER BY created_at ASC, id ASC'
+const FIND_DRINK_LOG_SQL = 'SELECT * FROM drink_logs WHERE id = ?1'
+const UNDO_DRINK_LOG_SQL = 'UPDATE drink_logs SET undone = 1 WHERE id = ?1 AND undone = 0'
 
 // 功能函數定義
+
+// 沒有值時存 NULL（D1 的 bind 不接受 undefined）
+const orNull = (value) => (value === undefined ? null : value)
+
+// 數字欄位：NULL 維持 null，其餘轉成數字
+const numberOrNull = (value) => (value === null || value === undefined ? null : Number(value))
+
+// 配料清單存成 JSON 文字；讀回時解析失敗或不是陣列就當成空陣列
+const parseToppings = (text) => {
+  try {
+    const list = JSON.parse(text)
+    return Array.isArray(list) ? list : []
+  } catch (error) {
+    return []
+  }
+}
+
+// 資料表的一列 → 路由層使用的紀錄形狀（與 store.stub.js 相同）
+const rowToDrinkLog = (row) => ({
+  id: row.id,
+  date: row.date,
+  slot: row.slot,
+  type: row.type,
+  name: orNull(row.name),
+  price: numberOrNull(row.price),
+  kcal: numberOrNull(row.kcal),
+  source: orNull(row.source),
+  ice: orNull(row.ice),
+  sizeId: orNull(row.size_id),
+  sugarLevelId: orNull(row.sugar_level_id),
+  baseId: orNull(row.base_id),
+  toppingIds: parseToppings(row.topping_ids),
+  starbucksId: orNull(row.starbucks_id),
+  createdAt: Number(row.created_at),
+  undone: Number(row.undone) === 1
+})
 
 export const createStore = (env) => {
   const db = env.DB
@@ -64,6 +107,44 @@ export const createStore = (env) => {
       const row = await db.prepare(COUNT_SINCE_SQL).bind(sinceMs).first()
       return Number(row?.total) || 0
     },
-    pruneRequests
+    pruneRequests,
+    // 新增一筆戒飲紀錄（M2 §4.1.3）
+    addDrinkLog: async (log) => {
+      await db
+        .prepare(ADD_DRINK_LOG_SQL)
+        .bind(
+          log.id,
+          log.date,
+          log.slot,
+          log.type,
+          orNull(log.name),
+          orNull(log.price),
+          orNull(log.kcal),
+          orNull(log.source),
+          orNull(log.ice),
+          orNull(log.sizeId),
+          orNull(log.sugarLevelId),
+          orNull(log.baseId),
+          JSON.stringify(Array.isArray(log.toppingIds) ? log.toppingIds : []),
+          orNull(log.starbucksId),
+          log.createdAt
+        )
+        .run()
+    },
+    // 全部未撤銷的紀錄，依記錄時間排序
+    listDrinkLogs: async () => {
+      const result = await db.prepare(LIST_DRINK_LOGS_SQL).all()
+      return (result?.results ?? []).map(rowToDrinkLog)
+    },
+    // 找一筆紀錄（含已撤銷）；找不到回 null
+    findDrinkLog: async (id) => {
+      const row = await db.prepare(FIND_DRINK_LOG_SQL).bind(id).first()
+      return row ? rowToDrinkLog(row) : null
+    },
+    // 標記撤銷：真的改到一列才回 true（找不到或已撤銷回 false）
+    markDrinkUndone: async (id) => {
+      const result = await db.prepare(UNDO_DRINK_LOG_SQL).bind(id).run()
+      return Number(result?.meta?.changes) > 0
+    }
   }
 }

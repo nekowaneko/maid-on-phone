@@ -21,3 +21,26 @@ CREATE TABLE IF NOT EXISTS daily_usage (
 CREATE TABLE IF NOT EXISTS request_log (
     ts INTEGER PRIMARY KEY
 );
+
+-- M2 戒飲記錄：一筆一列，欄位照戒飲存備份格式再加組合式模型的編號；撤銷只標記 undone，不刪除
+CREATE TABLE IF NOT EXISTS drink_logs (
+    id TEXT PRIMARY KEY,
+    date TEXT NOT NULL,
+    slot TEXT NOT NULL,
+    type TEXT NOT NULL,
+    name TEXT,
+    price INTEGER,
+    kcal INTEGER,
+    source TEXT,
+    ice TEXT,
+    size_id TEXT,
+    sugar_level_id TEXT,
+    base_id TEXT,
+    topping_ids TEXT,
+    starbucks_id TEXT,
+    created_at INTEGER NOT NULL,
+    undone INTEGER NOT NULL DEFAULT 0
+);
+
+-- 依日期查詢（統計、同時段判定、每日詢問）
+CREATE INDEX IF NOT EXISTS idx_drink_logs_date ON drink_logs (date);

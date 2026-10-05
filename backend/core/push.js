@@ -37,13 +37,19 @@ export const newPushId = (nowMs, randomText) => `${PUSH_ID_PREFIX}${nowMs.toStri
 
 // 組出推播的 data：script 為非空字串時才多帶 script 欄位（架構約束 A27，不含標籤時與 M1.5 逐字相同）
 const buildPushData = (id, text, script) =>
-  typeof script === 'string' && script.length > 0 ? { id, text, script } : { id, text }
+  isNonEmptyString(script) ? { id, text, script } : { id, text }
 
-// 組出 FCM HTTP v1 的訊息：只有 token、data（id、text，必要時加 script）與高優先順序，沒有 notification
-export const buildFcmMessage = (deviceToken, id, text, script) => ({
+// 是否為非空字串（不 trim，與 M1.6 判斷 script 的方式相同）
+const isNonEmptyString = (value) => typeof value === 'string' && value.length > 0
+
+// M2：actions（逗號分隔的動作編號）為非空字串時才加進 data；沒給時與 M1.6 逐字相同（§4.2）
+const withActions = (data, actions) => (isNonEmptyString(actions) ? { ...data, actions } : data)
+
+// 組出 FCM HTTP v1 的訊息：只有 token、data（id、text，必要時加 script、actions）與高優先順序，沒有 notification
+export const buildFcmMessage = (deviceToken, id, text, script, actions) => ({
   message: {
     token: deviceToken,
-    data: buildPushData(id, text, script),
+    data: withActions(buildPushData(id, text, script), actions),
     android: { priority: HIGH_PRIORITY }
   }
 })

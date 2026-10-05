@@ -29,8 +29,8 @@
     "[smile]這個時段已經記過了喔，我都記得的。"
   ],
   "undone": [
-    "[smile]好，那筆撤銷了。",
-    "[pout]撤銷了。[shy]……下次按之前想清楚喔。"
+    "[smile]好，那筆撤銷了。本週喝了 {weekCups} 杯，本月省下 {monthSavedMoney} 元，回本 {paybackPct}%，少攝取 {monthSavedKcal} 大卡。",
+    "[pout]撤銷了。本週 {weekCups} 杯，本月省下 {monthSavedMoney} 元、回本 {paybackPct}%、少攝取 {monthSavedKcal} 大卡。[shy]……下次按之前想清楚喔。"
   ],
   "cannotUndo": [
     "[troubled]這筆不能撤銷了。",
