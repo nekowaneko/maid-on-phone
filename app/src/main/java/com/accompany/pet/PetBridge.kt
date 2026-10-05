@@ -4,12 +4,16 @@ import android.os.Handler
 import android.os.Looper
 import android.webkit.JavascriptInterface
 
-// WebView ↔ 原生橋接：只開放三個沒有參數的方法給本機角色頁（架構約束 A5，M1.5 修訂）
+// 常數定義
+const val MAX_DRINK_ACTION_LENGTH = 16 * 1024  // 網頁傳來的動作 JSON 最長字數，超過就略過
+
+// WebView ↔ 原生橋接：三個沒有參數的方法＋onDrinkAction，恰好 4 個（架構約束 A5，M2 修訂）
 // 網頁呼叫時在背景執行緒，這裡統一轉回主執行緒再交給服務處理
 class PetBridge(
-    private val onTap: () -> Unit,   // 點角色時要做的事
-    private val onMic: () -> Unit,   // 按麥克風時要做的事
-    private val onChat: () -> Unit,  // 按「聊聊」時要做的事
+    private val onTap: () -> Unit,              // 點角色時要做的事
+    private val onMic: () -> Unit,              // 按麥克風時要做的事
+    private val onChat: () -> Unit,             // 按「聊聊」時要做的事
+    private val onDrink: (String) -> Unit,      // 按戒飲按鈕時要做的事（參數只當資料解析）
 ) {
     private val main = Handler(Looper.getMainLooper())  // 主執行緒
 
@@ -29,5 +33,12 @@ class PetBridge(
     @JavascriptInterface
     fun onChatPressed() {
         main.post { onChat() }
+    }
+
+    // 網頁通知：戒飲按鈕被按了（json 為 §4.3 的動作物件）；過長直接略過
+    @JavascriptInterface
+    fun onDrinkAction(json: String) {
+        if (json.length > MAX_DRINK_ACTION_LENGTH) return  // 不處理異常大的資料
+        main.post { onDrink(json) }
     }
 }
