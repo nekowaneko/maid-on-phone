@@ -16,7 +16,8 @@ import javax.net.ssl.HttpsURLConnection
 // 連線物件一律轉成 HttpsURLConnection：不是加密連線就轉型失敗、不送出（密鑰不會走明文）
 
 // 常數定義
-const val WORKER_TIMEOUT_MILLIS = 15_000          // 連線與讀取逾時各 15 秒
+const val WORKER_TIMEOUT_MILLIS = 15_000          // 連線逾時 15 秒
+const val WORKER_READ_TIMEOUT_MILLIS = 45_000     // 讀取逾時 45 秒：parse 會呼叫語言模型 2～3 次，實測 14～29 秒（2026-10-05 使用者決定）
 const val WORKER_MAX_RESPONSE_BYTES = 64 * 1024   // 回應最多讀 64 KB，超過視為連不上
 const val HEADER_APP_SECRET = "x-app-secret"      // 授權標頭
 const val CONTENT_TYPE_JSON = "application/json; charset=utf-8"  // 送出的格式
@@ -69,7 +70,7 @@ object WorkerApi {
             conn = opened.apply {
                 requestMethod = method
                 connectTimeout = WORKER_TIMEOUT_MILLIS
-                readTimeout = WORKER_TIMEOUT_MILLIS
+                readTimeout = WORKER_READ_TIMEOUT_MILLIS
                 instanceFollowRedirects = false                       // 不跟著轉址到別的網域
                 useCaches = false
                 setRequestProperty(HEADER_APP_SECRET, BuildConfig.API_SECRET)

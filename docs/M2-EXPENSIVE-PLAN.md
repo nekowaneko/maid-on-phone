@@ -260,7 +260,7 @@ FCM `data` 沿用 `{ id, text, script? }`，再加選用的 `actions`：**以逗
 | `speak` | — | 開始語音辨識（同按「說話」） |
 | `cancel` | — | 不連線，只記一次互動（重設閒置計時） |
 
-C 呼叫 Worker 前先 `thinking(true)`，拿到回應後 `thinking(false)` 再 `showDrink(回應原文)`。連不上、逾時（15 秒）、非 2xx → `thinking(false)` 後用 `showText` 顯示固定的提示（§7）。`window.pet` 沒有對應方法時沿用 M1.5 決定 47：`callBridge` 略過，不出錯。
+C 呼叫 Worker 前先 `thinking(true)`，拿到回應後 `thinking(false)` 再 `showDrink(回應原文)`。連不上、逾時（連線 15 秒、讀取 45 秒，2026-10-05 實機後改）、非 2xx → `thinking(false)` 後用 `showText` 顯示固定的提示（§7）。`window.pet` 沒有對應方法時沿用 M1.5 決定 47：`callBridge` 略過，不出錯。
 
 ### 4.4 懸浮窗網頁（B）
 
@@ -301,7 +301,7 @@ data class Reminder(..., val actions: List<String> = emptyList())   // parseRemi
 
 App 端：
 - `app/build.gradle.kts`：`buildConfigField("String", "API_SECRET", workerValue("apiSecret"))`。
-- `WorkerApi.kt`：唯一連外的檔案（A12 修訂）。`post(path, bodyJson, callback)`、`get(path, callback)`；網址＝`apiOrigin(BuildConfig.CHAT_URL) + path`；標頭 `x-app-secret: BuildConfig.API_SECRET`、`content-type: application/json`；連線與讀取逾時各 15 秒；在背景執行緒執行，結果回主執行緒；`apiOrigin` 為 null 或 `API_SECRET` 為空 → 不連線，直接回「尚未設定」。回應內容與密鑰不得寫進 log（只記狀態碼）。
+- `WorkerApi.kt`：唯一連外的檔案（A12 修訂）。`post(path, bodyJson, callback)`、`get(path, callback)`；網址＝`apiOrigin(BuildConfig.CHAT_URL) + path`；標頭 `x-app-secret: BuildConfig.API_SECRET`、`content-type: application/json`；連線逾時 15 秒、讀取逾時 45 秒（2026-10-05 實機後改：parse 實測 14～29 秒）；在背景執行緒執行，結果回主執行緒；`apiOrigin` 為 null 或 `API_SECRET` 為空 → 不連線，直接回「尚未設定」。回應內容與密鑰不得寫進 log（只記狀態碼）。
 - `PetBridge`：加 `@JavascriptInterface fun onDrinkAction(json: String)`，轉回主執行緒交給服務。
 - `OverlayService`：語音辨識**成功的結果**（不含「我在聽…」與錯誤提示）送 `POST /api/drink/parse { text }`；處理 `onDrinkAction`（§4.3 表）；新增 `showDrink(json)`、`thinking(on)`，寫法同 `showScript`（頁面未載入完成時暫存）。`SpeechBridge` 需要把「辨識結果」和「狀態提示」分成兩個回呼。
 - 推播：`actions` 非空且角色模式開 → 角色出現並 `showDrink("{\"kind\":\"ask\",\"script\":...}")`（用 `JSONObject` 組）；角色模式關 → 一般通知加上按鈕（`沒喝`、`有喝，用說的`），按下送到 `DrinkActionReceiver`。排隊（玩遊戲中）時照 M1.6 排隊，按鈕不保留（§10）。
