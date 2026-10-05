@@ -47,3 +47,13 @@
 - [ ] 關螢幕期間才收到的提醒，畫面恢復後是接著演（B 線決定）；若覺得應該直接跳到演完，告訴 Claude 另外調整
 - [ ] `tools/send_push.py --script` 時記得同時給 `--text`（純文字），否則通知欄會顯示預設句
 - [ ] App 圖示只在 debug 建置是 pout 臉；pout 表情圖更新後重跑 `python tools/make_app_icon.py` 再建置（想調整大小改 `VISIBLE_RADIUS`）
+
+## M2
+
+- [ ] 主倉庫的 `worker.properties` 填 `apiSecret`（值和 `APP_SECRET` 相同；**開 worktree 之前就要填**，準備腳本不會覆蓋已存在的檔案）
+- [ ] 套用新 schema（在 `backend/` 執行）：`npx wrangler d1 execute pet-maid-db --remote --file worker/schema.sql`
+- [ ] `npx wrangler deploy`（每小時的排程觸發會一起生效）；密鑰相關一律用 Git Bash 或 cmd，不要用 PowerShell 5.1 的管線
+- [ ] 照 DEVICE-CHECKLIST-M2.md 實測
+- [ ] 讀 RISK-REVIEW.md 的 M2 段落（`apiSecret` 編進 APK 的風險）
+- [ ] 讀 MUTATION-REPORT.md 的 M2 範圍（`backend/core/drink.js`、`core/drink`）
+- [ ] 要把資料搬去戒飲存時：先在戒飲存匯出備份，再匯入 `/api/drink/export` 下載的檔案（戒飲存匯入會整份取代）

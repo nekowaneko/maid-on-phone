@@ -1,3 +1,6 @@
 # App 的聊天網址設定範例。複製成 worker.properties 後填入（不會進 git）。
 # 必須是 https:// 開頭；沒填或不是 https 時，泡泡的「聊聊」會提示尚未設定。步驟見 docs/WORKER-SETUP.md
 chatUrl=
+# 戒飲記錄（M2）：App 呼叫 Worker API 用的存取密鑰，跟 wrangler secret put APP_SECRET 設的是同一把。
+# API 的網址由上面的 chatUrl 取出 https://網域 這一段，不用另外填。沒填時「沒喝」與語音記錄會提示尚未設定。
+apiSecret=

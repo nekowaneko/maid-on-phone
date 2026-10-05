@@ -70,3 +70,24 @@ cmd 直接在指令裡打中文會被轉成 Big5 送出，Worker 收到亂碼。
 curl -X POST "https://pet-maid-api.xxx.workers.dev/api/push" -H "x-app-secret: 你的存取密鑰" -H "Content-Type: application/json; charset=utf-8" --data-binary @push.json
 ```
 成功時回覆 `{"ok":true,"id":"push-..."}`。換台詞只要改 `push.json` 再執行同一行。
+
+## 8. 戒飲記錄（M2 貴批次完成後才有這個功能）
+1. **套用新的資料表**（在 `backend/` 執行；冪等，重複執行不會清掉既有資料）：
+```bash
+npx wrangler d1 execute pet-maid-db --remote --file worker/schema.sql
+```
+2. **讓 App 拿到存取密鑰**：主倉庫的 `worker.properties` 加一行 `apiSecret=`，值和第 3 節 `APP_SECRET` 設的那把相同。App 會用它呼叫 `/api/drink/*`（記錄喝了、沒喝、讀設定），網址從同一個檔案的 `chatUrl` 取出 `https://網域` 這一段，不用另外填。改完要重新建置、安裝 App。
+3. **重新部署**（`wrangler.toml` 的 `[triggers]` 讓 Worker 每小時跑一次，依台北時間在戒飲設定的整點送「今天有喝飲料嗎？」）：
+```bash
+npx wrangler deploy
+```
+4. **測一次**（Git Bash；`SECRET` 換成你的存取密鑰）：
+```bash
+curl -H "x-app-secret: $SECRET" https://pet-maid-api.xxx.workers.dev/api/drink/stats
+```
+成功時回覆本週杯數、本月省下金額、回本 %、少攝取熱量等數字。
+5. **匯出給戒飲存**：瀏覽器無法帶標頭，用 curl 存成檔案後在戒飲存的「匯入」選它：
+```bash
+curl -H "x-app-secret: $SECRET" -o boba-ai-backup.json https://pet-maid-api.xxx.workers.dev/api/drink/export
+```
+**注意：戒飲存匯入會整份取代原本的資料**，匯入前先在戒飲存按「匯出」備份。

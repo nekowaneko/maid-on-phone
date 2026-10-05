@@ -1,0 +1,56 @@
+{
+  "_note": "M2 戒飲記錄的預設台詞：語言模型的台詞數字和規則不一致（重試一次後）、語言模型失敗、或用量到頂時才用。每句以表情標籤開頭，{名稱} 由 Worker 以規則算出的值填入。語氣微傲、一句嬌，喝了也不能有罪惡感。",
+  "confirm": [
+    "[pout]{name}、{size}、{sugar}、{ice}，大約 {kcal} 大卡。[shy]……要我幫主人記下來嗎？",
+    "[smile]{name}、{size}、{sugar}、{ice}，算起來約 {kcal} 大卡。[pout]沒說錯的話就記下來囉。"
+  ],
+  "confirmWithPrice": [
+    "[pout]{name}、{size}、{sugar}、{ice}，{price} 元，大約 {kcal} 大卡。[shy]……要我幫主人記下來嗎？",
+    "[smile]{name}、{size}、{sugar}、{ice}，花了 {price} 元，約 {kcal} 大卡。[pout]沒說錯的話就記下來囉。"
+  ],
+  "confirmTable": [
+    "[pout]{name}，官方說大約 {kcal} 大卡。[shy]……要記下來嗎？",
+    "[smile]{name}，約 {kcal} 大卡喔。[pout]確認了就記下來。"
+  ],
+  "choose": [
+    "[thinking]這個我不太確定是哪一種……[pout]主人自己選最接近的吧。",
+    "[troubled]清單上找不到一模一樣的。[shy]挑一個最像的給我好嗎？"
+  ],
+  "saved": [
+    "[smile]記好了。本週喝了 {weekCups} 杯，本月省下 {monthSavedMoney} 元，回本 {paybackPct}%，少攝取 {monthSavedKcal} 大卡。[pout]喝了就好好享受，不准內疚。",
+    "[pout]哼，幫你記下了。本週 {weekCups} 杯，本月省下 {monthSavedMoney} 元、回本 {paybackPct}%、少攝取 {monthSavedKcal} 大卡。[shy]……偶爾喝一杯沒關係的。"
+  ],
+  "resisted": [
+    "[smile]今天忍住了呢。本週喝了 {weekCups} 杯，本月省下 {monthSavedMoney} 元，回本 {paybackPct}%，少攝取 {monthSavedKcal} 大卡。[shy]……做得很好。",
+    "[pout]記下來了，才不是特別為你高興。本週 {weekCups} 杯，本月省下 {monthSavedMoney} 元、回本 {paybackPct}%、少攝取 {monthSavedKcal} 大卡。[shy]……真的很棒喔。"
+  ],
+  "already": [
+    "[pout]今天已經記過了啦，不用再按一次。",
+    "[smile]這個時段已經記過了喔，我都記得的。"
+  ],
+  "undone": [
+    "[smile]好，那筆撤銷了。",
+    "[pout]撤銷了。[shy]……下次按之前想清楚喔。"
+  ],
+  "cannotUndo": [
+    "[troubled]這筆不能撤銷了。",
+    "[pout]這筆已經撤銷過，或是太久以前的了，沒辦法再改。"
+  ],
+  "notUnderstood": [
+    "[thinking]嗯……我沒聽懂，可以再說一次嗎？",
+    "[troubled]剛剛那句我沒弄明白。[shy]再說一次好不好？"
+  ],
+  "notDrink": [
+    "[smile]嗯嗯，我在聽喔。",
+    "[pout]這跟飲料沒關係吧？[shy]……不過我還是聽到了。"
+  ],
+  "ask": [
+    "[pout]今天有喝飲料嗎？[shy]……老實說，我不會生氣的。",
+    "[thinking]說起來，今天有喝飲料嗎？",
+    "[pout]主人，今天有喝飲料嗎？[smile]沒喝的話按一下就好。"
+  ],
+  "labels": {
+    "assumedSize": "（沒說大小，先當大杯）",
+    "assumedSugar": "（沒說甜度，先當全糖）"
+  }
+}

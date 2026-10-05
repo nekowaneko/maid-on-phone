@@ -1,0 +1,11 @@
+{
+  "_note": "M2 戒飲記錄的預設值，來源：cost_down commit 9fc08b2 的 index.html defaultData。使用者在 App 的戒飲設定改過的值存在 D1 settings 表（drink. 開頭），這裡只是沒設定時的預設。drinks 只留珍珠奶茶（使用者 2026-10-05 決定），少攝取熱量用它的平均熱量；monthlyQuota 只是每月最多喝幾杯的自我提醒，不參與計算。",
+  "subscriptionName": "Claude Pro",
+  "monthlyFee": 650,
+  "resistValue": 60,
+  "monthlyQuota": 20,
+  "askTime": "15:00",
+  "drinks": [
+    { "id": 1, "name": "珍珠奶茶", "price": 65, "sugar": 55, "kcal": 650 }
+  ]
+}

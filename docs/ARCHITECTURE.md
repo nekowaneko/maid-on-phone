@@ -40,3 +40,11 @@
 - 推播資料 `{id, text, script?}`：Worker B 收到帶標籤的台詞時，`text` 為去掉標籤的純文字（給通知欄），`script` 為原文（給角色演出）；沒有標籤時不帶 `script`，與 M1.5 相同。
 - 角色頁依序載入三支一般 script：`emotion-map.js`（表情鍵 → 整張表情圖）、`vendor/stream-parser.js`（由 `tools/sync-overlay-vendor.mjs` 從 `backend/core/stream-parser.js` 產生，不得手改）、`performance.js`（演出排程：每字 80 毫秒、句尾停 500 毫秒、換臉、排隊、跳到演完）。
 - 表情圖是整張替換，放在 `frames/local/`（不進 git），由 `tools/make_expression_frames.py` 從 Nano Banana 做的差分圖產生。
+
+## M2 戒飲記錄
+
+- 資料流：按「說話」→ App 語音辨識 → `POST /api/drink/parse` → 語言模型只回 `drink-model.json`／`starbucks.json` 的編號 → Worker 用組合式模型（`calorie.js` 的 `calcKcal`）或星巴克查表（`lookupTableKcal`）算熱量 → 角色複述 → 泡泡按鈕 → `PetBridge.onDrinkAction` → App → `POST /api/drink/confirm`（寫入）或 `/preview`（改甜度、選品項後重新複述）。
+- 熱量與統計一律由規則算出；語言模型的台詞數字必須和規則一致，不一致時重試一次，還是不一致就改用 `drink-lines.json` 的預設台詞。
+- 資料存在 D1 的 `drink_logs` 表（欄位照戒飲存備份格式），設定值存在 `settings` 表（`drink.` 開頭）；`GET /api/drink/export` 匯出成戒飲存的備份檔。
+- Worker 每小時跑一次排程，依台北時間在設定的整點送「今天有喝飲料嗎？」推播，推播資料多一個 `actions`（`resist,speak`），App 依此顯示「沒喝／有喝，用說的」按鈕。
+- App 只有 `WorkerApi.kt` 可以連外，網址由 `worker.properties` 的 `chatUrl` 取出網域、密鑰為 `apiSecret`；網頁呼叫原生的介面多一個 `onDrinkAction(json)`（共 4 個）。
