@@ -4,7 +4,7 @@
 > 本批次為純產出工作（照抄檔案、寫契約檔、寫文件），不含修正迴圈。
 > 執行順序：本批次先跑，完成後才凍結規格測試、開 worktree、平行執行 docs/M2-EXPENSIVE-PLAN.md 的 B、C、D 三條線。
 > 背景：docs/M2-HANDOFF.md、docs/wish28-pet-spec.md §4 F1、§5 M2。
-> **前提**：docs/M2-EXPENSIVE-PLAN.md §4.5 規格範例表與 §7.1 待確認事項已由使用者逐列確認。確認結果若改動了本文件 §3 的內容，以確認結果為準。
+> **前提**：docs/M2-EXPENSIVE-PLAN.md §4.5 規格範例表與 §7.1 待確認事項已由使用者於 2026-10-05 逐列確認。
 
 ## 0. 執行協定
 
@@ -21,7 +21,7 @@
 
 | 步驟 | 動作 | 對象 |
 |---|---|---|
-| 1 | 照抄 | `cost_down/netlify_deploy/data/drink-model.json` → `backend/config/drink-model.json`（逐字，不加註解，JSON 不能加） |
+| 1 | 照抄 | `cost_down/netlify_deploy/data/drink-model.json` → `backend/config/drink-model.json`（逐字，不加註解，JSON 不能加）；`data/starbucks.json` → `backend/config/starbucks.json`（只改重複的編號，§3.11） |
 | 2 | 照抄 | `cost_down/netlify_deploy/core/calorie.js` → `backend/core/calorie.js`；`core/ledger.js` → `backend/core/ledger.js`（§3.1） |
 | 3 | 照抄 | `cost_down/tests/calorie.test.js` → `backend/tests/costdown-calorie.test.js`；`tests/ledger.test.js` → `backend/tests/costdown-ledger.test.js`（§3.1） |
 | 4 | 建立 | `backend/config/drink-defaults.json`（§3.2，契約檔） |
@@ -35,7 +35,7 @@
 
 貴批次 T0 會逐一確認以下檔案存在且非空：
 
-- `backend/config/drink-model.json`
+- `backend/config/drink-model.json`、`backend/config/starbucks.json`
 - `backend/core/calorie.js`、`backend/core/ledger.js`
 - `backend/tests/costdown-calorie.test.js`、`backend/tests/costdown-ledger.test.js`
 - `backend/config/drink-defaults.json`、`backend/config/drink-lines.json`
@@ -53,7 +53,7 @@
 
 - `calorie.js`、`ledger.js`：檔案第一行前面加一行 `// 照抄自 cost_down（戒飲存）commit 9fc08b2 的 netlify_deploy/core/<檔名>，不得修改；要更新時照 backend/SOURCE.md 重抄`，其餘逐字。
 - 兩個測試檔：開頭加同樣格式的一行來源註解；`'../netlify_deploy/core/` 換成 `'../core/`；`'../netlify_deploy/data/drink-model.json'` 換成 `'../config/drink-model.json'`。其餘逐字。
-- 測試若讀了 `starbucks.json` 或 `drink-model.json` 以外的資料檔，**不要**搬那個資料檔：把那幾個 `test(...)` 整段保留不動，記在 BLOCKERS.md「costdown 測試缺資料檔」，交給貴批次 D 線處理（D 線可以把整個檔案改成只測 `calcKcal`、`explainKcal`，這是唯一允許改動照抄測試的情況）。
+- 已查證：兩個測試只讀 `drink-model.json`，查表測試用的是檔案內的假資料，不讀 `starbucks.json`。
 - 完成後在 `backend/` 執行 `node --test tests/costdown-*.test.js`。失敗時只檢查路徑替換有沒有漏，不改任何斷言；仍失敗就記 BLOCKERS.md。
 
 ### 3.2 `backend/config/drink-defaults.json`（契約檔）
@@ -69,11 +69,12 @@
   "monthlyQuota": 20,
   "askTime": "15:00",
   "drinks": [
-    { "id": 1, "name": "珍珠奶茶", "price": 65, "sugar": 55, "kcal": 650 },
-    { "id": 2, "name": "四季春茶", "price": 35, "sugar": 40, "kcal": 180 }
+    { "id": 1, "name": "珍珠奶茶", "price": 65, "sugar": 55, "kcal": 650 }
   ]
 }
 ```
+
+`drinks` 只留珍珠奶茶（使用者 2026-10-05 決定，Q12）；「少攝取熱量」用它的平均熱量，也就是 650。`monthlyQuota` 只是「每月最多喝幾杯」的自我提醒，不影響省下金額（使用者 2026-10-05 決定，M2-S10）。
 
 ### 3.3 `backend/config/drink-lines.json`（預設台詞）
 
@@ -83,6 +84,7 @@
 |---|---|---|
 | `confirm` | 複述待確認的飲料 | `{name}` `{size}` `{sugar}` `{ice}` `{kcal}` |
 | `confirmWithPrice` | 同上，使用者有說價格 | 上列＋`{price}` |
+| `confirmTable` | 複述星巴克查表的品項（沒有甜度、冰量） | `{name}` `{kcal}` |
 | `choose` | 請使用者選最接近的品項（不得含任何數字） | 無 |
 | `saved` | 喝了，已記下 | `{weekCups}` `{monthSavedMoney}` `{paybackPct}` `{monthSavedKcal}` |
 | `resisted` | 沒喝，已記下 | 同上 |
@@ -120,7 +122,7 @@ apiSecret=
 
 ### 3.7 `backend/SOURCE.md` 追加
 
-一節「戒飲存（cost_down）的來源」：本機路徑 `C:\Users\Dominic\Desktop\ml_demo\cost_down`、commit `9fc08b2`、照抄的 5 個檔案與改了什麼（只有 §3.1 的路徑與來源註解）、沒搬的東西（`starbucks.json` 查表、Gemini 代打估熱量、`slots.js`、`migrate.js`）與原因、之後要更新時的步驟（同 accompany_bot 那一節的做法）。
+一節「戒飲存（cost_down）的來源」：本機路徑 `C:\Users\Dominic\Desktop\ml_demo\cost_down`、commit `9fc08b2`、照抄的 6 個檔案與改了什麼（§3.1 的路徑與來源註解、§3.11 的星巴克編號）、沒搬的東西（Gemini 代打估熱量、`slots.js`、`migrate.js`）與原因、之後要更新時的步驟（同 accompany_bot 那一節的做法）。
 
 ### 3.8 `CHECKLIST.md` 追加「## M2」
 
@@ -137,7 +139,20 @@ apiSecret=
 
 ### 3.10 `docs/ARCHITECTURE.md` 追加
 
-一段「M2 戒飲記錄」：資料流（語音 → App → `POST /api/drink/parse` → 語言模型只回編號 → Worker 用組合式模型算熱量 → 角色複述 → 按鈕 → App → `confirm`／`preview`）；Worker 的每小時排程；`drink_logs` 表；App 唯一連外的檔案 `WorkerApi.kt`；第 4 個 JS 介面 `onDrinkAction`。
+一段「M2 戒飲記錄」：資料流（語音 → App → `POST /api/drink/parse` → 語言模型只回編號 → Worker 用組合式模型或星巴克查表算熱量 → 角色複述 → 按鈕 → App → `confirm`／`preview`）；Worker 的每小時排程；`drink_logs` 表；App 唯一連外的檔案 `WorkerApi.kt`；第 4 個 JS 介面 `onDrinkAction`。
+
+### 3.11 `backend/config/starbucks.json`
+
+戒飲存原檔有兩組重複的編號（同一個編號對到中杯與大杯），`lookupTableKcal` 只會找到第一筆。照抄時只改 `id`，其餘逐字：
+
+| 原 `id` | 品名 | 新 `id` |
+|---|---|---|
+| `sb_black_tea_latte_t` | 伯爵茶那堤（中杯） | `sb_black_tea_latte_tall` |
+| `sb_black_tea_latte_t` | 伯爵茶那堤（大杯） | `sb_black_tea_latte_grande` |
+| `sb_frappuccino_coffee_t` | 巧克力可可碎片星冰樂（大杯） | `sb_frappuccino_chocolate_grande` |
+| `sb_frappuccino_coffee_t` | 巧克力可可碎片星冰樂（特大杯） | `sb_frappuccino_chocolate_venti` |
+
+`_note` 後面接一句「pet-maid 版：重複的編號已依杯型改成唯一（見 backend/SOURCE.md）」。
 
 ## 4. 預設值表
 
@@ -156,7 +171,7 @@ apiSecret=
 ## 6. 故意不做的事
 
 - 不寫任何 Worker、Kotlin、角色頁的程式（屬貴批次）
-- 不搬 `starbucks.json`、Gemini 代打估熱量、`slots.js`、`migrate.js`
+- 不搬 Gemini 代打估熱量、`slots.js`、`migrate.js`；`starbucks.json` 不補新品項
 - 不改 `backend/schema.sql`、`wrangler.toml`（屬 D 線）
 - 不建立 worktree、不凍結規格測試（由規劃者處理）
 - 不部署、不填真正的 `worker.properties`
