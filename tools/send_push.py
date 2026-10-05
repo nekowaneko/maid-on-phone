@@ -7,6 +7,8 @@
 #   python tools/send_push.py --key 金鑰.json --id 上次的編號       # 用同一個編號重送（測去重）
 #   python tools/send_push.py --key 金鑰.json --text "真拿主人沒辦法。水記得喝。" --script "[pout]真拿主人沒辦法。[smile]水記得喝。"
 #                                                                # 帶角色演出用的原文（M1.6；不經 Worker，不會自動剝標籤）
+#   python tools/send_push.py --key 金鑰.json --text "今天有喝飲料嗎？" --script "[pout]今天有喝飲料嗎？" --actions resist,speak
+#                                                                # 附按鈕（M2；逗號分隔的動作編號，App 只認 resist、speak）
 # 金鑰路徑也可以用環境變數 PET_FCM_KEY 指定；推播代碼預設用 adb 從手機讀（需接線或無線偵錯）
 # 金鑰與推播代碼都是憑證：不要放進專案資料夾，本腳本也不會把它們印出來
 
@@ -60,20 +62,22 @@ def get_access(key_path):
     return credentials.token, project_id
 
 
-# 組出推播的 data：script 有給（非空字串）才多帶 script 欄位，沒給時與 M1.5 相同只有 id、text
-def build_data(reminder_id, text, script=None):
+# 組出推播的 data：script、actions 有給（非空字串）才多帶對應欄位，都沒給時與 M1.5 相同只有 id、text
+def build_data(reminder_id, text, script=None, actions=None):
     data = {"id": reminder_id, "text": text}
     if script:
         data["script"] = script  # 角色演出用的原文（含表情標籤）
+    if actions:
+        data["actions"] = actions  # M2：通知按鈕，逗號分隔的動作編號（與 Worker 的每日詢問相同格式）
     return data
 
 
-# 組出推播內容：只有 data（id、text，必要時加 script），高優先順序才能在省電狀態下即時送達
-def build_message(device_token, reminder_id, text, script=None):
+# 組出推播內容：只有 data（id、text，必要時加 script、actions），高優先順序才能在省電狀態下即時送達
+def build_message(device_token, reminder_id, text, script=None, actions=None):
     return {
         "message": {
             "token": device_token,
-            "data": build_data(reminder_id, text, script),
+            "data": build_data(reminder_id, text, script, actions),
             "android": {"priority": "high"},
         }
     }
@@ -103,6 +107,7 @@ def parse_args():
     parser.add_argument("--id", help="提醒編號；不給就自動產生新的，給上次的編號可測去重")
     parser.add_argument("--delay", type=int, default=0, help="幾秒後才送（方便先切到遊戲畫面）")
     parser.add_argument("--script", help="角色演出用的原文（可含 [pout] 等表情標籤）；不給就只送 id、text")
+    parser.add_argument("--actions", help="通知按鈕，逗號分隔的動作編號（例如 resist,speak）；不給就不帶按鈕")
     return parser.parse_args()
 
 
@@ -119,7 +124,7 @@ def main():
     if args.delay:
         print()
     access_token, project_id = get_access(args.key)
-    name = send(access_token, project_id, build_message(device_token, reminder_id, args.text, args.script))
+    name = send(access_token, project_id, build_message(device_token, reminder_id, args.text, args.script, args.actions))
     print("已送出：編號 %s（FCM 訊息 %s）" % (reminder_id, name.rsplit("/", 1)[-1]))
 
 

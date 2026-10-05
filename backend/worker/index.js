@@ -13,7 +13,13 @@ import personaSchema from '../config/persona-schema.json' with { type: 'json' }
 import messageSchema from '../config/message.json' with { type: 'json' }
 import personaText from '../config/persona.md'
 import templateText from '../config/prompt-template.md'
-import { createHandler } from './handlers.js'
+import drinkModel from '../config/drink-model.json' with { type: 'json' }
+import starbucksTable from '../config/starbucks.json' with { type: 'json' }
+import drinkDefaults from '../config/drink-defaults.json' with { type: 'json' }
+import drinkLines from '../config/drink-lines.json' with { type: 'json' }
+import drinkParsePrompt from '../config/drink-parse-prompt.md'
+import drinkScriptPrompt from '../config/drink-script-prompt.md'
+import { createHandler, runScheduled } from './handlers.js'
 import { streamCompletion as realStream } from './llm-client.js'
 import { streamCompletion as stubStream } from './llm-client.stub.js'
 import { createStore as realStore } from './store.js'
@@ -46,6 +52,12 @@ const buildDeps = (env) => ({
   messageSchema,
   personaText,
   templateText,
+  // M2 戒飲記錄（§4.1.8）
+  drinkModel,
+  starbucksTable,
+  drinkDefaults,
+  drinkLines,
+  drinkPrompts: { parse: drinkParsePrompt, script: drinkScriptPrompt },
   secret: env?.APP_SECRET,
   store: pickStore(env)(env),
   streamer: (messages) => pickStreamer(env)(messages, env),
@@ -55,5 +67,7 @@ const buildDeps = (env) => ({
 })
 
 export default {
-  fetch: async (request, env) => createHandler(buildDeps(env))(request)
+  fetch: async (request, env) => createHandler(buildDeps(env))(request),
+  // M2 每日詢問：每個整點觸發一次，邏輯全部在 handlers.js 的 runScheduled（A9）
+  scheduled: (event, env, ctx) => ctx.waitUntil(runScheduled(buildDeps(env), event.scheduledTime))
 }

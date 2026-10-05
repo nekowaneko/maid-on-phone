@@ -14,9 +14,13 @@ const ensureDaily = (daily, dateKey) => {
   return daily.get(dateKey)
 }
 
+// 複製一筆戒飲紀錄（配料清單另外複製，避免共用同一個陣列）
+const copyLog = (log) => ({ ...log, toppingIds: Array.isArray(log.toppingIds) ? [...log.toppingIds] : [] })
+
 export const createStore = (env) => {
   const settings = new Map()
   const daily = new Map()
+  const drinkLogs = [] // M2 戒飲紀錄，撤銷只標記 undone
   let requestTimes = []
 
   // 兩分鐘以前的時間戳沒有用處，順手丟掉，免得無限長大
@@ -44,6 +48,28 @@ export const createStore = (env) => {
     },
     readDaily: async (dateKey) => ({ ...(daily.get(dateKey) ?? EMPTY_DAILY) }),
     countRequestsSince: async (sinceMs) => requestTimes.filter((ts) => ts > sinceMs).length,
-    pruneRequests
+    pruneRequests,
+    // 新增一筆戒飲紀錄（存複本，呼叫端之後改動傳入的物件不影響儲存內容）
+    addDrinkLog: async (log) => {
+      drinkLogs.push(copyLog({ ...log, undone: false }))
+    },
+    // 全部未撤銷的紀錄，依記錄時間排序（同一時間依寫入順序）
+    listDrinkLogs: async () =>
+      drinkLogs
+        .filter((log) => !log.undone)
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map(copyLog),
+    // 找一筆紀錄（含已撤銷）；找不到回 null
+    findDrinkLog: async (id) => {
+      const found = drinkLogs.find((log) => log.id === id)
+      return found ? copyLog(found) : null
+    },
+    // 標記撤銷：找不到或已撤銷回 false
+    markDrinkUndone: async (id) => {
+      const found = drinkLogs.find((log) => log.id === id)
+      if (!found || found.undone) return false
+      found.undone = true
+      return true
+    }
   }
 }
