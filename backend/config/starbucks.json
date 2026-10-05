@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "_note": "星巴克走官方公告值查表，不使用組合式估算（品項固定且官方有數字，查表更準）。energy-kcal 欄位請至星巴克官網或 App 抄錄後填入，並移除 <TODO:...> 佔位符。pet-maid 版：重複的編號已依杯型改成唯一（見 backend/SOURCE.md）。",
+  "items": [
+    { "id": "sb_black_tea_latte_tall", "name": "伯爵茶那堤（中杯）", "serving_size": 355, "energy-kcal": 154 },
+    { "id": "sb_black_tea_latte_grande", "name": "伯爵茶那堤（大杯）", "serving_size": 473, "energy-kcal": 204 },
+    { "id": "sb_frappuccino_chocolate_grande", "name": "巧克力可可碎片星冰樂（大杯）", "serving_size": 473, "energy-kcal": 371 },
+    { "id": "sb_frappuccino_chocolate_venti", "name": "巧克力可可碎片星冰樂（特大杯）", "serving_size": 591, "energy-kcal": 583 }
+  ]
+}

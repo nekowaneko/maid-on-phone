@@ -1,0 +1,50 @@
+{
+  "version": 2,
+  "_note": "組合式熱量模型。基準：700ml 全糖 ≈ 60g 糖 ≈ 240 kcal（國健署）。法定標示誤差 ±20%，故結果四捨五入至 10 kcal。欄位命名沿用 Open Food Facts nutriments 慣例。",
+  "roundTo": 10,
+  "sugarBaseline": { "serving_size": 700, "sugars": 60, "energy-kcal": 240 },
+  "sizes": [
+    { "id": "M", "name": "中杯", "serving_size": 500, "factor": 0.71 },
+    { "id": "L", "name": "大杯", "serving_size": 700, "factor": 1.0 },
+    { "id": "XL", "name": "特大", "serving_size": 900, "factor": 1.29 }
+  ],
+  "sugarLevels": [
+    { "id": "full", "name": "全糖", "factor": 1.0 },
+    { "id": "less", "name": "少糖", "factor": 0.7 },
+    { "id": "half", "name": "半糖", "factor": 0.5 },
+    { "id": "quarter", "name": "微糖", "factor": 0.3 },
+    { "id": "none", "name": "無糖", "factor": 0 }
+  ],
+  "bases": [
+    { "id": "tea", "name": "純茶（紅/綠/青/烏龍）", "energy-kcal": 5 },
+    { "id": "milktea", "name": "奶茶（奶精）", "energy-kcal": 170 },
+    { "id": "freshmilktea", "name": "鮮奶茶", "energy-kcal": 190 },
+    { "id": "latte", "name": "拿鐵／鮮奶", "energy-kcal": 200 },
+    { "id": "fruittea", "name": "水果茶", "energy-kcal": 60 },
+    { "id": "wintermelon", "name": "冬瓜茶（本身含糖，糖度僅微調）", "energy-kcal": 60 },
+    { "id": "yakult", "name": "多多／養樂多系列", "energy-kcal": 130 }
+  ],
+  "toppings": [
+    { "id": "boba", "name": "珍珠／波霸", "serving_size": 60, "energy-kcal": 160 },
+    { "id": "milkcap", "name": "奶蓋", "serving_size": 60, "energy-kcal": 200 },
+    { "id": "caogua", "name": "草仔粿", "serving_size": 60, "energy-kcal": 170 },
+    { "id": "fenguo", "name": "粉粿", "serving_size": 60, "energy-kcal": 165 },
+    { "id": "sago", "name": "西米露", "serving_size": 60, "energy-kcal": 165 },
+    { "id": "taroball", "name": "芋圓", "serving_size": 60, "energy-kcal": 180 },
+    { "id": "redbean", "name": "紅豆", "serving_size": 60, "energy-kcal": 130 },
+    { "id": "pudding", "name": "布丁", "serving_size": 60, "energy-kcal": 130 },
+    { "id": "oat", "name": "燕麥", "serving_size": 60, "energy-kcal": 110 },
+    { "id": "coconut", "name": "椰果", "serving_size": 60, "energy-kcal": 80 },
+    { "id": "aloe", "name": "蘆薈", "serving_size": 60, "energy-kcal": 60 },
+    { "id": "grassjelly", "name": "仙草凍", "serving_size": 60, "energy-kcal": 50 },
+    { "id": "aiyu", "name": "愛玉", "serving_size": 60, "energy-kcal": 30 },
+    { "id": "agar", "name": "寒天", "serving_size": 60, "energy-kcal": 20 }
+  ],
+  "iceLevels": [
+    { "id": "normal", "name": "正常冰" },
+    { "id": "less", "name": "少冰" },
+    { "id": "light", "name": "微冰" },
+    { "id": "none", "name": "去冰" },
+    { "id": "hot", "name": "熱飲" }
+  ]
+}
