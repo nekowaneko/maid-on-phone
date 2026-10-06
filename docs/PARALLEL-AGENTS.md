@@ -65,6 +65,20 @@
 - 代理人自己回報的時間不準（B 線說 15 分鐘，實際不到 4 分鐘），統計時以背景任務記錄的執行時間為準
 - 三條線都把計畫書的幾個階段合成一次 commit：凍結的規格測試會 import 後面階段才有的函式，前面的階段不可能全綠
 
+### 5.2 M3 的實際數字（2026-10-06）
+
+Todoist 雙軌提醒（F2）：後端純函式篩選、API 路由、Kotlin 資料模型與動作處理常式、懸浮窗泡泡 3 選 1 選單。
+
+| 線 | 負責 | 時間 | 修正輪數 | 結果 |
+|---|---|---|---|---|
+| D Worker | P2/P3 篩選判斷、延後計算、出聲次數控管、`/api/todoist/action` | 約 6 分鐘 | 0 | 第一次就全綠 |
+| C Kotlin | `TodoistModels` 領域模型、`TodoistActionHandler` 連接 `WorkerApi` | 約 5 分鐘 | 0 | `:core:test` 與 `:app:compileDebugKotlin` 第一次就全綠 |
+| B 懸浮窗網頁 | `todoist-view.js` 泡泡 3 選 1 按鈕與拆解確認選單、`index.html` | 約 4 分鐘 | 0 | 第一次就全綠 |
+| 整合 | 依序合併（D → C → B）、產出 `ACCEPTANCE-M3.md` | 約 5 分鐘 | 0 | 三次合併皆零衝突，全套測試全綠 |
+
+- 實作階段最慢線（D 線）僅約 6 分鐘，各線一次全綠。
+- 檔案所有權邊界清楚（D 改 `backend/`、C 改 `core/` 與 `app/` Kotlin、B 改 `assets/pet/`），完全無衝突。
+
 ## 6. 踩到的坑與對策
 
 | 坑 | 發生在 | 對策 |
