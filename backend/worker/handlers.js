@@ -797,8 +797,30 @@ export const createHandler = (deps) => async (request) => {
   if (url.pathname === PUSH_PATH) {
     return handlePush(deps, request)
   }
+// Todoist 動作處理常數與處理函式
+const TODOIST_PREFIX = '/api/todoist/'
+const handleTodoist = async (deps, request, pathname) => {
+  if (request.method !== POST_METHOD) {
+    return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405)
+  }
+  const payload = await readPayload(request)
+  const action = payload?.action
+  const taskId = payload?.taskId
+  if (!action || !taskId) {
+    return jsonResponse({ error: 'MISSING_REQUIRED_FIELDS' }, 400)
+  }
+  // 記錄動作至 settings 或 Todoist 同步
+  if (deps.store?.writeSetting) {
+    await deps.store.writeSetting(`todoist:action:${taskId}`, JSON.stringify({ action, at: new Date().toISOString() }))
+  }
+  return jsonResponse({ ok: true, taskId, action })
+}
+
   if (url.pathname.startsWith(DRINK_PREFIX)) {
     return handleDrink(deps, request, url.pathname)
+  }
+  if (url.pathname.startsWith(TODOIST_PREFIX)) {
+    return handleTodoist(deps, request, url.pathname)
   }
   if (url.pathname === USAGE_PATH) {
     return handleUsage(deps, request)
