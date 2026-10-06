@@ -42,6 +42,7 @@ import com.accompany.pet.core.chat.ChatAction
 import com.accompany.pet.core.chat.decideChat
 import com.accompany.pet.core.clampInScreen
 import com.accompany.pet.core.drink.ACTION_CONFIRM
+import com.accompany.pet.core.drink.ACTION_HISTORY
 import com.accompany.pet.core.drink.ACTION_PREVIEW
 import com.accompany.pet.core.drink.ACTION_RESIST
 import com.accompany.pet.core.drink.ACTION_SPEAK
@@ -87,7 +88,7 @@ fun isAllowedUrl(url: String): Boolean = url.startsWith(ASSET_ROOT)
 fun drinkRequestBody(action: String, obj: JSONObject): String? = when (action) {
     ACTION_CONFIRM, ACTION_PREVIEW -> obj.optJSONObject("draft")?.let { JSONObject().put("draft", it).toString() }
     ACTION_UNDO -> (obj.opt("logId") as? String)?.takeIf { it.isNotBlank() }?.let { JSONObject().put("logId", it).toString() }
-    ACTION_RESIST -> "{}"
+    ACTION_RESIST, ACTION_HISTORY -> "{}"
     else -> null
 }
 

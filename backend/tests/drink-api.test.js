@@ -295,6 +295,15 @@ test('already 的回應只有 kind、script、text', async () => {
   assert.equal(again.json.text, '今天已經記過了啦，不用再按一次。')
 })
 
+test('history 端點：回傳過往統計與角色台詞', async () => {
+  const env = setup()
+  const res = await env.call('POST', '/api/drink/history', {})
+  assert.equal(res.status, 200)
+  assert.equal(res.json.kind, 'other')
+  assert.ok(res.json.stats)
+  assert.equal(res.json.stats.weekCups, 0)
+})
+
 test('設定：數字欄位要是整數型別；名稱 trim 後存；多餘欄位不存；存壞的值退回預設', async () => {
   const env = setup()
   const asText = await env.call('PUT', '/api/drink/settings', { ...DEFAULT_SETTINGS, monthlyFee: '300' })

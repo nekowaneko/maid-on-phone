@@ -266,7 +266,7 @@ test('M2-S07 本月第三次沒喝時回報省下 180 元、回本 28%、少攝�
   assert.deepEqual(exported.json.logs.at(-1), { date: '2026-10-07', slot: 'afternoon', type: 'resist' })
 })
 
-test('M2-S08 同一時段再按沒喝、或今天已喝過再按沒喝都不新增；不同時段可以再按', async () => {
+test('M2-S08 同一時段再按沒喝不新增；當天喝過飲料在不同時段仍可按沒喝', async () => {
   const sameSlot = setup()
   await sameSlot.at('2026-10-07T15:00', 'POST', '/api/drink/resist', {})
   const again = await sameSlot.at('2026-10-07T15:30', 'POST', '/api/drink/resist', {})
@@ -276,8 +276,8 @@ test('M2-S08 同一時段再按沒喝、或今天已喝過再按沒喝都不新�
   const drank = setup()
   await drank.at('2026-10-07T09:00', 'POST', '/api/drink/confirm', { draft: bobaDraft() })
   const afterDrink = await drank.at('2026-10-07T15:10', 'POST', '/api/drink/resist', {})
-  assert.equal(afterDrink.json.kind, 'already')
-  assert.equal((await drank.call('GET', '/api/drink/stats')).json.monthResists, 0)
+  assert.equal(afterDrink.json.kind, 'saved')
+  assert.equal((await drank.call('GET', '/api/drink/stats')).json.monthResists, 1)
 
   const otherSlot = setup()
   await otherSlot.at('2026-10-07T09:00', 'POST', '/api/drink/resist', {})

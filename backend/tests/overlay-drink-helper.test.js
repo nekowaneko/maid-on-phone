@@ -140,9 +140,9 @@ test('index.html 依序載入五支 script，戒飲按鈕列在 #text 與 #actio
   assert.ok(text >= 0 && text < drink && drink < actions)
 })
 
-test('index.html 泡泡按鈕列為說話、聊聊、沒喝，戒飲按鈕用 textContent 設文字', () => {
+test('index.html 泡泡按鈕列為說話、聊聊、沒喝、歷史，戒飲按鈕用 textContent 設文字', () => {
   const ids = [...INDEX_HTML.matchAll(/<button id="([^"]+)"/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['mic', 'chat', 'resist'])
+  assert.deepEqual(ids, ['mic', 'chat', 'resist', 'history'])
   assert.ok(!/innerHTML/.test(INDEX_HTML))
   assert.match(INDEX_HTML, /showDrink:/)
   assert.match(INDEX_HTML, /thinking:/)

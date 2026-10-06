@@ -38,3 +38,6 @@ fallthrough = false
 binding = "DB"
 database_name = "pet-maid-db"
 database_id = "ba0f3e4a-ce01-4ee9-9a69-cf0dd1cfcb43"
+
+# todoist token 
+todoistToken=72f305bf43552493da2a983940575523ed83d5a5

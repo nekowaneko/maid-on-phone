@@ -285,10 +285,10 @@ export const statsOf = (logs, settings, todayKey) => {
   }
 }
 
-// 現在這個時段能不能按「沒喝」：同時段已有沒喝、或今天已有喝了 → 不能（§4.1.3）
+// 現在這個時段能不能按「沒喝」：同時段已有沒喝 → 不能（§4.1.3）
 export const canResist = (logs, todayKey, slot) =>
   !activeLogs(logs).some(
-    (log) => log.date === todayKey && (log.type === DRINK_TYPE || (log.type === RESIST_TYPE && log.slot === slot))
+    (log) => log.date === todayKey && log.type === RESIST_TYPE && log.slot === slot
   )
 
 // 這筆能不能撤銷：存在、未撤銷、日期在今天往回 6 天內（含今天）

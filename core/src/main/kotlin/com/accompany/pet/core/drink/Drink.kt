@@ -8,6 +8,7 @@ const val ACTION_CONFIRM = "confirm"                    // 動作：對，記下
 const val ACTION_PREVIEW = "preview"                    // 動作：改甜度、選品項後重新複述
 const val ACTION_UNDO = "undo"                          // 動作：撤銷
 const val ACTION_CANCEL = "cancel"                      // 動作：取消
+const val ACTION_HISTORY = "history"                    // 動作：過往紀錄
 const val RESIST_LABEL = "沒喝"                         // 通知按鈕文字（與 drink-labels.js 的 buttons 同一套字）
 const val SPEAK_LABEL = "有喝，用說的"                  // 通知按鈕文字
 const val PARSE_PATH = "/api/drink/parse"               // 語音辨識結果送去解析
@@ -25,6 +26,7 @@ private val DRINK_ENDPOINTS = mapOf(                    // 網頁按鈕動作對
     ACTION_PREVIEW to "/api/drink/preview",
     ACTION_RESIST to "/api/drink/resist",
     ACTION_UNDO to "/api/drink/undo",
+    ACTION_HISTORY to "/api/drink/history",
 )
 private const val AUTHORITY_END = "/?#"                 // 網域段結束的字元
 

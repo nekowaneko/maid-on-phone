@@ -684,6 +684,14 @@ const handleDrinkUndo = async (deps, request) => {
   return drinkResponse('undone', await statsScript(deps, stats, 'undone', 'undone'), { stats })
 }
 
+// POST /api/drink/history：呼叫過往紀錄與統計台詞
+const handleDrinkHistory = async (deps) => {
+  const nowMs = readNow(deps)
+  const { today } = drinkClock(deps, nowMs)
+  const stats = await currentStats(deps, today)
+  return drinkResponse('other', await statsScript(deps, stats, 'saved', 'saved'), { stats })
+}
+
 // GET /api/drink/stats
 const handleDrinkStats = async (deps) => jsonResponse(await currentStats(deps, todayKey(deps, readNow(deps))), 200)
 
@@ -724,6 +732,7 @@ const DRINK_ROUTES = {
   confirm: { [POST_METHOD]: handleDrinkConfirm },
   resist: { [POST_METHOD]: handleDrinkResist },
   undo: { [POST_METHOD]: handleDrinkUndo },
+  history: { [POST_METHOD]: handleDrinkHistory, [GET_METHOD]: handleDrinkHistory },
   stats: { [GET_METHOD]: handleDrinkStats },
   settings: { [GET_METHOD]: handleDrinkSettingsRead, [PUT_METHOD]: handleDrinkSettingsWrite },
   export: { [GET_METHOD]: handleDrinkExport }

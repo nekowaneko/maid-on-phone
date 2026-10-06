@@ -89,7 +89,7 @@
             android:name=".PetTileService"
             android:exported="true"
             android:icon="@drawable/ic_launcher_foreground"
-            android:label="陪伴角色"
+            android:label="🐾 陪伴角色"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE" />

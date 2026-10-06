@@ -214,11 +214,11 @@ test('statsOf：回本 % 四捨五入（0.5 進位）', () => {
   assert.equal(statsOf(logs, { resistValue: 1, monthlyFee: 201, drinks: [] }, '2026-10-01').paybackPct, 0)
 })
 
-test('canResist：同時段已有沒喝、或今天已喝過就不能；撤銷過的不算；昨天的不算', () => {
+test('canResist：同時段已有沒喝就不能；撤銷過的不算；昨天的不算；當天喝過飲料仍可按沒喝', () => {
   assert.equal(canResist([], '2026-10-07', 'afternoon'), true)
   assert.equal(canResist([log('2026-10-07', 'resist', 'afternoon')], '2026-10-07', 'afternoon'), false)
   assert.equal(canResist([log('2026-10-07', 'resist', 'morning')], '2026-10-07', 'afternoon'), true)
-  assert.equal(canResist([log('2026-10-07', 'drink', 'morning')], '2026-10-07', 'afternoon'), false)
+  assert.equal(canResist([log('2026-10-07', 'drink', 'morning')], '2026-10-07', 'afternoon'), true)
   assert.equal(canResist([log('2026-10-07', 'resist', 'afternoon', { undone: true })], '2026-10-07', 'afternoon'), true)
   assert.equal(canResist([log('2026-10-06', 'drink', 'afternoon')], '2026-10-07', 'afternoon'), true)
 })

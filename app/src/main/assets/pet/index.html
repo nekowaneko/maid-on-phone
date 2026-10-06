@@ -18,10 +18,11 @@
   /* 只有台詞區捲動；戒飲按鈕與「說話」「聊聊」「沒喝」固定在泡泡底部 */
   #text { white-space: pre-wrap; word-break: break-all; min-height: 1em; flex: 1 1 auto; overflow-y: auto; }
   #actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; } /* 「說話」「聊聊」「沒喝」依序排，放不下就換行 */
-  #mic, #chat, #resist { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
+  #mic, #chat, #resist, #history { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
   #mic { background: #ff8fab; }
   #chat { background: #8fb8ff; }
   #resist { background: #8fd3a8; }
+  #history { background: #ffd166; color: #222; }
   #drinkActions { display: none; flex-direction: row; flex-wrap: wrap; gap: 4px; } /* 戒飲記錄的按鈕（複述、選項、撤銷） */
   #drinkActions.show { display: flex; flex: 0 0 auto; }
   #drinkActions button { border: 1px solid #ffb3c6; border-radius: 12px; padding: 3px 8px; background: #fff;
@@ -34,7 +35,7 @@
 </style>
 </head>
 <body>
-  <div id="bubble"><div id="text"></div><div id="drinkActions"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button><button id="resist" type="button">沒喝</button></div></div>
+  <div id="bubble"><div id="text"></div><div id="drinkActions"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button><button id="resist" type="button">沒喝</button><button id="history" type="button">📜 歷史</button></div></div>
   <div id="pet"><img id="idle" alt=""><img id="blink" alt=""></div>
 <script src="emotion-map.js"></script>
 <script src="vendor/stream-parser.js"></script>
@@ -56,6 +57,7 @@
   var THINKING_EMOTION = 'thinking';         // 等待 Worker 回應時的臉
   var THINKING_TEXT = '…';                   // 等待 Worker 回應時泡泡裡的字
   var RESIST_ACTION = { action: 'resist' };  // 泡泡上「沒喝」交給原生的動作
+  var HISTORY_ACTION = { action: 'history' }; // 泡泡上「📜 歷史」交給原生的動作
 
   var drinkDraft = null;       // 目前這組戒飲按鈕對應的草稿（改甜度時用）
   var drinkGroup = 0;          // 戒飲按鈕組的序號：撤銷計時只收掉自己那一組
@@ -302,6 +304,7 @@
   document.getElementById('mic').addEventListener('click', function () { callBridge('onMicPressed'); });
   document.getElementById('chat').addEventListener('click', function () { callBridge('onChatPressed'); });
   document.getElementById('resist').addEventListener('click', function () { sendDrinkAction(RESIST_ACTION); });
+  document.getElementById('history').addEventListener('click', function () { sendDrinkAction(HISTORY_ACTION); });
   window.pet.setRender('playing');
 </script>
 </body>

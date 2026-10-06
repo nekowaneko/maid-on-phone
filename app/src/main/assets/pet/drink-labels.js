@@ -16,7 +16,8 @@
       cancel: '取消',
       resist: '沒喝',
       speak: '有喝，用說的',
-      undo: '撤銷'
+      undo: '撤銷',
+      history: '📜 歷史'
     },
     undoMs: 60000   // 撤銷按鈕保留的時間（毫秒）
   }

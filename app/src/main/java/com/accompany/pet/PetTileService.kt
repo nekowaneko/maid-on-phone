@@ -37,7 +37,7 @@ class PetTileService : TileService() {
     private fun updateTile() {
         val tile = qsTile ?: return
         tile.state = if (petModeStore(this).load()) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-        tile.label = "陪伴角色"
+        tile.label = "🐾 陪伴角色"
         tile.updateTile()
     }
 

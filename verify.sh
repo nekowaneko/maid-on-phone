@@ -20,6 +20,8 @@ M16_JS_SPEC_IDS="M16-S01 M16-S02 M16-S10 M16-S11 M16-S12 M16-S13 M16-S14 M16-S15
 M2_SPEC_IDS="M2-S13"  # M2 的 Kotlin 自動列
 M2_JS_SPEC_IDS="M2-S01 M2-S02 M2-S03 M2-S04 M2-S05 M2-S06 M2-S07 M2-S08 M2-S09 M2-S10 M2-S11 M2-S12 M2-S14 M2-S15 M2-S16"  # M2 的 Worker 自動列
 M2_JS_B_SPEC_IDS="M2-S02-B M2-S04-B M2-S11-B M2-S16-B"  # M2 的懸浮窗網頁自動列
+M3_SPEC_IDS="M3-S10 M3-S11 M3-S12"  # M3 的 Kotlin 自動列
+M3_JS_SPEC_IDS="M3-S01 M3-S02 M3-S03 M3-S04 M3-S05 M3-S06 M3-S07 M3-S08 M3-S09 M3-S13 M3-S14 M3-S15"  # M3 的 Worker/JS 自動列
 OVERLAY_TESTS="tests/spec/m16/overlay.test.js tests/spec/m2/overlay-drink.test.js tests/overlay-*.test.js"  # B 線（角色頁）的測試
 WORKER_API_KT="app/src/main/java/com/accompany/pet/WorkerApi.kt"  # App 唯一可以連外的檔案（M2 A12 修訂）
 M1_SPEC_IDS="M1-S01 M1-S02 M1-S03 M1-S04 M1-S05 M1-S06 M1-S07 M1-S08 M1-S09 M1-S10 M1-S11 M1-S12 M1-S14 M1-S15"  # M1 自動列（計畫書寫 13 個但列了 14 列，見 DECISIONS.md）
@@ -72,14 +74,14 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 
 [ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列各一次；沒有略過或獨跑標記
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3 3 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3 12 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 35 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 35"
-for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 38 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 38"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
-for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS; do
+for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3_JS_SPEC_IDS; do
   n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -233,14 +235,14 @@ if runs C; then
 fi
 
 if runs D; then
-  # V26：backend 全部測試通過（原有 269 個＋規格＋輔助）；D 線不跑角色頁的測試（屬 B 線）
+  # V26：backend 全部測試通過（包含 M3 規格＋輔助）；D 線不跑角色頁的測試（屬 B 線）
   if [ "$LANE" = "D" ]; then
-    NODE_FILES=$(cd backend && find tests -name '*.test.js' ! -path 'tests/spec/m16/overlay.test.js' ! -path 'tests/spec/m2/overlay-drink.test.js' ! -name 'overlay-*.test.js' | sort | tr '
+    NODE_FILES=$(cd backend && find tests -name '*.test.js' ! -path 'tests/spec/m16/overlay.test.js' ! -path 'tests/spec/m2/overlay-drink.test.js' ! -path 'tests/spec/m3/overlay-todoist.test.js' ! -name 'overlay-*.test.js' | sort | tr '
 ' ' ')
-    NODE_MIN=361   # M2 起跑前 346 個＋M2 Worker 規格 15 個
+    NODE_MIN=373   # M2/M3 起跑前＋M3 Worker 規格
   else
     NODE_FILES="tests/**/*.test.js"
-    NODE_MIN=390   # 上一行的 361＋角色頁 25 個＋M2 網頁規格 4 個
+    NODE_MIN=402   # 包含角色頁與全套測試
   fi
   NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
   NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')
