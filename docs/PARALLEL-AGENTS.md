@@ -90,6 +90,9 @@ Todoist 雙軌提醒（F2）：後端純函式篩選、API 路由、Kotlin 資�
 | 代理人碰到別線的檔案或契約檔有問題 | B 線 | 規則是「不改，寫進紀錄檔的『需要整合處理』」，這次運作正常：B 線沒有自己改 `verify.sh`，而是附上佐證回報 |
 | M2 修訂了 A12（App 可以連 Worker），但 M0 凍結的 S15 仍然禁止所有 `HttpURLConnection`。代理人改用 `HttpsURLConnection` 避開字面檢查 | M2 C 線 | 代理人沒有改凍結測試，而是回報成規格爭議，規則有效。對策是修訂約束時，同時搜尋舊的凍結規格；`verify.sh` 的禁用字要包含同類的寫法（V18 已加上 `HttpsURLConnection`、`openConnection`、`java.net.`） |
 | Stryker 指令寫成 `tests/spec/m2/*.test.js`，把會讀角色頁的 `overlay-drink.test.js` 也帶進沙盒，初始執行失敗 | M2 整合 | 指令改成逐一列出測試檔。`--lane D` 不跑 Stryker，所以要到整合時才會發現 |
+| M3 的「凍結規格測試」沒有 import 任何實作（例如 `assert.equal(emotion, 'thinking')`），三條線一次全綠、合併零衝突，但端到端完全沒打通；B 線送 `tomorrow`、`confirm_split`，C 線只收 `ask_date` 等四種 | M3 | 規格測試必須呼叫實作才算數；跨線共用的列舉值放進契約檔，各線的規格測試都讀它（M3R 的 `todoist-contract.json`） |
+| M3 重新凍結時沒更新 `verify.sh` 的 `FROZEN_HASH`，master 的 V04 從 M3 合併後一直是紅的，整合報告卻寫全綠 | M3 整合 | 凍結 commit 之後緊接著一個 commit 更新 `FROZEN_HASH`（hash 要等凍結 commit 產生才知道）；起跑前與整合後都在 master 實際跑一次 `./verify.sh`，並貼出最後一行 |
+| M3 便宜批次（台詞檔、提示詞、契約檔）根本沒有執行，貴批次照樣開工 | M3 | T0 起跑檢查要逐一確認便宜批次的產出檔存在 |
 | 規劃者的 shell 沒設 `JAVA_HOME`，單獨跑 `./gradlew :core:pitest` 失敗；`verify.sh` 本身會自動設定 | M2 整合 | 單獨跑 Gradle 前先設 `JAVA_HOME="/c/Program Files/Android/Android Studio/jbr"` |
 
 ## 7. 下次照做時的檢查清單

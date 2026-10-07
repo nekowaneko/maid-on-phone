@@ -1,0 +1,15 @@
+{
+  "_note": "M3 預設台詞：語言模型失敗、台詞沒有完整帶出任務名稱、或用量到頂時使用。{title} 為任務名稱，{steps} 為以「、」連接的步驟。D 線可以改句子，但不得刪鍵或佔位符。",
+  "p2": ["[thinking]「{title}」放了好一陣子了呢。[smile]今天先推進最小的一步就好，要不要試試？"],
+  "p3": ["[smile]今天是「{title}」可以開始的日子喔，要今天做嗎？"],
+  "askDate": ["[thinking]「{title}」還沒有開始日期……主人覺得什麼時候可以做呢？"],
+  "followup": ["[pout]「{title}」說好今天要做的，還沒完成喔？睡前再看一眼吧。"],
+  "split": ["[smile]「{title}」可以拆成這幾步：{steps}。要幫主人加成子任務嗎？"],
+  "doneDoToday": ["[smile]好，到期日改成今天了。從最小的一步開始就好。"],
+  "doneSnooze": ["[pout]好吧，這一週先不提它。下次可不能再拖了喔。"],
+  "doneTomorrow": ["[smile]知道了，明天再提醒主人。"],
+  "doneSetDate": ["[smile]記下來了，到那天我會提醒主人。"],
+  "doneUnknownDate": ["[thinking]不知道也沒關係，這件事我就不再問了。"],
+  "doneSplit": ["[laugh]子任務加好了，一步一步來吧。"],
+  "failed": ["[troubled]Todoist 那邊好像出了點狀況，等一下再試一次吧。"]
+}

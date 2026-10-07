@@ -1,0 +1,29 @@
+{
+  "_note": "M3 第二輪接口塊（docs/M3R-EXPENSIVE-PLAN.md §4）。B、C、D 三條線的規格測試都讀這一份；各線不得修改。",
+  "views": ["p2", "p3", "askDate"],
+  "actions": {
+    "sent": ["doToday", "snooze", "tomorrow", "split", "confirmSplit", "setDate", "unknownDate"],
+    "local": ["cancel"]
+  },
+  "viewButtons": {
+    "p2": ["doToday", "snooze", "split"],
+    "p3": ["doToday", "tomorrow"],
+    "askDate": ["setDate:tomorrow", "setDate:nextMonday", "setDate:nextMonth", "unknownDate"],
+    "split": ["confirmSplit", "cancel"]
+  },
+  "setDateWhen": ["tomorrow", "nextMonday", "nextMonth"],
+  "responseKinds": ["done", "split", "failed"],
+  "push": {
+    "field": "todoist",
+    "maxChars": 2048,
+    "keys": ["view", "taskId", "content"]
+  },
+  "taskIdPattern": "^[0-9A-Za-z_]{1,64}$",
+  "split": { "minSteps": 2, "maxSteps": 3, "maxStepChars": 100 },
+  "contentMaxChars": 200,
+  "actionPath": "/api/todoist/action",
+  "bridge": {
+    "webToNative": "onTodoistAction",
+    "nativeToWeb": "showTodoist"
+  }
+}

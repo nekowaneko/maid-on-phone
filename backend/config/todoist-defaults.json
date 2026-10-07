@@ -1,0 +1,14 @@
+{
+  "_note": "M3 Todoist 雙軌提醒的預設值（台北時間）。D 線讀取，不得刪鍵。",
+  "apiOrigin": "https://api.todoist.com/api/v1",
+  "pageLimit": 200,
+  "maxPages": 10,
+  "p2Priority": 3,
+  "p3Priority": 2,
+  "p2StaleDays": 14,
+  "p2IntervalDays": 7,
+  "p2SnoozeDays": 7,
+  "p3Time": "08:30",
+  "p2Time": "09:00",
+  "followupTime": "21:00"
+}
