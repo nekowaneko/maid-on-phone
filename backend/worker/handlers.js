@@ -43,6 +43,15 @@ import {
   buildCatalogText,
   nameIn
 } from '../core/drink.js'
+import {
+  toTaipeiDateString,
+  addDaysToDateKey,
+  pickP2,
+  pickP3,
+  setDateFor,
+  validateSplitSteps,
+  validateTodoistAction
+} from '../core/todoist.js'
 
 // 常數定義
 const API_PREFIX = '/api/' // 授權只掛在這個前綴底下（架構約束 A8）
@@ -51,6 +60,8 @@ const CHAT_PATH = '/api/chat'
 const PERSONA_PATH = '/api/persona'
 const USAGE_PATH = '/api/usage'
 const PUSH_PATH = '/api/push' // M1.5：送一則純資料推播到手機
+const TODOIST_ACTION_PATH = '/api/todoist/action'
+const TODOIST_PREFIX = '/api/todoist/'
 const RANDOM_ID_LENGTH = 8 // 推播編號的亂數段取 randomUUID 前 8 碼
 const UNKNOWN_CODE = 'UNKNOWN'
 const PUSH_TOO_LONG_REASON = 'too_long'
@@ -748,29 +759,326 @@ const handleDrink = async (deps, request, pathname) => {
   return handler(deps, request)
 }
 
-// 每日詢問（§4.1.5）：詢問的整點、今天沒問過、詢問時段沒有紀錄、推播已設定 → 產生台詞送一則附按鈕的推播；
-// 推播成功才寫 drink.askedOn（失敗不補送）。排程觸發不經 HTTP，不需要密鑰（A34）
-export const runScheduled = async (deps, nowMs) => {
+// ===== Todoist 雙軌提醒（docs/M3R-EXPENSIVE-PLAN.md §4.2） =====
+
+const TODOIST_CONTRACT = {
+  actions: { sent: ['doToday', 'snooze', 'tomorrow', 'split', 'confirmSplit', 'setDate', 'unknownDate'] },
+  setDateWhen: ['tomorrow', 'nextMonday', 'nextMonth'],
+  taskIdPattern: '^[0-9A-Za-z_]{1,64}$',
+  contentMaxChars: 200
+}
+
+// 產生提醒台詞用的訊息
+const todoistScriptMessages = (deps, personaText, taskTitle) => {
+  const systemPrompt = buildSystemPrompt(deps.templateText, {
+    persona: personaText,
+    emotionList: drinkEmotionList(deps),
+    timeGap: EMPTY_TEXT,
+    history: EMPTY_TEXT
+  })
+  return [
+    { role: 'system', content: `${systemPrompt}\n\n${deps.todoistPrompts?.script || ''}` },
+    { role: 'user', content: `任務名稱：${taskTitle}` }
+  ]
+}
+
+// 產生拆步驟用的訊息（不得包含提醒台詞提示詞）
+const todoistSplitMessages = (deps, taskTitle) => [
+  { role: 'user', content: `${deps.todoistPrompts?.split || ''}\n任務名稱：${taskTitle}` }
+]
+
+// 處理 Todoist 動作請求 POST /api/todoist/action
+const handleTodoistAction = async (deps, request) => {
+  if (request.method !== POST_METHOD) {
+    return jsonResponse({ error: METHOD_NOT_ALLOWED_MESSAGE }, 405)
+  }
+
+  const payload = await readPayload(request)
+  const validation = validateTodoistAction(payload, TODOIST_CONTRACT)
+  if (!validation.valid) {
+    return jsonResponse({ error: validation.error || 'BAD_REQUEST' }, 400)
+  }
+
+  const failedReply = () => {
+    const script = deps.todoistLines?.failed?.[0] || 'Todoist 發生錯誤'
+    return jsonResponse({ kind: 'failed', script, text: stripTags(script) }, 200)
+  }
+
+  if (!deps.todoist) {
+    return failedReply()
+  }
+
+  const nowMs = readNow(deps)
+  const todayKey = toTaipeiDateString(nowMs)
+  const { action, taskId, view, when, content, steps } = payload
+
   try {
-    const { today, hour } = drinkClock(deps, nowMs)
-    const settings = await readDrinkSettings(deps)
-    const askedOn = await deps.store.readSetting(DRINK_ASKED_ON_KEY)
-    const logs = await deps.store.listDrinkLogs()
-    if (!shouldAsk({ hour, askTime: settings.askTime, askedOn, todayKey: today, logs })) return
-    const config = deps.pushConfig ?? {}
-    if (!isPushConfigured(config.serviceAccount, config.deviceToken)) return
-    const finished = await speak(deps, { situation: SITUATIONS.ask, facts: EMPTY_TEXT, required: [], fallbackKey: 'ask' })
-    const split = splitPushScript(deps, finished.script)
-    const message = buildFcmMessage(config.deviceToken, questionPushId(today), split.text, split.script, DRINK_QUESTION_ACTIONS)
-    const result = await sendOnce(deps, message)
-    if (!result?.ok) {
-      console.error('每日詢問推播失敗：', typeof result?.code === 'string' ? result.code : UNKNOWN_CODE)
-      return
+    if (action === 'doToday') {
+      await deps.todoist.updateDue(taskId, todayKey)
+      if (view === 'p3') {
+        await deps.store.writeSetting('todoist.doToday', JSON.stringify({ taskId, date: todayKey }))
+      }
+      const script = deps.todoistLines?.doneDoToday?.[0] || '完成'
+      return jsonResponse({ kind: 'done', script, text: stripTags(script) }, 200)
     }
-    await deps.store.writeSetting(DRINK_ASKED_ON_KEY, today)
-    console.log('每日詢問推播送出成功')
+
+    if (action === 'snooze') {
+      const snoozeUntil = addDaysToDateKey(todayKey, 7)
+      await deps.store.writeSetting(`todoist.p2Snooze.${taskId}`, snoozeUntil)
+      const script = deps.todoistLines?.doneSnooze?.[0] || '完成'
+      return jsonResponse({ kind: 'done', script, text: stripTags(script) }, 200)
+    }
+
+    if (action === 'tomorrow') {
+      const tomorrowKey = addDaysToDateKey(todayKey, 1)
+      await deps.todoist.updateDue(taskId, tomorrowKey)
+      const script = deps.todoistLines?.doneTomorrow?.[0] || '完成'
+      return jsonResponse({ kind: 'done', script, text: stripTags(script) }, 200)
+    }
+
+    if (action === 'setDate') {
+      const targetDate = setDateFor(when, todayKey)
+      await deps.todoist.updateDue(taskId, targetDate)
+      const script = deps.todoistLines?.doneSetDate?.[0] || '完成'
+      return jsonResponse({ kind: 'done', script, text: stripTags(script) }, 200)
+    }
+
+    if (action === 'unknownDate') {
+      const script = deps.todoistLines?.doneUnknownDate?.[0] || '完成'
+      return jsonResponse({ kind: 'done', script, text: stripTags(script) }, 200)
+    }
+
+    if (action === 'split') {
+      let validSteps = null
+      const messages = todoistSplitMessages(deps, content)
+      for (let attempt = 0; attempt < 2; attempt += 1) {
+        const reply = await askLlm(deps, messages)
+        if (reply) {
+          const match = reply.match(/\{[\s\S]*\}/)
+          if (match) {
+            try {
+              const parsed = JSON.parse(match[0])
+              const check = validateSplitSteps(parsed.steps)
+              if (check.valid) {
+                validSteps = check.steps
+                break
+              }
+            } catch {}
+          }
+        }
+      }
+
+      if (!validSteps) {
+        return failedReply()
+      }
+
+      const template = deps.todoistLines?.split?.[0] || '{title}：{steps}'
+      const script = template.replace('{title}', content).replace('{steps}', validSteps.join('、'))
+      return jsonResponse(
+        {
+          kind: 'split',
+          script,
+          text: stripTags(script),
+          taskId,
+          content,
+          steps: validSteps
+        },
+        200
+      )
+    }
+
+    if (action === 'confirmSplit') {
+      for (const step of steps) {
+        await deps.todoist.addSubtask(taskId, step)
+      }
+      const script = deps.todoistLines?.doneSplit?.[0] || '完成'
+      return jsonResponse({ kind: 'done', script, text: stripTags(script) }, 200)
+    }
   } catch (error) {
-    console.error('每日詢問失敗：', error?.message)
+    console.error('Todoist 動作處理失敗：', error?.message)
+    return failedReply()
+  }
+
+  return failedReply()
+}
+
+// 產生推播台詞（若語言模型失敗或格式不合，改用預設台詞）
+const generateTodoistRemindScript = async (deps, view, taskTitle) => {
+  const personaText = await readPersona(deps)
+  const messages = todoistScriptMessages(deps, personaText, taskTitle)
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const reply = await askLlm(deps, messages)
+    if (reply) {
+      const plain = stripTags(reply).trim()
+      if (plain.includes(taskTitle) && countChars(reply) <= 120 && !/[0-9]/.test(reply)) {
+        return reply.trim()
+      }
+    }
+  }
+  const fallbackTemplate = deps.todoistLines?.[view]?.[0] || '{title}'
+  return fallbackTemplate.replace('{title}', taskTitle)
+}
+
+// 08:30 P3 掃描
+const runP3Scan = async (deps, todayKey) => {
+  const p3SentOn = await deps.store.readSetting('todoist.p3SentOn')
+  if (p3SentOn === todayKey) return
+
+  const tasks = await deps.todoist.listTasks()
+  const state = { 'todoist.p3SentOn': p3SentOn }
+  for (const t of tasks) {
+    if (t?.priority === 2) {
+      const reminded = await deps.store.readSetting(`todoist.p3Reminded.${t.id}`)
+      if (reminded) state[`todoist.p3Reminded.${t.id}`] = reminded
+      const asked = await deps.store.readSetting(`todoist.p3Asked.${t.id}`)
+      if (asked) state[`todoist.p3Asked.${t.id}`] = asked
+    }
+  }
+
+  const picked = pickP3(tasks, todayKey, state)
+  if (!picked) return
+
+  const { view, task } = picked
+  const taskTitle = Array.from(task.content || '').slice(0, 200).join('')
+  const script = await generateTodoistRemindScript(deps, view, taskTitle)
+  const id = `todoist-${view}-${task.id}-${todayKey.replace(/-/g, '')}`
+  const text = stripTags(script).trim()
+  const todoistData = JSON.stringify({ view, taskId: task.id, content: taskTitle })
+
+  const msg = buildFcmMessage(deps.pushConfig.deviceToken, id, text, script)
+  msg.message.data.todoist = todoistData
+
+  const res = await sendOnce(deps, msg)
+  if (res?.ok) {
+    await deps.store.writeSetting('todoist.p3SentOn', todayKey)
+    if (view === 'p3' && task.due?.date) {
+      await deps.store.writeSetting(`todoist.p3Reminded.${task.id}`, task.due.date.slice(0, 10))
+    } else if (view === 'askDate') {
+      await deps.store.writeSetting(`todoist.p3Asked.${task.id}`, '1')
+    }
+    console.log('P3 掃描推播送出成功')
+  }
+}
+
+// 09:00 P2 掃描
+const runP2Scan = async (deps, todayKey, nowMs) => {
+  const p2SentOn = await deps.store.readSetting('todoist.p2SentOn')
+  const tasks = await deps.todoist.listTasks()
+  const state = { 'todoist.p2SentOn': p2SentOn }
+  for (const t of tasks) {
+    if (t?.priority === 3) {
+      const snooze = await deps.store.readSetting(`todoist.p2Snooze.${t.id}`)
+      if (snooze) state[`todoist.p2Snooze.${t.id}`] = snooze
+    }
+  }
+
+  const task = pickP2(tasks, todayKey, nowMs, state, deps.todoistDefaults)
+  if (!task) return
+
+  const taskTitle = Array.from(task.content || '').slice(0, 200).join('')
+  const script = await generateTodoistRemindScript(deps, 'p2', taskTitle)
+  const id = `todoist-p2-${task.id}-${todayKey.replace(/-/g, '')}`
+  const text = stripTags(script).trim()
+  const todoistData = JSON.stringify({ view: 'p2', taskId: task.id, content: taskTitle })
+
+  const msg = buildFcmMessage(deps.pushConfig.deviceToken, id, text, script)
+  msg.message.data.todoist = todoistData
+
+  const res = await sendOnce(deps, msg)
+  if (res?.ok) {
+    await deps.store.writeSetting('todoist.p2SentOn', todayKey)
+    console.log('P2 掃描推播送出成功')
+  }
+}
+
+// 21:00 追問
+const runNightFollowup = async (deps, todayKey) => {
+  const doTodayRaw = await deps.store.readSetting('todoist.doToday')
+  if (!doTodayRaw) return
+
+  try {
+    const doToday = JSON.parse(doTodayRaw)
+    if (doToday.date === todayKey) {
+      const taskObj = await deps.todoist.getTask(doToday.taskId)
+      if (taskObj !== null) {
+        const taskTitle = Array.from(taskObj.content || '').slice(0, 200).join('')
+        const template = deps.todoistLines?.followup?.[0] || '任務追問：{title}'
+        const script = template.replace('{title}', taskTitle)
+        const id = `todoist-night-${doToday.taskId}-${todayKey.replace(/-/g, '')}`
+        const text = stripTags(script).trim()
+        const msg = buildFcmMessage(deps.pushConfig.deviceToken, id, text, script)
+        await sendOnce(deps, msg)
+        console.log('夜間追問推播送出成功')
+      }
+    }
+  } finally {
+    await deps.store.deleteSetting('todoist.doToday')
+  }
+}
+
+// 排程觸發（§4.2）：整點戒飲詢問，以及台北時間 08:30 P3、09:00 P2、21:00 追問
+export const runScheduled = async (deps, nowMs) => {
+  const tpeMs = nowMs + 8 * 60 * 60 * 1000
+  const tpeDate = new Date(tpeMs)
+  const hour = tpeDate.getUTCHours()
+  const minute = tpeDate.getUTCMinutes()
+  const timeStr = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`
+  const today = tpeDate.toISOString().slice(0, 10)
+
+  // 1. 每日戒飲詢問：只在分鐘為 0（整點）時觸發（M2-S11 保持不變）
+  if (minute === 0) {
+    try {
+      const settings = await readDrinkSettings(deps)
+      const askedOn = await deps.store.readSetting(DRINK_ASKED_ON_KEY)
+      const logs = await deps.store.listDrinkLogs()
+      if (shouldAsk({ hour, askTime: settings.askTime, askedOn, todayKey: today, logs })) {
+        const config = deps.pushConfig ?? {}
+        if (isPushConfigured(config.serviceAccount, config.deviceToken)) {
+          const finished = await speak(deps, { situation: SITUATIONS.ask, facts: EMPTY_TEXT, required: [], fallbackKey: 'ask' })
+          const split = splitPushScript(deps, finished.script)
+          const message = buildFcmMessage(config.deviceToken, questionPushId(today), split.text, split.script, DRINK_QUESTION_ACTIONS)
+          const result = await sendOnce(deps, message)
+          if (result?.ok) {
+            await deps.store.writeSetting(DRINK_ASKED_ON_KEY, today)
+            console.log('每日詢問推播送出成功')
+          }
+        }
+      }
+    } catch (error) {
+      console.error('每日詢問失敗：', error?.message)
+    }
+  }
+
+  // 2. Todoist 雙軌提醒排程：需具備 todoist 實例與推播設定
+  if (!deps.todoist || !deps.pushConfig?.deviceToken) {
+    return
+  }
+
+  // 08:30 P3 掃描
+  if (timeStr === '08:30') {
+    try {
+      await runP3Scan(deps, today)
+    } catch (error) {
+      console.error('P3 掃描失敗：', error?.message)
+    }
+  }
+
+  // 09:00 P2 掃描
+  if (timeStr === '09:00') {
+    try {
+      await runP2Scan(deps, today, nowMs)
+    } catch (error) {
+      console.error('P2 掃描失敗：', error?.message)
+    }
+  }
+
+  // 21:00 追問
+  if (timeStr === '21:00') {
+    try {
+      await runNightFollowup(deps, today)
+    } catch (error) {
+      console.error('夜間追問失敗：', error?.message)
+    }
   }
 }
 
@@ -781,7 +1089,7 @@ const redirectToApp = (url) => Response.redirect(new URL(APP_PATH + url.search, 
 // 否則使用者連網頁都打不開，也就沒有地方可以輸入密鑰（架構約束 A8）。
 const needsSecret = (pathname) => pathname.startsWith(API_PREFIX)
 
-// 建立處理函式：只認 /api/chat、/api/persona、/api/usage、/api/push、/api/drink/* 與根路徑，其餘路徑交還給靜態資源或回 404
+// 建立處理函式：只認 /api/chat、/api/persona、/api/usage、/api/push、/api/drink/*、/api/todoist/action 與根路徑
 export const createHandler = (deps) => async (request) => {
   const url = new URL(request.url)
   if (request.method === OPTIONS_METHOD) {
@@ -797,30 +1105,14 @@ export const createHandler = (deps) => async (request) => {
   if (url.pathname === PUSH_PATH) {
     return handlePush(deps, request)
   }
-// Todoist 動作處理常數與處理函式
-const TODOIST_PREFIX = '/api/todoist/'
-const handleTodoist = async (deps, request, pathname) => {
-  if (request.method !== POST_METHOD) {
-    return jsonResponse({ error: 'METHOD_NOT_ALLOWED' }, 405)
-  }
-  const payload = await readPayload(request)
-  const action = payload?.action
-  const taskId = payload?.taskId
-  if (!action || !taskId) {
-    return jsonResponse({ error: 'MISSING_REQUIRED_FIELDS' }, 400)
-  }
-  // 記錄動作至 settings 或 Todoist 同步
-  if (deps.store?.writeSetting) {
-    await deps.store.writeSetting(`todoist:action:${taskId}`, JSON.stringify({ action, at: new Date().toISOString() }))
-  }
-  return jsonResponse({ ok: true, taskId, action })
-}
-
   if (url.pathname.startsWith(DRINK_PREFIX)) {
     return handleDrink(deps, request, url.pathname)
   }
+  if (url.pathname === TODOIST_ACTION_PATH) {
+    return handleTodoistAction(deps, request)
+  }
   if (url.pathname.startsWith(TODOIST_PREFIX)) {
-    return handleTodoist(deps, request, url.pathname)
+    return jsonResponse({ error: NOT_FOUND_MESSAGE }, 404)
   }
   if (url.pathname === USAGE_PATH) {
     return handleUsage(deps, request)
@@ -833,3 +1125,4 @@ const handleTodoist = async (deps, request, pathname) => {
   }
   return jsonResponse({ error: NOT_FOUND_MESSAGE }, 404)
 }
+
