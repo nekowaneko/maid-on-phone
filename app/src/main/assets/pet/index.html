@@ -27,6 +27,10 @@
   #drinkActions.show { display: flex; flex: 0 0 auto; }
   #drinkActions button { border: 1px solid #ffb3c6; border-radius: 12px; padding: 3px 8px; background: #fff;
                          color: #222; font-size: 12px; }
+  #todoistActions { display: none; flex-direction: row; flex-wrap: wrap; gap: 4px; } /* Todoist 雙軌提醒按鈕 */
+  #todoistActions.show { display: flex; flex: 0 0 auto; }
+  #todoistActions button { border: 1px solid #8fb8ff; border-radius: 12px; padding: 3px 8px; background: #fff;
+                           color: #222; font-size: 12px; }
   #pet { width: 96px; height: 108px; flex: 0 0 auto; position: relative; }
   #pet img { width: 100%; height: 100%; object-fit: contain; position: absolute; left: 0; top: 0;
              transform-origin: 50% 100%; }
@@ -35,13 +39,14 @@
 </style>
 </head>
 <body>
-  <div id="bubble"><div id="text"></div><div id="drinkActions"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button><button id="resist" type="button">沒喝</button><button id="history" type="button">📊 戒飲歷史</button></div></div>
+  <div id="bubble"><div id="text"></div><div id="drinkActions"></div><div id="todoistActions"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button><button id="resist" type="button">沒喝</button><button id="history" type="button">📊 戒飲歷史</button></div></div>
   <div id="pet"><img id="idle" alt=""><img id="blink" alt=""></div>
 <script src="emotion-map.js"></script>
 <script src="vendor/stream-parser.js"></script>
 <script src="performance.js"></script>
 <script src="drink-labels.js"></script>
 <script src="drink-view.js"></script>
+<script src="todoist-labels.js"></script>
 <script src="todoist-view.js"></script>
 <script>
   // 常數定義
@@ -55,6 +60,8 @@
   var IDLE_PLACEHOLDER = 'frames/placeholder-idle.svg'; // 平常的臉也載不到時的替代圖
   var DRINK_LABELS = window.PetDrinkLabels;  // 戒飲記錄的文字（drink-labels.js，契約檔）
   var DRINK_VIEW = window.PetDrinkView;      // 戒飲記錄的台詞與按鈕（drink-view.js，純函式）
+  var TODOIST_LABELS = window.PetTodoistLabels; // Todoist 提醒的文字（todoist-labels.js，契約檔）
+  var TODOIST_VIEW = window.PetTodoistView;     // Todoist 提醒的檢視（todoist-view.js，純函式）
   var THINKING_EMOTION = 'thinking';         // 等待 Worker 回應時的臉
   var THINKING_TEXT = '…';                   // 等待 Worker 回應時泡泡裡的字
   var RESIST_ACTION = { action: 'resist' };  // 泡泡上「沒喝」交給原生的動作
@@ -212,12 +219,24 @@
     if (window.PetBridge && window.PetBridge.onDrinkAction) window.PetBridge.onDrinkAction(JSON.stringify(action));
   }
 
+  // 把 Todoist 動作交給原生（PetBridge.onTodoistAction，參數是 JSON 字串；沒有這個方法就略過）
+  function sendTodoistAction(action) {
+    if (window.PetBridge && window.PetBridge.onTodoistAction) window.PetBridge.onTodoistAction(JSON.stringify(action));
+  }
+
   // 收掉目前這組戒飲按鈕與撤銷計時
   function clearDrinkButtons() {
     clearTimeout(undoTimer);
     undoTimer = null;
     drinkGroup += 1;
     var box = document.getElementById('drinkActions');
+    while (box.firstChild) box.removeChild(box.firstChild);
+    box.classList.remove('show');
+  }
+
+  // 收掉目前這組 Todoist 按鈕
+  function clearTodoistButtons() {
+    var box = document.getElementById('todoistActions');
     while (box.firstChild) box.removeChild(box.firstChild);
     box.classList.remove('show');
   }
@@ -229,8 +248,15 @@
     sendDrinkAction(action);
   }
 
+  // 按下一顆 Todoist 按鈕：先收掉這組；交給原生
+  function onTodoistButton(action) {
+    clearTodoistButtons();
+    sendTodoistAction(action);
+  }
+
   // 放上一組新的戒飲按鈕（取代舊的一組）；含撤銷時排定自動移除
   function showDrinkButtons(buttons) {
+    clearTodoistButtons();
     clearDrinkButtons();
     var box = document.getElementById('drinkActions');
     var hasUndo = false;
@@ -247,6 +273,22 @@
       var group = drinkGroup;
       undoTimer = setTimeout(function () { if (group === drinkGroup) clearDrinkButtons(); }, DRINK_LABELS.undoMs);
     }
+    scrollBubbleToBottom();
+  }
+
+  // 放上一組新的 Todoist 按鈕（取代舊的一組，且收掉戒飲按鈕）
+  function showTodoistButtons(buttons) {
+    clearDrinkButtons();
+    clearTodoistButtons();
+    var box = document.getElementById('todoistActions');
+    buttons.forEach(function (item) {
+      var el = document.createElement('button');
+      el.type = 'button';
+      el.textContent = item.label; // 用 textContent，不解析 HTML
+      el.addEventListener('click', function () { onTodoistButton(item.action); });
+      box.appendChild(el);
+    });
+    box.classList.toggle('show', buttons.length > 0);
     scrollBubbleToBottom();
   }
 
@@ -295,6 +337,15 @@
       var view = DRINK_VIEW.viewFor(resp, DRINK_LABELS);
       drinkDraft = resp.draft || null;
       showDrinkButtons(view.buttons);
+      window.pet.say(view.script);
+    },
+    // 顯示 Todoist 提醒的回應（Worker 回應原文或推播 JSON）：台詞交給 say 演出，按鈕取代舊的一組；解析失敗就忽略
+    showTodoist: function (jsonText) {
+      var data;
+      try { data = JSON.parse(jsonText); } catch (e) { return; }
+      if (!data || typeof data !== 'object') return;
+      var view = TODOIST_VIEW.viewFor(data, TODOIST_LABELS);
+      showTodoistButtons(view.buttons);
       window.pet.say(view.script);
     }
   };
