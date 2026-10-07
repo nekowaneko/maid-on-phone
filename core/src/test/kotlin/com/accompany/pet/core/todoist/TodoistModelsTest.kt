@@ -16,7 +16,7 @@ class TodoistModelsTest {
 
     @Test
     fun testBuildTodoistActionJson() {
-        val json = buildTodoistActionJson("snooze", "task-123")
-        assertEquals("""{"action":"snooze","taskId":"task-123"}""", json)
+        val json = buildTodoistActionJson("snooze", "task123")
+        assertEquals("""{"action":"snooze","taskId":"task123"}""", json)
     }
 }

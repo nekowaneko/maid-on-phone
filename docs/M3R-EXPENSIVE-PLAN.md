@@ -215,7 +215,7 @@ App：
 | C1 | C | core：`TodoistModels.kt` 改寫、`Reminder.todoist`；第一輪的 `core/src/test/.../core/todoist/TodoistModelsTest.kt` 測的是舊介面，移到 `helper/` 改寫或刪除 | `--lane C` 全綠 |
 | C2 | C | app：`PetBridge.onTodoistAction`、`OverlayService.showTodoist` 與動作處理、`ReminderDispatcher`、`PetControl.startPetService` 參數；刪除 `TodoistActionHandler.kt` | `--lane C` 全綠 |
 | B1 | B | `todoist-view.js` 改寫＋輔助測試（第一輪的 `tests/overlay-todoist.test.js` 測的是舊介面，改寫） | `--lane B` 全綠 |
-| B2 | B | `index.html`：載入兩支 script、`#todoistActions`、`showTodoist`、按鈕互斥 | `--lane B` 全綠 |
+| B2 | B | `index.html`：載入兩支 script、`#todoistActions`、`showTodoist`、按鈕互斥；`tests/overlay-drink-helper.test.js` 的「依序載入五支 script」從第一輪起就是紅的（第一輪多掛了 `todoist-view.js`），一併改成新的載入順序 | `--lane B` 全綠 |
 | T4 | 規劃者 | 合併 D → C → B → `./verify.sh --full` → 報告 → 手機實測（Todoist 測試專案） | 全部通過 |
 
 ## 6. 驗收清單

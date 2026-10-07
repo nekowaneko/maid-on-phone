@@ -3,11 +3,11 @@
 # 用法：./verify.sh          → L1＋L2
 #       ./verify.sh --full   → L1＋L2＋L3
 #       ./verify.sh --core-only → 只在 T1 使用：app 尚未實作，略過 V07～V10（見 DECISIONS.md）
-#       ./verify.sh --lane B|C|D → 平行開工：L1 全跑，L2 只跑該線負責的部分（M2 範圍見 docs/M2-EXPENSIVE-PLAN.md §0.4）
+#       ./verify.sh --lane B|C|D → 平行開工：L1 全跑，L2 只跑該線負責的部分（M3R 範圍見 docs/M3R-EXPENSIVE-PLAN.md §0）
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="592f89e3a776ce41334d6e3f601a17816847a1e2"   # 凍結規格測試的 commit（M2 凍結版）
+FROZEN_HASH="155532f85c8035133a6016e64c01ba6a03e100a1"   # 凍結規格測試的 commit（M3R 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"
@@ -20,9 +20,9 @@ M16_JS_SPEC_IDS="M16-S01 M16-S02 M16-S10 M16-S11 M16-S12 M16-S13 M16-S14 M16-S15
 M2_SPEC_IDS="M2-S13"  # M2 的 Kotlin 自動列
 M2_JS_SPEC_IDS="M2-S01 M2-S02 M2-S03 M2-S04 M2-S05 M2-S06 M2-S07 M2-S08 M2-S09 M2-S10 M2-S11 M2-S12 M2-S14 M2-S15 M2-S16"  # M2 的 Worker 自動列
 M2_JS_B_SPEC_IDS="M2-S02-B M2-S04-B M2-S11-B M2-S16-B"  # M2 的懸浮窗網頁自動列
-M3_SPEC_IDS="M3-S10 M3-S11 M3-S12"  # M3 的 Kotlin 自動列
-M3_JS_SPEC_IDS="M3-S01 M3-S02 M3-S03 M3-S04 M3-S05 M3-S06 M3-S07 M3-S08 M3-S09 M3-S13 M3-S14 M3-S15"  # M3 的 Worker/JS 自動列
-OVERLAY_TESTS="tests/spec/m16/overlay.test.js tests/spec/m2/overlay-drink.test.js tests/overlay-*.test.js"  # B 線（角色頁）的測試
+M3R_SPEC_IDS="M3R-S16 M3R-S17"  # M3R 的 Kotlin 自動列（第一輪 M3 的規格測試已刪除）
+M3R_JS_SPEC_IDS="M3R-S01 M3R-S02 M3R-S03 M3R-S04 M3R-S05 M3R-S06 M3R-S07 M3R-S08 M3R-S09 M3R-S10 M3R-S11 M3R-S12 M3R-S13 M3R-S14 M3R-S15 M3R-S18 M3R-S19"  # M3R 的 Worker 與懸浮窗自動列
+OVERLAY_TESTS="tests/spec/m16/overlay.test.js tests/spec/m2/overlay-drink.test.js tests/spec/m3r/overlay-todoist.test.js tests/overlay-*.test.js"  # B 線（角色頁）的測試
 WORKER_API_KT="app/src/main/java/com/accompany/pet/WorkerApi.kt"  # App 唯一可以連外的檔案（M2 A12 修訂）
 M1_SPEC_IDS="M1-S01 M1-S02 M1-S03 M1-S04 M1-S05 M1-S06 M1-S07 M1-S08 M1-S09 M1-S10 M1-S11 M1-S12 M1-S14 M1-S15"  # M1 自動列（計畫書寫 13 個但列了 14 列，見 DECISIONS.md）
 
@@ -74,14 +74,14 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 
 [ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3 3 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3 12 列各一次；沒有略過或獨跑標記
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 38 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 38"
-for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 37 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 37"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
-for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3_JS_SPEC_IDS; do
+for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS; do
   n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -117,6 +117,14 @@ GOOGLE_HITS=$(grep -rH 'googleapis\.com' backend/worker backend/core | grep -v '
 [ -z "$GOOGLE_HITS" ] || { echo "$GOOGLE_HITS"; fail "V24 googleapis.com 出現在 fcm-client.js 以外"; }
 if grep -rnE 'fetch\(|crypto\.subtle|env\.|eval\(|new Function\(' backend/core; then fail "V24 backend/core 含連線、憑證或環境變數存取"; fi
 pass "V24"
+
+# V30：只有 todoist-client.js 連 Todoist；權杖不寫進設定檔、只在 index.js 讀環境變數（M3R A35）
+TODOIST_HITS=$(grep -rln 'api\.todoist\.com' backend/worker backend/core backend/web 2>/dev/null | grep -v '^backend/worker/todoist-client\.js$' || true)
+[ -z "$TODOIST_HITS" ] || { echo "$TODOIST_HITS"; fail "V30 api.todoist.com 出現在 todoist-client.js 以外"; }
+if grep -nE '^\s*TODOIST_TOKEN\s*=' "$TOML"; then fail "V30 wrangler.toml 含 TODOIST_TOKEN 賦值"; fi
+TOKEN_HITS=$(grep -rln 'TODOIST_TOKEN' backend/worker backend/core 2>/dev/null | grep -v '^backend/worker/index\.js$' || true)
+[ -z "$TOKEN_HITS" ] || { echo "$TOKEN_HITS"; fail "V30 TODOIST_TOKEN 出現在 index.js 以外"; }
+pass "V30"
 
 # V28：角色頁只載入本機相對路徑的一般 script，不用 module、不讀檔、不連外（M1.6 A24）
 PET_ASSETS=app/src/main/assets/pet
@@ -154,13 +162,13 @@ if [ "$CORE_ONLY" -eq 0 ]; then
   done
   pass "V07"
 
-  # V08：@JavascriptInterface 恰好 4 次（M2 A5 修訂：加 onDrinkAction）；ChatActivity 不得加 JS 介面
-  # B、D 線的 worktree 不含 C 線的改動，仍是 3 個；只有 C 線與整合時要求 4 個
+  # V08：@JavascriptInterface 恰好 5 次（M3R A5 修訂：加 onTodoistAction）；ChatActivity 不得加 JS 介面
+  # B、D 線的 worktree 不含 C 線的改動，仍是 4 個；只有 C 線與整合時要求 5 個
   JS_COUNT=$(grep -rho '@JavascriptInterface' app/src | wc -l)
   if [ "$LANE" = "B" ] || [ "$LANE" = "D" ]; then
-    [ "$JS_COUNT" -eq 3 ] || [ "$JS_COUNT" -eq 4 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次"
+    [ "$JS_COUNT" -eq 4 ] || [ "$JS_COUNT" -eq 5 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次"
   else
-    [ "$JS_COUNT" -eq 4 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次，應為 4"
+    [ "$JS_COUNT" -eq 5 ] || fail "V08 @JavascriptInterface 出現 $JS_COUNT 次，應為 5"
   fi
   if grep -n 'addJavascriptInterface' "$CHAT_KT"; then fail "V08 ChatActivity.kt 含 addJavascriptInterface"; fi
   pass "V08"
@@ -235,14 +243,14 @@ if runs C; then
 fi
 
 if runs D; then
-  # V26：backend 全部測試通過（包含 M3 規格＋輔助）；D 線不跑角色頁的測試（屬 B 線）
+  # V26：backend 全部測試通過（包含 M3R 規格＋輔助）；D 線不跑角色頁的測試（屬 B 線）
   if [ "$LANE" = "D" ]; then
-    NODE_FILES=$(cd backend && find tests -name '*.test.js' ! -path 'tests/spec/m16/overlay.test.js' ! -path 'tests/spec/m2/overlay-drink.test.js' ! -path 'tests/spec/m3/overlay-todoist.test.js' ! -name 'overlay-*.test.js' | sort | tr '
+    NODE_FILES=$(cd backend && find tests -name '*.test.js' ! -path 'tests/spec/m16/overlay.test.js' ! -path 'tests/spec/m2/overlay-drink.test.js' ! -path 'tests/spec/m3r/overlay-todoist.test.js' ! -name 'overlay-*.test.js' | sort | tr '
 ' ' ')
-    NODE_MIN=373   # M2/M3 起跑前＋M3 Worker 規格
+    NODE_MIN=430   # M3R 起跑前（不含第一輪的 todoist-core、todoist-api 輔助測試）＋M3R Worker 規格 15 列
   else
     NODE_FILES="tests/**/*.test.js"
-    NODE_MIN=402   # 包含角色頁與全套測試
+    NODE_MIN=471   # 上一行＋角色頁測試（不含第一輪的 overlay-todoist 輔助測試）＋M3R 懸浮窗規格 2 列
   fi
   NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
   NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')

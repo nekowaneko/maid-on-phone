@@ -46,12 +46,12 @@ test('POST /api/todoist/action：成功處理 action 回傳 ok', async () => {
       'content-type': 'application/json',
       [SECRET_HEADER]: SECRET
     },
-    body: JSON.stringify({ action: 'snooze', taskId: 'task-abc' })
+    body: JSON.stringify({ action: 'snooze', taskId: 'taskabc' })
   })
   const res = await handler(req)
   assert.equal(res.status, 200)
   const json = await res.json()
   assert.equal(json.ok, true)
-  assert.equal(json.taskId, 'task-abc')
+  assert.equal(json.taskId, 'taskabc')
   assert.equal(json.action, 'snooze')
 })
