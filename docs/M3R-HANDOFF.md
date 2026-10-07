@@ -37,6 +37,10 @@
 
 三個代理人**同時**在背景執行，各自只在自己的 worktree 工作。派工訊息只放下面這些，其餘全部在計畫書裡，不要在訊息裡重述或改寫計畫書的內容。
 
+**用什麼派**：用你自己（Antigravity）內建的代理人功能派三個代理人。**不要**從終端機呼叫任何外部 AI 命令列工具（例如 `claude`、`gemini`、`codex`）來代替派工；使用者沒有要求，這類工具也會另外計費、另外要求權限。如果你沒有辦法同時派三個代理人，就停下來告訴使用者，不要自己找替代方案。
+
+**commit 署名**：計畫書沿用的 M2 §0.6 寫了 `Co-Authored-By: Claude Opus 5.5 …` 的結尾，那是當時由 Claude 實作的署名。這一輪由你的代理人實作，**不要照抄這一行**；commit 訊息照 §0.6 其餘規定（繁體中文、以「M3R <線>：」開頭），結尾署名用你的代理人自己的名稱，或不加。
+
 ### 3.1 D 線（Worker）派工訊息
 
 ```
@@ -47,6 +51,7 @@
 只在 m3r-lane-d 分支 commit，不得 merge、rebase、push、切換分支。
 不得修改 backend/tests/spec/、verify.sh、契約檔、docs/。規格測試與實作衝突時，在 lanes/M3R-D.md 記「規格爭議」，不得改測試。
 不得連到真正的 Todoist、Cloudflare、Google。全程不得向任何人提問，未明訂處依計畫書 §7 處理並記錄。
+commit 訊息結尾不要加 M2 計畫書裡 Claude 的 Co-Authored-By 那一行；不得從終端機呼叫任何外部 AI 命令列工具。
 完成後依計畫書 §9 的格式回報。
 ```
 
@@ -60,6 +65,7 @@
 只在 m3r-lane-c 分支 commit，不得 merge、rebase、push、切換分支。
 不得修改 core/src/test/kotlin/com/accompany/pet/spec/、verify.sh、契約檔、docs/。規格測試與實作衝突時，在 lanes/M3R-C.md 記「規格爭議」，不得改測試。
 Kotlin 檔案一律用檔案編輯工具寫，不用 shell heredoc。全程不得向任何人提問，未明訂處依計畫書 §7 處理並記錄。
+commit 訊息結尾不要加 M2 計畫書裡 Claude 的 Co-Authored-By 那一行；不得從終端機呼叫任何外部 AI 命令列工具。
 完成後依計畫書 §9 的格式回報。
 ```
 
@@ -73,6 +79,7 @@ Kotlin 檔案一律用檔案編輯工具寫，不用 shell heredoc。全程不�
 只在 m3r-lane-b 分支 commit，不得 merge、rebase、push、切換分支。
 不得修改 backend/tests/spec/、verify.sh、契約檔（含 todoist-labels.js）、docs/。規格測試與實作衝突時，在 lanes/M3R-B.md 記「規格爭議」，不得改測試。
 角色頁不得用 ES module、不得連外、不得用 innerHTML。全程不得向任何人提問，未明訂處依計畫書 §7 處理並記錄。
+commit 訊息結尾不要加 M2 計畫書裡 Claude 的 Co-Authored-By 那一行；不得從終端機呼叫任何外部 AI 命令列工具。
 完成後依計畫書 §9 的格式回報。
 ```
 
