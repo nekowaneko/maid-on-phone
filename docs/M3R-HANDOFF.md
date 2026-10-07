@@ -37,7 +37,12 @@
 
 三個代理人**同時**在背景執行，各自只在自己的 worktree 工作。派工訊息只放下面這些，其餘全部在計畫書裡，不要在訊息裡重述或改寫計畫書的內容。
 
-**用什麼派**：用你自己（Antigravity）內建的代理人功能派三個代理人。**不要**從終端機呼叫任何外部 AI 命令列工具（例如 `claude`、`gemini`、`codex`）來代替派工；使用者沒有要求，這類工具也會另外計費、另外要求權限。如果你沒有辦法同時派三個代理人，就停下來告訴使用者，不要自己找替代方案。
+**用什麼派**：用 Antigravity 2.0 的 subagent：主代理人呼叫 `invoke_subagent` 工具，一次派三個，讓它們在背景同時執行（官方文件：https://www.antigravity.google/docs/subagents ）。使用者這台電腦裝的是 Antigravity 2.2.1 與 Antigravity IDE 2.5.5，都支援。**不要**從終端機呼叫任何外部 AI 命令列工具（例如 `claude`、`gemini`、`codex`）來代替派工；使用者沒有要求，這類工具也會另外計費、另外要求權限。如果 `invoke_subagent` 不能用，就停下來告訴使用者，不要自己找替代方案。
+
+**工作目錄怎麼給**：官方文件說 subagent 的 workspace 只有三種模式（`inherit` 沿用主代理人的、`branch` 自動開新的 Git worktree、`share` 共用目錄），**沒有寫可以直接指定某個資料夾**。三個 worktree 已經開在 `../pet-maid-m3r-b`、`-c`、`-d`，所以：
+1. **優先**：派工前把這三個資料夾加進目前的 Antigravity 專案（讓權限涵蓋它們），用 `inherit` 派工，派工訊息裡的絕對路徑就是工作目錄。派出去後先確認每個 subagent 第一個指令是在自己的 worktree 執行（例如 `git -C <路徑> branch --show-current` 回 `m3r-lane-<x>`）。
+2. **如果 subagent 碰不到那三個資料夾**：改用 `branch` 模式。每個 subagent 開工第一步：在自己的 worktree 根目錄執行 `git switch -c m3r-lane-<x>`、`bash ../pet-maid/tools/prepare-worktree.sh .`（路徑依實際位置調整，主倉庫在 `C:\Users\Dominic\Desktop\ml_demo\pet-maid`），並確認 `git log -1` 是 `20ab3e9` 之後的 commit。你要先刪掉預先開好的同名 worktree 與分支（`git worktree remove ../pet-maid-m3r-<x>`、`git branch -D m3r-lane-<x>`），否則分支名稱會衝突。派工訊息裡的「工作目錄」那一行改成「你自己的 worktree」。
+3. 不論用哪一種，**三個 subagent 都不得在主倉庫 `pet-maid` 裡修改檔案或 commit**。
 
 **commit 署名**：計畫書沿用的 M2 §0.6 寫了 `Co-Authored-By: Claude Opus 5.5 …` 的結尾，那是當時由 Claude 實作的署名。這一輪由你的代理人實作，**不要照抄這一行**；commit 訊息照 §0.6 其餘規定（繁體中文、以「M3R <線>：」開頭），結尾署名用你的代理人自己的名稱，或不加。
 
