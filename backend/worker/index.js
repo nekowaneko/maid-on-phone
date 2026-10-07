@@ -19,6 +19,10 @@ import drinkDefaults from '../config/drink-defaults.json' with { type: 'json' }
 import drinkLines from '../config/drink-lines.json' with { type: 'json' }
 import drinkParsePrompt from '../config/drink-parse-prompt.md'
 import drinkScriptPrompt from '../config/drink-script-prompt.md'
+import todoistDefaults from '../config/todoist-defaults.json' with { type: 'json' }
+import todoistLines from '../config/todoist-lines.json' with { type: 'json' }
+import todoistSplitPrompt from '../config/todoist-split-prompt.md'
+import todoistScriptPrompt from '../config/todoist-script-prompt.md'
 import { createHandler, runScheduled } from './handlers.js'
 import { streamCompletion as realStream } from './llm-client.js'
 import { streamCompletion as stubStream } from './llm-client.stub.js'
@@ -26,6 +30,8 @@ import { createStore as realStore } from './store.js'
 import { createStore as stubStore } from './store.stub.js'
 import { sendFcm as realPusher } from './fcm-client.js'
 import { sendFcm as stubPusher } from './fcm-client.stub.js'
+import { createTodoistClient as realTodoistClient } from './todoist-client.js'
+import { createTodoistStub as stubTodoistClient } from './todoist-client.stub.js'
 
 // 常數定義
 const STUB_FLAG = 'true'
@@ -40,6 +46,9 @@ const pickStore = (env) => (env?.USE_STUB === STUB_FLAG ? stubStore : realStore)
 
 // 推播客戶端也跟同一個開關，Stub 模式下絕不連到 Google
 const pickPusher = (env) => (env?.USE_STUB === STUB_FLAG ? stubPusher : realPusher)
+
+// Todoist 用戶端也跟同一個開關
+const pickTodoist = (env) => (env?.USE_STUB === STUB_FLAG ? stubTodoistClient : realTodoistClient)
 
 // 組出這一次請求要用的相依。streamer 在這裡就把 env 綁好，
 // 路由層因此完全不必認識環境變數，也碰不到憑證。
@@ -58,6 +67,11 @@ const buildDeps = (env) => ({
   drinkDefaults,
   drinkLines,
   drinkPrompts: { parse: drinkParsePrompt, script: drinkScriptPrompt },
+  // M3 Todoist 雙軌提醒（§4.2）
+  todoist: env?.TODOIST_TOKEN ? pickTodoist(env)(env.TODOIST_TOKEN, fetch, todoistDefaults) : null,
+  todoistDefaults,
+  todoistLines,
+  todoistPrompts: { split: todoistSplitPrompt, script: todoistScriptPrompt },
   secret: env?.APP_SECRET,
   store: pickStore(env)(env),
   streamer: (messages) => pickStreamer(env)(messages, env),

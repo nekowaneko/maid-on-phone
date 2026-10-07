@@ -1,84 +1,73 @@
-// Todoist 核心純函式邏輯單元測試
+// Todoist 核心純函式邏輯輔助單元測試
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  isP2Stale,
-  pickP2TaskToRemind,
-  calculateSnoozeTime,
-  isP3DueToday,
-  shouldAskP3Date,
-  shouldFollowupP3Night,
-  canSpeakToday,
-  validateSplitSteps
+  toTaipeiDateString,
+  addDaysToDateKey,
+  diffDays,
+  pickP2,
+  pickP3,
+  setDateFor,
+  validateSplitSteps,
+  validateTodoistAction
 } from '../core/todoist.js'
 
-test('isP2Stale：超過 14 天未修改且未完成者符合條件', () => {
-  const now = new Date('2026-10-15T00:00:00Z').getTime()
-  const staleTask = {
-    id: 't1',
-    priority: 3,
-    completed: false,
-    updated_at: '2026-09-30T00:00:00Z'
-  }
-  assert.equal(isP2Stale(staleTask, now), true)
-
-  const recentTask = {
-    id: 't2',
-    priority: 3,
-    completed: false,
-    updated_at: '2026-10-10T00:00:00Z'
-  }
-  assert.equal(isP2Stale(recentTask, now), false)
+test('日期工具函式正確計算', () => {
+  const d = new Date('2026-10-07T00:00:00Z')
+  assert.equal(toTaipeiDateString(d), '2026-10-07')
+  assert.equal(addDaysToDateKey('2026-10-07', 1), '2026-10-08')
+  assert.equal(diffDays('2026-10-03', '2026-10-10'), 7)
 })
 
-test('pickP2TaskToRemind：挑選擱置最久的那件，且 7 天內提過則跳過', () => {
-  const now = new Date('2026-10-15T00:00:00Z').getTime()
+test('pickP2 挑選擱置任務與間隔邏輯', () => {
+  const now = Date.parse('2026-10-07T09:00:00+08:00')
   const tasks = [
-    { id: 't1', priority: 3, updated_at: '2026-09-10T00:00:00Z' },
-    { id: 't2', priority: 3, updated_at: '2026-09-01T00:00:00Z' }
+    { id: 't1', priority: 3, updated_at: '2026-09-01T00:00:00Z', parent_id: null },
+    { id: 't2', priority: 3, updated_at: '2026-09-10T00:00:00Z', parent_id: null },
+    { id: 'sub1', priority: 3, updated_at: '2026-08-01T00:00:00Z', parent_id: 't1' }
   ]
-  const picked = pickP2TaskToRemind(tasks, now, null, '2026-10-15')
-  assert.equal(picked.id, 't2')
+  const picked = pickP2(tasks, '2026-10-07', now, {})
+  assert.equal(picked?.id, 't1')
 
-  // 若 3 天前剛提醒過，則回傳 null
-  const skipped = pickP2TaskToRemind(tasks, now, '2026-10-12', '2026-10-15')
+  // 若 7 天內提過則回傳 null
+  const skipped = pickP2(tasks, '2026-10-07', now, { 'todoist.p2SentOn': '2026-10-03' })
   assert.equal(skipped, null)
 })
 
-test('calculateSnoozeTime：產生 7 天後之 ISO 字串', () => {
-  const now = new Date('2026-10-06T00:00:00Z').getTime()
-  const snoozed = calculateSnoozeTime(now, 7)
-  assert.equal(snoozed, '2026-10-13T00:00:00.000Z')
+test('pickP3 到期與問日期分流', () => {
+  const tasks = [
+    { id: 'due1', priority: 2, due: { date: '2026-10-07' } },
+    { id: 'ask1', priority: 2, due: null, parent_id: null, added_at: '2026-09-01T00:00:00Z' }
+  ]
+  const resultDue = pickP3(tasks, '2026-10-07', {})
+  assert.equal(resultDue?.view, 'p3')
+  assert.equal(resultDue?.task.id, 'due1')
+
+  const resultAsk = pickP3([tasks[1]], '2026-10-07', {})
+  assert.equal(resultAsk?.view, 'askDate')
+  assert.equal(resultAsk?.task.id, 'ask1')
 })
 
-test('isP3DueToday：判斷到期日是否為今天', () => {
-  const taskToday = { priority: 2, completed: false, due_date: '2026-10-06' }
-  const taskTomorrow = { priority: 2, completed: false, due_date: '2026-10-07' }
-  assert.equal(isP3DueToday(taskToday, '2026-10-06'), true)
-  assert.equal(isP3DueToday(taskTomorrow, '2026-10-06'), false)
+test('setDateFor 計算不同選項', () => {
+  assert.equal(setDateFor('tomorrow', '2026-10-07'), '2026-10-08')
+  assert.equal(setDateFor('nextMonday', '2026-10-07'), '2026-10-12')
+  assert.equal(setDateFor('nextMonth', '2026-10-07'), '2026-11-01')
 })
 
-test('shouldAskP3Date：未設定到期日且未詢問過者需詢問', () => {
-  const unasked = { priority: 2, completed: false, due_date: null, has_asked_date: false }
-  const asked = { priority: 2, completed: false, due_date: null, has_asked_date: true }
-  assert.equal(shouldAskP3Date(unasked), true)
-  assert.equal(shouldAskP3Date(asked), false)
+test('validateSplitSteps 嚴格驗證步數與長度', () => {
+  assert.equal(validateSplitSteps(['第一步', '第二步']).valid, true)
+  assert.equal(validateSplitSteps(['只有一步']).valid, false)
+  assert.equal(validateSplitSteps(['一', '二', '三', '四']).valid, false)
+  assert.equal(validateSplitSteps(['第一步', '  ']).valid, false)
 })
 
-test('shouldFollowupP3Night：當天標記今天做但 21:00 未完成者需追問', () => {
-  assert.equal(shouldFollowupP3Night({ action: 'do_today' }, false), true)
-  assert.equal(shouldFollowupP3Night({ action: 'do_today' }, true), false)
-  assert.equal(shouldFollowupP3Night({ action: 'other' }, false), false)
-})
-
-test('canSpeakToday：每天出聲限制在 2 次之內', () => {
-  assert.equal(canSpeakToday(0), true)
-  assert.equal(canSpeakToday(1), true)
-  assert.equal(canSpeakToday(2), false)
-})
-
-test('validateSplitSteps：驗證子任務陣列長度在 2~5 之間', () => {
-  assert.equal(validateSplitSteps({ steps: ['A', 'B'] }).valid, true)
-  assert.equal(validateSplitSteps({ steps: ['A'] }).valid, false)
-  assert.equal(validateSplitSteps(null).valid, false)
+test('validateTodoistAction 驗證動作參數', () => {
+  const contract = {
+    actions: { sent: ['doToday', 'snooze', 'confirmSplit'] },
+    taskIdPattern: '^[0-9A-Za-z_]{1,64}$',
+    contentMaxChars: 200
+  }
+  assert.equal(validateTodoistAction({ action: 'doToday', taskId: '123', view: 'p2' }, contract).valid, true)
+  assert.equal(validateTodoistAction({ action: 'doToday', taskId: '123', view: 'invalid' }, contract).valid, false)
+  assert.equal(validateTodoistAction({ action: 'unknown', taskId: '123' }, contract).valid, false)
 })
