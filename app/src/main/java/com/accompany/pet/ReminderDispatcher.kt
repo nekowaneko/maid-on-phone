@@ -63,9 +63,12 @@ object ReminderDispatcher {
     private fun execute(context: Context, route: Route, r: Reminder, nowMillis: Long) {
         when (route) {
             Route.SHOW_PET -> {
-                // 角色用原文演出（帶按鈕的每日詢問改用 ask）；沒有懸浮窗權限或被系統拒絕啟動時，改發一般通知（通知會帶按鈕）
-                val started = hasOverlayPermission(context) &&
-                    if (r.actions.isNotEmpty()) startPetService(context, askScript = r.script) else startPetService(context, r.script)
+                // 角色用原文演出（帶按鈕的每日詢問改用 ask；Todoist 提醒帶 todoistJson）；沒有懸浮窗權限或被系統拒絕啟動時，改發一般通知
+                val started = hasOverlayPermission(context) && when {
+                    r.todoist != null -> startPetService(context, todoistJson = r.todoist, todoistScript = r.script)
+                    r.actions.isNotEmpty() -> startPetService(context, askScript = r.script)
+                    else -> startPetService(context, text = r.script)
+                }
                 if (!started) showReminderNotification(context, r)
             }
             Route.NOTIFY -> showReminderNotification(context, r)

@@ -59,6 +59,9 @@ import com.accompany.pet.core.reminder.shouldHide
 import com.accompany.pet.core.reduce
 import com.accompany.pet.core.reminder.IDLE_HIDE_MILLIS
 import com.accompany.pet.core.snapToEdge
+import com.accompany.pet.core.todoist.TODOIST_VIEWS
+import com.accompany.pet.core.todoist.isSendableTodoistAction
+import com.accompany.pet.core.todoist.isValidTaskId
 import java.io.ByteArrayInputStream
 import kotlin.math.abs
 
@@ -80,7 +83,7 @@ const val ASSET_ROOT = "file:///android_asset/pet/"   // WebView 唯一允許的
 const val PARSE_MAX_CHARS = 200                       // 送去解析的文字最多幾字（Worker 超過回 400）
 
 // 頁面載入前暫存的呼叫種類
-enum class PendingKind { SCRIPT, TEXT, DRINK, THINKING }
+enum class PendingKind { SCRIPT, TEXT, DRINK, THINKING, TODOIST }
 
 // 判斷網址是否為角色頁的本機資產（架構約束 A4）
 fun isAllowedUrl(url: String): Boolean = url.startsWith(ASSET_ROOT)
@@ -321,7 +324,13 @@ class OverlayService : Service() {
         wv.settings.allowContentAccess = false
         wv.webViewClient = PetWebViewClient()
         wv.addJavascriptInterface(
-            PetBridge(onTap = ::toggleBubble, onMic = ::onMicPressed, onChat = ::onChatPressed, onDrink = ::onDrinkAction),
+            PetBridge(
+                onTap = ::toggleBubble,
+                onMic = ::onMicPressed,
+                onChat = ::onChatPressed,
+                onDrink = ::onDrinkAction,
+                onTodoist = ::onTodoistAction,
+            ),
             "PetBridge",
         )
         wv.setOnTouchListener(DragHandler())
@@ -341,17 +350,41 @@ class OverlayService : Service() {
         lastInteractionMillis = System.currentTimeMillis()
     }
 
-    // 依啟動指令決定角色出現後做什麼：每日詢問（帶按鈕）、開始聆聽、或一般的演出與排隊報告
+    // 依啟動指令決定角色出現後做什麼：每日詢問（帶按鈕）、開始聆聽、Todoist 提醒、或一般的演出與排隊報告
     private fun presentIntent(intent: Intent?) {
+        val todoistJson = intent?.getStringExtra(EXTRA_TODOIST_JSON)
+        val todoistScript = intent?.getStringExtra(EXTRA_TODOIST_SCRIPT)
         val ask = intent?.getStringExtra(EXTRA_ASK_SCRIPT)               // 每日詢問的原文（M2）
         val listen = intent?.getBooleanExtra(EXTRA_LISTEN, false) == true  // 通知按「有喝，用說的」（M2）
         when {
+            todoistJson != null -> presentTodoist(todoistJson, todoistScript ?: intent?.getStringExtra(EXTRA_TEXT) ?: "")
             ask != null -> presentAsk(ask)
             listen -> {
                 presentQueued()
                 onMicPressed()  // 沒有麥克風權限時照現有提示
             }
             else -> presentReport(intent?.getStringExtra(EXTRA_TEXT))  // 要演出的原文（沒有就只報告排隊）
+        }
+    }
+
+    // Todoist 提醒：先報告排隊內容，驗證 todoist 負載後交給 showTodoist（帶 script），驗不過降級為 showScript
+    private fun presentTodoist(todoistJson: String, script: String) {
+        presentQueued()
+        val validObj = try {
+            val obj = JSONObject(todoistJson)
+            val view = obj.optString("view").takeIf { it.isNotEmpty() }
+            val taskId = obj.optString("taskId").takeIf { it.isNotEmpty() }
+            if (view != null && view in TODOIST_VIEWS && taskId != null && isValidTaskId(taskId)) {
+                obj.put("script", script)
+                obj
+            } else null
+        } catch (e: JSONException) {
+            null
+        }
+        if (validObj != null) {
+            showTodoist(validObj.toString())
+        } else {
+            showScript(script)
         }
     }
 
@@ -494,6 +527,44 @@ class OverlayService : Service() {
         }
     }
 
+    // 網頁的 Todoist 按鈕（§4.3）：只解析固定欄位，不認得的動作略過
+    private fun onTodoistAction(json: String) {
+        markInteraction()  // 包含「cancel」：只記一次互動
+        val obj = try {
+            JSONObject(json)
+        } catch (e: JSONException) {
+            return  // 不是 JSON 物件就略過
+        }
+        val action = obj.optString("action").takeIf { it.isNotEmpty() } ?: return
+        if (action == "cancel") return  // cancel 不連線，只記一次互動
+        if (!isSendableTodoistAction(action)) return  // 不在 TODOIST_SENT_ACTIONS 內略過
+
+        callTodoistWorker(json)
+    }
+
+    // 呼叫 Worker Todoist API：先換思考的臉，拿到回應後交給 showTodoist；連不上或非 2xx 顯示固定提示
+    private fun callTodoistWorker(body: String) {
+        thinking(true)
+        WorkerApi.post("/api/todoist/action", body) { result ->
+            if (state.service != com.accompany.pet.core.ServiceState.RUNNING) return@post
+            markInteraction()
+            thinking(false)
+            val message = workerErrorMessage(result.status)
+            if (message != null) showText(message) else showTodoist(result.text)
+        }
+    }
+
+    // 把 Todoist 資料（或回應）交給角色頁；以 JSON 字串跳脫，只當資料（A26）
+    fun showTodoist(json: String) {
+        if (!pageReady) {
+            pending.add(PendingKind.TODOIST to json)  // 頁面還沒載入完成，等 onPageFinished 再交
+            return
+        }
+        val arg = org.json.JSONObject.quote(json)
+        callJs("window.pet.showTodoist&&window.pet.showTodoist($arg)")  // 網頁沒有這個方法時略過
+        if (!bubbleShown) toggleBubble()
+    }
+
     // 把 Worker 回應（或 App 組的 ask）交給角色頁；以 JSON 字串跳脫，只當資料（A26）
     fun showDrink(json: String) {
         if (!pageReady) {
@@ -545,6 +616,7 @@ class OverlayService : Service() {
                 PendingKind.TEXT -> showText(value)
                 PendingKind.DRINK -> showDrink(value)
                 PendingKind.THINKING -> thinking(value.toBoolean())
+                PendingKind.TODOIST -> showTodoist(value)
             }
         }
     }
