@@ -1,9 +1,9 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "mutate": ["core/push.js", "core/drink.js"],
+  "mutate": ["core/push.js", "core/drink.js", "core/todoist.js"],
   "testRunner": "command",
   "commandRunner": {
-    "command": "node --test tests/spec/m15/push.test.js tests/push-helper.test.js tests/spec/m16/push.test.js tests/push-script.test.js tests/push-actions.test.js tests/spec/m2/drink.test.js tests/drink-*.test.js"
+    "command": "node --test tests/spec/m15/push.test.js tests/push-helper.test.js tests/spec/m16/push.test.js tests/push-script.test.js tests/push-actions.test.js tests/spec/m2/drink.test.js tests/drink-api.test.js tests/drink-core.test.js tests/spec/m3r/todoist.test.js tests/todoist-api.test.js tests/todoist-core.test.js"
   },
   "reporters": ["clear-text", "html", "json"],
   "htmlReporter": { "fileName": "reports/mutation/mutation.html" },
@@ -11,3 +11,4 @@
   "tempDirName": ".stryker-tmp",
   "cleanTempDir": true
 }
+

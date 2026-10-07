@@ -82,3 +82,17 @@
 | 52 | `apiOrigin`、`parseDrinkActions` | `core/.../drink/Drink.kt` | 決定連線目的地；解析外部輸入 | 只接受 https，拒絕帳密、IPv6、空白、奇怪的埠號；`actions` 白名單只有 `resist`、`speak` |
 | 53 | `PetDrinkView.viewFor`／`applyChoice` | `app/src/main/assets/pet/drink-view.js` | 外部文字顯示在畫面上；產生要寫入的草稿 | 純函式，不碰 DOM；按鈕文字由 `showDrinkButtons` 用 `textContent` 設定；草稿每次都複製一份，最後由 Worker 重新驗證 |
 | 54 | `window.pet.showDrink`、`showDrinkButtons`／`sendDrinkAction` | `app/src/main/assets/pet/index.html` | 外部 JSON 進入網頁；網頁按鈕觸發寫入 | `JSON.parse` 失敗就忽略；按下後整組按鈕清掉，避免重複送出；撤銷按鈕 60 秒後移除 |
+
+## M3R（Todoist 提醒與任務處理）
+
+依據 M3R 計畫書 §2 與三條線紀錄檔（`lanes/M3R-B.md`、`M3R-C.md`、`M3R-D.md`）的高風險函式匯整。
+
+| # | 模組／函式 | 檔案 | 風險類別 | 看什麼 |
+|---|---|---|---|---|
+| 55 | `createTodoistClient`（`listTasks`、`updateDue`、`addSubtask`） | `backend/worker/todoist-client.js` | 唯一連線 Todoist 的用戶端（A35） | `TODOIST_TOKEN` 僅由傳入傳出使用，不得寫進 log 或錯誤訊息；錯誤集中為 `TODOIST_<status>` |
+| 56 | `handleTodoistAction` / `runScheduled` | `backend/worker/handlers.js` | Worker API 路由與定時排程對外寫入 | 動作白名單處理（`doToday`、`tomorrow`、`setDate`、`confirmSplit`）；寫入前檢查快取與限制，錯誤時安全抓取 |
+| 57 | `handleTodoistCron` | `backend/worker/handlers.js` | 台北時間排程處理（P3/P2 提問與到期提醒） | 精確符合 08:30 / 09:00 / 21:00 台北時間；每區段獨立 try/catch，成功始記錄日期 |
+| 58 | `PetBridge.onTodoistAction` | `app/.../PetBridge.kt` | 原生暴露給 WebView 的第 5 個 `@JavascriptInterface`（A5） | 資料上限 16 KB；只傳轉給主執行緒之 json 字串 |
+| 59 | `OverlayService.showTodoist` / `onTodoistAction` / `presentTodoist` | `app/.../OverlayService.kt` | 懸浮窗與 Worker API 介面串接 | JSON 安全跳脫傳給 WebView 演出，背景非同步轉發動作至 Worker |
+| 60 | `PetTodoistView.viewFor` / `applyChoice` / `showTodoist` | `app/src/main/assets/pet/todoist-view.js` | 懸浮窗 Todoist 卡片與按鈕演出 | 純函式處理卡片與按鈕；不使用 `innerHTML`；點擊後即刻清理按鈕避免重複發送 |
+

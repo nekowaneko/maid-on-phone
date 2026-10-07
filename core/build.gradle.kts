@@ -21,7 +21,7 @@ dependencies {
 
 // 突變測試針對權限判斷、提醒分流與聊天網址白名單（M1.5 計畫 §2.2）
 pitest {
-    targetClasses.set(listOf("com.accompany.pet.core.permission.*", "com.accompany.pet.core.reminder.*", "com.accompany.pet.core.chat.*", "com.accompany.pet.core.drink.*"))
+    targetClasses.set(listOf("com.accompany.pet.core.permission.*", "com.accompany.pet.core.reminder.*", "com.accompany.pet.core.chat.*", "com.accompany.pet.core.drink.*", "com.accompany.pet.core.todoist.*"))
     targetTests.set(listOf("com.accompany.pet.*"))  // 用全部測試（spec＋helper）去殺突變
     outputFormats.set(listOf("HTML", "XML"))
     timestampedReports.set(false)
