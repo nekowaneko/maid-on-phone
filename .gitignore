@@ -43,3 +43,9 @@ backend/.stryker-tmp/
 
 # M1.6：App 圖示用角色立繪產生（tools/make_app_icon.py），只放在 debug 來源集，不進公開 repo
 app/src/debug/res/
+
+# 本機工具與暫存檔
+/.idea/
+screen_test.png
+prototype.html
+tools/push.json

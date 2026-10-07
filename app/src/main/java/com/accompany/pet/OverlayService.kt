@@ -65,6 +65,7 @@ import kotlin.math.abs
 // 常數定義
 const val ACTION_STOP = "com.accompany.pet.STOP"     // 通知「停止」按鈕的動作
 const val ACTION_APPLY_SETTINGS = "com.accompany.pet.APPLY_SETTINGS"  // 主畫面改了設定，請服務重新套用
+const val ACTION_PET_STATE_CHANGED = "com.accompany.pet.STATE_CHANGED"  // 角色服務執行狀態變更通知
 const val PET_WIDTH_DP = 96                           // 角色寬
 const val PET_HEIGHT_DP = 108                         // 角色高
 const val BUBBLE_WIDTH_DP = 164                       // 泡泡寬（含間距）
@@ -161,6 +162,7 @@ class OverlayService : Service() {
         ContextCompat.registerReceiver(this, screenReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         dispatch(PetEvent.START)
         running = true
+        sendBroadcast(Intent(ACTION_PET_STATE_CHANGED).setPackage(packageName))
         refreshTile(this)
         batteryLogger.start()  // 螢幕關閉時也不停（S14 優先）
         presentIntent(intent)
@@ -191,6 +193,7 @@ class OverlayService : Service() {
     private fun cleanup() {
         idleHandler.removeCallbacks(idleCheck)
         running = false
+        sendBroadcast(Intent(ACTION_PET_STATE_CHANGED).setPackage(packageName))
         refreshTile(this)
         batteryLogger.stop()
         speech.release()

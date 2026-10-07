@@ -16,6 +16,7 @@ directory = "./"
 #   LLM_RELAY_SECRET（轉送服務的密鑰，與 accompany_bot 共用同一個轉送服務）
 #   FCM_SERVICE_ACCOUNT（Firebase 服務帳戶金鑰 JSON 全文）
 #   FCM_DEVICE_TOKEN（手機主畫面顯示的推播代碼）
+#   TODOIST_TOKEN（Todoist 個人 API 權杖）
 [vars]
 USE_STUB = "false"
 LLM_MODEL = "gemini-3.5-flash-lite"
@@ -38,6 +39,3 @@ fallthrough = false
 binding = "DB"
 database_name = "pet-maid-db"
 database_id = "ba0f3e4a-ce01-4ee9-9a69-cf0dd1cfcb43"
-
-# todoist token 
-todoistToken=72f305bf43552493da2a983940575523ed83d5a5
