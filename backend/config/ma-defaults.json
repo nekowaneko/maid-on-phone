@@ -1,0 +1,12 @@
+{
+  "_note": "M4 盤前均線預設值（台北時間）。D 線讀取，不得刪鍵。",
+  "twseAllUrl": "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL",
+  "twseDayUrl": "https://www.twse.com.tw/rwd/zh/afterTrading/STOCK_DAY",
+  "twseHolidayUrl": "https://openapi.twse.com.tw/v1/holidaySchedule/holidaySchedule",
+  "scheduleTime": "08:30",
+  "twseDelayMs": 1000,
+  "refreshMinIntervalSec": 60,
+  "openingMaxChars": 40,
+  "holidayKeepWords": ["開始交易", "最後交易"],
+  "undoSeconds": 6
+}
