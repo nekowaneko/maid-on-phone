@@ -40,6 +40,12 @@ private fun showPending(context: Context, requestCode: Int, script: String?): Pe
     return PendingIntent.getForegroundService(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 }
 
+// 點通知後開啟盤前均線明細畫面的 PendingIntent（M4）
+private fun maPending(context: Context, requestCode: Int): PendingIntent {
+    val intent = Intent(context, MaActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+}
+
 // 提醒通知的編號：同編號覆蓋同一則
 fun reminderNotificationId(reminderId: String): Int = REMINDER_NOTIFICATION_BASE + (reminderId.hashCode() and 0x0FFFFFFF)
 
@@ -55,19 +61,27 @@ private fun drinkActionPending(context: Context, notificationId: Int, action: St
 
 // 一般通知：頭像＋提醒文字（純文字，看不到標籤），點一下叫出角色用原文演出同一則
 // M2：帶 actions 時加上「沒喝」「有喝，用說的」按鈕（不認得的已在 parseReminder 略過）
+// M4：帶 ma 時通知點擊開 MaActivity，不加按鈕
 fun showReminderNotification(context: Context, r: Reminder) {
     ensureChannels(context)
     val id = reminderNotificationId(r.id)
+    val contentIntent = if (r.ma != null) {
+        maPending(context, id)
+    } else {
+        showPending(context, id, r.script)
+    }
     val builder = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
         .setSmallIcon(R.drawable.ic_launcher_foreground)
         .setContentTitle("陪伴角色")
         .setContentText(r.text)
         .setStyle(NotificationCompat.BigTextStyle().bigText(r.text))
-        .setContentIntent(showPending(context, id, r.script))  // 角色用原文演出（M16-S09）
+        .setContentIntent(contentIntent)  // ma 開明細，其餘角色用原文演出（M16-S09）
         .setAutoCancel(true)
-    r.actions.forEachIndexed { index, action ->
-        val label = pushActionLabel(action) ?: return@forEachIndexed  // 保險：不認得的按鈕略過
-        builder.addAction(0, label, drinkActionPending(context, id, action, index))
+    if (r.ma == null) {
+        r.actions.forEachIndexed { index, action ->
+            val label = pushActionLabel(action) ?: return@forEachIndexed  // 保險：不認得的按鈕略過
+            builder.addAction(0, label, drinkActionPending(context, id, action, index))
+        }
     }
     manager(context).notify(id, builder.build())
 }

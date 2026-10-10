@@ -53,6 +53,7 @@ import com.accompany.pet.core.drink.workerErrorMessage
 import org.json.JSONException
 import org.json.JSONObject
 import com.accompany.pet.core.initialPosition
+import com.accompany.pet.core.ma.maPageUrl
 import com.accompany.pet.core.permission.MIC_DENIED_MESSAGE
 import com.accompany.pet.core.reminder.idleDeadline
 import com.accompany.pet.core.reminder.shouldHide
@@ -81,9 +82,10 @@ const val LOG_TAG = "AccompanyPet"                    // logcat 標籤
 const val ASSET_ROOT = "file:///android_asset/pet/"   // WebView 唯一允許的網址開頭
 
 const val PARSE_MAX_CHARS = 200                       // 送去解析的文字最多幾字（Worker 超過回 400）
+val MA_PUSH_STATUSES = setOf("ok", "failed")          // 盤前均線推播合法狀態清單（M4 契約 push.pushStatuses）
 
 // 頁面載入前暫存的呼叫種類
-enum class PendingKind { SCRIPT, TEXT, DRINK, THINKING, TODOIST }
+enum class PendingKind { SCRIPT, TEXT, DRINK, THINKING, TODOIST, MA }
 
 // 判斷網址是否為角色頁的本機資產（架構約束 A4）
 fun isAllowedUrl(url: String): Boolean = url.startsWith(ASSET_ROOT)
@@ -330,6 +332,7 @@ class OverlayService : Service() {
                 onChat = ::onChatPressed,
                 onDrink = ::onDrinkAction,
                 onTodoist = ::onTodoistAction,
+                onMa = ::onMaPressed,
             ),
             "PetBridge",
         )
@@ -350,13 +353,16 @@ class OverlayService : Service() {
         lastInteractionMillis = System.currentTimeMillis()
     }
 
-    // 依啟動指令決定角色出現後做什麼：每日詢問（帶按鈕）、開始聆聽、Todoist 提醒、或一般的演出與排隊報告
+    // 依啟動指令決定角色出現後做什麼：每日詢問（帶按鈕）、開始聆聽、Todoist 提醒、盤前均線、或一般的演出與排隊報告
     private fun presentIntent(intent: Intent?) {
+        val maJson = intent?.getStringExtra(EXTRA_MA_JSON)
+        val maScript = intent?.getStringExtra(EXTRA_MA_SCRIPT)
         val todoistJson = intent?.getStringExtra(EXTRA_TODOIST_JSON)
         val todoistScript = intent?.getStringExtra(EXTRA_TODOIST_SCRIPT)
         val ask = intent?.getStringExtra(EXTRA_ASK_SCRIPT)               // 每日詢問的原文（M2）
         val listen = intent?.getBooleanExtra(EXTRA_LISTEN, false) == true  // 通知按「有喝，用說的」（M2）
         when {
+            maJson != null -> presentMa(maJson, maScript ?: intent?.getStringExtra(EXTRA_TEXT) ?: "")
             todoistJson != null -> presentTodoist(todoistJson, todoistScript ?: intent?.getStringExtra(EXTRA_TEXT) ?: "")
             ask != null -> presentAsk(ask)
             listen -> {
@@ -364,6 +370,29 @@ class OverlayService : Service() {
                 onMicPressed()  // 沒有麥克風權限時照現有提示
             }
             else -> presentReport(intent?.getStringExtra(EXTRA_TEXT))  // 要演出的原文（沒有就只報告排隊）
+        }
+    }
+
+    // 盤前均線提醒：先報告排隊內容，驗證 ma 負載後交給 showMa（帶 script），驗不過降級為 showScript（M4）
+    private fun presentMa(maJson: String, script: String) {
+        presentQueued()
+        val validObj = try {
+            val obj = JSONObject(maJson)
+            val status = obj.optString("status").takeIf { it.isNotEmpty() }
+            val u = obj.optInt("u", -1)
+            val d = obj.optInt("d", -1)
+            val m = obj.optInt("m", -1)
+            if (status != null && status in MA_PUSH_STATUSES && u >= 0 && d >= 0 && m >= 0) {
+                obj.put("script", script)
+                obj
+            } else null
+        } catch (e: JSONException) {
+            null
+        }
+        if (validObj != null) {
+            showMa(validObj.toString())
+        } else {
+            showScript(script)
         }
     }
 
@@ -491,6 +520,17 @@ class OverlayService : Service() {
         }
     }
 
+    // 按「📈 盤前均線」或「看明細」：沒設定聊天網址就在泡泡提示；有設定就開啟盤前均線畫面（角色保留，閒置照常計時，M4）
+    private fun onMaPressed() {
+        markInteraction()
+        val url = maPageUrl(BuildConfig.CHAT_URL)
+        if (url == null) {
+            showText(CHAT_NOT_SET_MESSAGE) // 尚未設定聊天網址提示，不開畫面
+        } else {
+            startActivity(Intent(this, MaActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+    }
+
     // 語音辨識成功的文字：送 Worker 解析（M2；「我在聽…」與錯誤提示不會進來）
     private fun onSpeechResult(text: String) {
         markInteraction()
@@ -565,6 +605,17 @@ class OverlayService : Service() {
         if (!bubbleShown) toggleBubble()
     }
 
+    // 把盤前均線資料交給角色頁；以 JSON 字串跳脫，只當資料（A26，M4）
+    fun showMa(json: String) {
+        if (!pageReady) {
+            pending.add(PendingKind.MA to json)  // 頁面還沒載入完成，等 onPageFinished 再交
+            return
+        }
+        val arg = org.json.JSONObject.quote(json)
+        callJs("window.pet.showMa&&window.pet.showMa($arg)")  // 網頁沒有這個方法時略過
+        if (!bubbleShown) toggleBubble()
+    }
+
     // 把 Worker 回應（或 App 組的 ask）交給角色頁；以 JSON 字串跳脫，只當資料（A26）
     fun showDrink(json: String) {
         if (!pageReady) {
@@ -617,6 +668,7 @@ class OverlayService : Service() {
                 PendingKind.DRINK -> showDrink(value)
                 PendingKind.THINKING -> thinking(value.toBoolean())
                 PendingKind.TODOIST -> showTodoist(value)
+                PendingKind.MA -> showMa(value)
             }
         }
     }
