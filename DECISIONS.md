@@ -132,3 +132,12 @@
 ## M4.1 貴批次
 
 62. **verify.sh 支援 `--stage 1|2|3|4` 參數**：沿用決策 9（`--core-only`）與 `--lane` 設計，T1 僅實作 core、T2 實作網頁、T3 實作 App 原生端。預設不帶 `--stage` 時為 Stage 4（全跑 V01～V45）。各階段以 `--stage` 進行對應進度驗證，T4 及 `--full` 執行全部檢查，確保接線與整合無任何遺漏。
+
+## M4.2 便宜批次
+
+63. **開工前先 commit 既有未提交檔案**：設計規格包（design/prototype/）、docs/wish28-pet-spec.md 的視訊版追加段落與兩份 M4.2 計畫書，依 §0 保存，內容未修改。
+64. **表情圖來源**：從 `app/src/main/assets/pet/frames/local/` 以 `cp` 複製 7 張，位元組相同；`.gitignore` 加 `backend/assets/character/frames/*.png`，不進 git。
+
+### 建議後續（M4.2，僅記錄，未實作）
+
+- App 端名稱（快速設定磚「🐾 陪伴角色」等）是否改為「手機女僕」：見 design/prototype/later.md。

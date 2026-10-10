@@ -63,3 +63,11 @@
 2. 盤前均線卡片副標由 App 在 `onResume` 透過 `WorkerApi.get("/api/ma/report")` 取得（只讀取，不呼叫 refresh、不推播）；判斷與文字在 `core/ma/MaEntry.kt`（純函式）。
 3. 明細頁關閉機制：網頁導向 `ma-exit://close`（契約檔 `exitUrl`），`MaActivity` 在 `shouldOverrideUrlLoading` 用 `isMaExitUrl` 辨識後 `finish()`；仍不提供任何 JS 介面（A44）。
 4. 聊聊卡片副標是固定句；App 沒有本地對話紀錄。
+
+## M4.2 聊天頁視訊版
+
+1. 聊天頁改為視訊通話版：角色用整張表情圖（`backend/assets/character/frames/`，不進 git），不再疊分層 PNG；換裝移除。
+2. 通話狀態（呼叫中、通話中、她在想、連線失敗、通話結束）與各狀態的文字、按鈕可用性，全部由 `backend/core/call-state.js` 的純函式決定；眨眼的時間與條件在 `backend/core/blink.js`。DOM 接線在 `backend/web/call.js`。
+3. 接通判斷：載入設定與表情圖、並以存取密鑰呼叫 `/api/usage` 回 200；沒有密鑰、401、網路錯誤或逾時（`connectTimeoutMs`）都是連線失敗。
+4. 「關閉聊天」：網頁導向 `chat-exit://close`（`config/call.json` 的 `exitUrl`），`ChatActivity` 在 `shouldOverrideUrlLoading` 用 `isChatExitUrl` 辨識後 `finish()`；仍不提供任何 JS 介面（A5）。
+5. 設計上的取捨：沿用聊天頁現況風格；角色圖放大到視訊區寬度的 118%，畫質偏軟，見 design/prototype/later.md。

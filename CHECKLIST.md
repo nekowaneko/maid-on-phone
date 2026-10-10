@@ -76,3 +76,13 @@
 - □ 聊聊卡片副標目前是固定句；若想顯示女僕最後一句話，需要另立功能（見 design/prototype/later.md）
 - □ 讀 RISK-REVIEW.md 裡 MaActivity.kt 與 MainActivity.kt 的 M4.1 新增項目
 - □ 看 MUTATION-REPORT.md 的 M4.1 範圍結果（或待補狀態）
+
+## M4.2
+
+- □ 手機實測 DEVICE-CHECKLIST-M4.2.md（D01～D16），特別是 D07（畫質）與 D11（關閉聊天）
+- □ 重新部署 Worker B（新的表情圖在 backend/assets/character/frames/，不進 git，部署時才會一起上傳）
+- □ 表情圖會被部署成公開的靜態檔案（與原本的 png 圖層相同的處境），確認你能接受
+- □ 聊天頁的語言模型現在看得到 `[pout]`、`[shy]` 兩個標籤，聊幾輪確認語氣沒有被帶偏
+- □ App 端名稱（快速設定磚「🐾 陪伴角色」等）是否也要改成「手機女僕」：見 design/prototype/later.md
+- □ 讀 RISK-REVIEW.md 裡 ChatActivity.kt 與 call.js 的 M4.2 新增項目
+- □ 看 MUTATION-REPORT.md 的 M4.2 範圍結果（或待補狀態）
