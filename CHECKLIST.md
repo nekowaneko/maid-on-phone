@@ -68,3 +68,11 @@
 - □ 看 `SECURITY-REPORT.md` 與依賴套件稽核結果（需連網，代理人不做）。
 - □ 跑 `DEVICE-CHECKLIST-M4.md` 的手機實測。
 - □ 開場台詞的語感、說明比喻是否好懂（使用者本人判斷）。
+
+## M4.1
+
+- □ 手機實測 DEVICE-CHECKLIST-M4.1.md（D01～D15），特別是 D08（明細頁「‹」關閉）
+- □ 確認主畫面兩張卡片在你的手機上好不好點、好不好讀（螢幕寬度、字體大小）
+- □ 聊聊卡片副標目前是固定句；若想顯示女僕最後一句話，需要另立功能（見 design/prototype/later.md）
+- □ 讀 RISK-REVIEW.md 裡 MaActivity.kt 與 MainActivity.kt 的 M4.1 新增項目
+- □ 看 MUTATION-REPORT.md 的 M4.1 範圍結果（或待補狀態）
