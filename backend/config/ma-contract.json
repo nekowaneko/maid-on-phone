@@ -1,0 +1,51 @@
+{
+  "_note": "M4 盤前均線接口塊（docs/M4-EXPENSIVE-PLAN.md §4）。B、C、D 三條線的規格測試都讀這一份；各線不得修改。",
+  "kinds": ["U", "D", "W", "V", "S", "B", "T", "N"],
+  "kindGroups": { "U": "u", "D": "d", "W": "m", "V": "m", "S": "m", "B": "m", "T": "m", "N": "m" },
+  "classify": {
+    "windows": [5, 20, 60],
+    "roundDigits": 2,
+    "byOrder": {
+      "5>20>60": "U",
+      "60>20>5": "D",
+      "20>5>60": "W",
+      "20>60>5": "V",
+      "5>60>20": "S",
+      "60>5>20": "B"
+    },
+    "tie": "T",
+    "insufficient": "N"
+  },
+  "statuses": ["ok", "failed", "empty", "none"],
+  "push": {
+    "field": "ma",
+    "maxChars": 2048,
+    "keys": ["date", "asOf", "u", "d", "m", "status"],
+    "pushStatuses": ["ok", "failed"],
+    "idPrefix": "ma-"
+  },
+  "api": {
+    "report": "/api/ma/report",
+    "history": "/api/ma/history",
+    "watchlist": "/api/ma/watchlist",
+    "refresh": "/api/ma/refresh"
+  },
+  "watchActions": ["add", "untrack", "restore"],
+  "watchErrors": ["format", "notFound", "duplicate", "limit", "unavailable"],
+  "codePattern": "^[0-9]{4,6}[A-Z]?$",
+  "limit": 10,
+  "historyDays": 7,
+  "backfillMonths": 4,
+  "minCloses": 60,
+  "page": "/web/ma.html",
+  "bridge": {
+    "webToNative": "onMaPressed",
+    "nativeToWeb": "showMa"
+  },
+  "bubbleActions": ["openMa", "dismiss"],
+  "settingsKeys": {
+    "sentOn": "ma.sentOn",
+    "last": "ma.last",
+    "refreshedAt": "ma.refreshedAt"
+  }
+}
