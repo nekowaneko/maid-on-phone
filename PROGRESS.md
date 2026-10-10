@@ -142,3 +142,5 @@
 - 依 D → C → B 合併，零衝突；新增 `ma-wiring.test.js`；`./verify.sh --full` 全綠（backend 551 個測試）
 - 寫 ACCEPTANCE-M4、RISK-REVIEW（第 55～65 項）、MUTATION-REPORT 的 M4 段落
 - 等使用者處理：部署與手機實測；是否採用建議新增的 M4-S18～S22
+- 採用 M4-S18～S22（凍結 `ec20954`），只有 S21 需改 `core/ma.js`；`--full` 重跑全綠（backend 556 個測試）
+- 已部署 Worker `pet-maid-api`（版本 a3edac81）並對遠端 D1 套用 schema（三張 ma_ 表）；等使用者手機實測

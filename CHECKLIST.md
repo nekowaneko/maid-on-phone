@@ -61,10 +61,10 @@
 
 ## M4
 
-- □ 重新部署 Worker，並對 D1 重跑 `worker/schema.sql`（M4 新增三張表，指令見 docs/WORKER-SETUP.md 第 9 節）。
+- ✅ 重新部署 Worker，並對 D1 重跑 `worker/schema.sql`（M4 新增三張表，指令見 docs/WORKER-SETUP.md 第 9 節）。（2026-10-10 已部署：Worker 版本 a3edac81，D1 已有 ma_watch、ma_close、ma_result 三張表）
 - □ 第一次使用：在追蹤清單頁加入想追蹤的標的（上限 10 檔）。
 - □ 讀 `RISK-REVIEW.md` 中 M4 新增的高風險函式。
-- □ 看 `MUTATION-REPORT.md` 的 M4 範圍（`backend/core/ma.js`）與建議新增的規格範例。
+- ✅ 看 `MUTATION-REPORT.md` 的 M4 範圍（`backend/core/ma.js`）與建議新增的規格範例。（M4-S18～S22 已採用）
 - □ 看 `SECURITY-REPORT.md` 與依賴套件稽核結果（需連網，代理人不做）。
 - □ 跑 `DEVICE-CHECKLIST-M4.md` 的手機實測。
 - □ 開場台詞的語感、說明比喻是否好懂（使用者本人判斷）。

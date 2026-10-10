@@ -36,3 +36,11 @@
 2. 手機實測：DEVICE-CHECKLIST-M4.md 共 15 項。
 3. 決定是否採用 MUTATION-REPORT.md 建議的 M4-S18～S22。
 4. 單檔取得失敗的卡片（標籤「沒拿到」）原型沒畫，依 `design/prototype/screens.md` 實作，實機看過再決定要不要補原型。
+
+## 6. 追加：M4-S18～S22 與部署（2026-10-10）
+
+- 使用者採用 MUTATION-REPORT.md 建議的 M4-S18～S22，新增 `backend/tests/spec/m4/ma-edge.test.js` 並重新凍結（`ec20954`）；`verify.sh` 的 `FROZEN_HASH`、V05、V26 下限已更新。
+- 五列中只有 M4-S21 需要改程式：收盤價含非數字時，`averageLast` 回傳 null、`computeStock` 整檔算資料不足（原本會算出 NaN）。其餘四列原實作就符合。
+- `./verify.sh --full` 重跑全綠（backend 556 個測試）。
+- 部署：已對遠端 D1 `pet-maid-db` 套用 `worker/schema.sql`（新增三張表 `ma_watch`、`ma_close`、`ma_result`），並 `wrangler deploy` 部署 `pet-maid-api`（版本 `a3edac81-ffb2-4073-897f-79948ffd7244`，排程 `0 * * * *`、`30 0 * * *`）。
+- 部署後檢查：`/config/ma-glossary.json` 與 `/web/ma`（`/web/ma.html` 會 307 轉到 `/web/ma`，與聊天頁相同行為）回 200，`/api/ma/report` 無密鑰回 401。尚未用真實密鑰與證交所資料實測，那一步屬於手機實測。
