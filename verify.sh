@@ -214,7 +214,7 @@ if [ "$CORE_ONLY" -eq 0 ]; then
   CHAT_KT=app/src/main/java/com/accompany/pet/ChatActivity.kt
   OVERLAY_KT=app/src/main/java/com/accompany/pet/OverlayService.kt
   [ -f "$CHAT_KT" ] || fail "V07 找不到 ChatActivity.kt"
-  LOADS=$(grep -rhoE 'loadUrl\([^)]*\)' app/src --exclude=ChatActivity.kt || true)
+  LOADS=$(grep -rhoE 'loadUrl\([^)]*\)' app/src --exclude=ChatActivity.kt --exclude=MaActivity.kt || true)  # MaActivity 的 loadUrl 由 V33 檢查
   [ -n "$LOADS" ] || fail "V07 找不到 loadUrl"
   while IFS= read -r line; do
     case "$line" in
