@@ -90,3 +90,28 @@ M0-S15 修訂版取代 `SpecTest.kt` 內的 S15，函式名稱開頭仍為 `S15`
 | M16-S13 | 自動＋手機 | m16/overlay.test.js：`M16-S13 演出中又來一則時第一則照常演完才開始演第二則` |
 | M16-S14 | 自動＋手機 | m16/overlay.test.js：`M16-S14 演出被打斷時直接跳到演完泡泡顯示全部完整台詞且換回平常的臉` |
 | M16-S15 | 自動 | m16/overlay.test.js：`M16-S15 同一句帶標籤的台詞懸浮窗和聊天網頁解析出的文字與換臉位置完全一樣`；另有 V27 |
+## M4.1
+
+規格範例表 docs/M4.1-EXPENSIVE-PLAN.md §4.5 → 測試位置（T0b 後凍結）。
+- Kotlin：`core/src/test/kotlin/com/accompany/pet/spec/m41/M41SpecTest.kt`（類別 `M41SpecTest`）
+- JS：`backend/tests/spec/m41/ma-back.test.js`
+
+| 編號 | 驗證 | 測試檔與函式名稱 |
+|---|---|---|
+| M41-S01 | 自動 | M41SpecTest.kt：`M41-S01 最近一份報告是 10月12日（週一），資料正常，多頭 1 檔、空頭 1 檔、其他 3 檔` |
+| M41-S02 | 自動 | M41SpecTest.kt：`M41-S02 最近一份報告是 10月16日（週五），資料正常，多頭 2 檔、空頭 0 檔、其他 0 檔` |
+| M41-S03 | 自動 | M41SpecTest.kt：`M41-S03 伺服器回報「今天的資料沒拿到」（證交所取得失敗），副標顯示「今天的資料沒拿到，點了可重試」，不顯示任何檔數` |
+| M41-S04 | 自動＋手機 | M41SpecTest.kt：`M41-S04 App 連不上伺服器（沒網路或逾時），副標顯示「今天的資料沒拿到，點了可重試」，卡片仍可點`；手機見 DEVICE-CHECKLIST-M4.1.md D11 |
+| M41-S05 | 自動 | M41SpecTest.kt：`M41-S05 追蹤清單是空的，副標顯示「還沒有追蹤標的，點了去加入」` |
+| M41-S06 | 自動＋手機 | M41SpecTest.kt：`M41-S06 清單有標的但還沒有任何報告，副標顯示還沒有報告，明天 08點30 會送來`；手機見 DEVICE-CHECKLIST-M4.1.md D10 |
+| M41-S07 | 自動＋手機 | M41SpecTest.kt：`M41-S07 App 還沒設定連線（沒有聊天網址或存取密鑰），副標顯示「尚未設定連線」，不連線`；手機見 DEVICE-CHECKLIST-M4.1.md；接線見 V40 |
+| M41-S08 | 自動＋手機 | M41SpecTest.kt：`M41-S08 資料還沒回來的那段時間，副標顯示「正在取得今天的資料…」`；手機見 DEVICE-CHECKLIST-M4.1.md |
+| M41-S09 | 自動 | M41SpecTest.kt：`M41-S09 伺服器回的內容怪怪的（狀態不認得，或檔數是負數、不是數字），副標顯示「今天的資料沒拿到，點了可重試」，不顯示怪數字` |
+| M41-S10 | 手機 | 見 DEVICE-CHECKLIST-M4.1.md D07；接線見 V40 |
+| M41-S11 | 自動＋手機 | ma-back.test.js：`M41-S11 在明細頁（今天分頁）按畫面左上的「‹」，關閉明細頁，回到進來的地方`；手機見 DEVICE-CHECKLIST-M4.1.md D08；接線見 V41 |
+| M41-S12 | 自動 | ma-back.test.js：`M41-S12 在追蹤清單頁或看懂排列頁按畫面左上的「‹」，只是回到明細頁，不關閉明細頁`；手機見 DEVICE-CHECKLIST-M4.1.md D09 |
+| M41-S13 | 手機 | 見 DEVICE-CHECKLIST-M4.1.md D13；接線見 V40 |
+| M41-S14 | 自動＋手機 | M41SpecTest.kt：`M41-S14 聊天網址沒設定，在主畫面點「聊聊」卡片，不開聊天畫面，顯示現有的「尚未設定」訊息`；手機見 DEVICE-CHECKLIST-M4.1.md D15 |
+| M41-S15 | 手機 | 見 DEVICE-CHECKLIST-M4.1.md D10；接線見 V40 |
+
+> 註：T0b 凍結時尚未建立 MaEntry.kt，Kotlin 規格測試尚未編譯通過、JS 規格測試尚未通過，屬正常狀態。
