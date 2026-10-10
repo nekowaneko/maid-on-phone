@@ -1,0 +1,534 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>F3 盤前均線原型</title>
+<style>
+/* 版面：左欄放控制與核心路徑，右欄是 375px 手機框；窄螢幕改為上下堆疊 */
+:root {
+  --bg: #eef0f3;
+  --fg: #1d2330;
+  --muted: #5d6677;
+  --card: #ffffff;
+  --line: #d3d8e0;
+  --accent: #0a6ad8;
+  --accent-fg: #ffffff;
+  --ok: #1b7f4b;
+  --warn-bg: #fff4d6;
+  --warn-fg: #6b4a00;
+  --font: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+  --mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* 手機螢幕內（App 現況色，來自 colors／drawable／index.html，不隨網頁主題變） */
+  --p-wall-1: #1c1c24;
+  --p-wall-2: #2b2142;
+  --p-glass: rgba(255, 255, 255, 0.10);
+  --p-glass-line: rgba(255, 255, 255, 0.20);
+  --p-text: #ffffff;
+  --p-sub: rgba(235, 235, 245, 0.62);
+  --p-blue: #0a84ff;
+  --p-bubble: rgba(255, 255, 255, 0.95);
+  --p-ink: #222222;
+  --pk-mic: #ff8fab;
+  --pk-chat: #8fb8ff;
+  --pk-resist: #8fd3a8;
+  --pk-hist: #ffd166;
+  --pk-ma: #c9b0ff;
+  --p-up: #ff6b6b;
+  --p-down: #4cd08a;
+  --p-flat: #c8ccd8;
+  --ma5: #ffd166;
+  --ma20: #8fb8ff;
+  --ma60: #c9b0ff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14171d; --fg: #e8ebf1; --muted: #9aa3b5; --card: #1e232c; --line: #323945;
+    --accent: #6aa8ff; --accent-fg: #0d1522; --ok: #5ccf94; --warn-bg: #3a2f10; --warn-fg: #f2d58a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14171d; --fg: #e8ebf1; --muted: #9aa3b5; --card: #1e232c; --line: #323945;
+  --accent: #6aa8ff; --accent-fg: #0d1522; --ok: #5ccf94; --warn-bg: #3a2f10; --warn-fg: #f2d58a;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font-family: var(--font); line-height: 1.6; padding-inline: 16px; padding-block: 20px 40px; }
+h1 { font-size: 1.35rem; margin: 0; text-wrap: balance; }
+h2 { font-size: 0.8rem; letter-spacing: 0.08em; color: var(--muted); margin: 0 0 8px; text-transform: uppercase; font-weight: 600; }
+p { margin: 0; }
+button { font: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.wrap { max-width: 1120px; margin-inline: auto; display: grid; grid-template-columns: minmax(0, 1fr) 375px; gap: 28px; align-items: start; }
+.head { grid-column: 1 / -1; display: grid; gap: 4px; }
+.head p { color: var(--muted); max-width: 70ch; }
+.side { display: grid; gap: 18px; min-width: 0; }
+.panel { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; min-width: 0; }
+
+.seg { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line); background: var(--bg); color: var(--fg); padding: 6px 12px; border-radius: 8px; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); font-weight: 600; }
+.ctl { display: grid; gap: 12px; }
+.ctl-row { display: grid; gap: 6px; }
+.ctl-row > span { font-size: 0.85rem; color: var(--muted); }
+.replay { border: 1px solid var(--line); background: var(--card); color: var(--fg); padding: 6px 12px; border-radius: 8px; justify-self: start; }
+
+.ver-note { font-size: 0.92rem; }
+.ver-note b { color: var(--accent); }
+
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+ol.steps li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; font-size: 0.92rem; color: var(--muted); }
+ol.steps li .dot { width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--line); display: grid; place-items: center; font-size: 12px; margin-top: 2px; }
+ol.steps li.done { color: var(--fg); }
+ol.steps li.done .dot { background: var(--ok); border-color: var(--ok); color: #fff; }
+ol.steps li.now { color: var(--fg); font-weight: 600; }
+ol.steps li.now .dot { border-color: var(--accent); }
+
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 0.85rem; min-width: 460px; }
+th, td { border-bottom: 1px solid var(--line); padding: 6px 8px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+tr.cur td, tr.cur th { }
+td.cur, th.cur { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.flag { background: var(--warn-bg); color: var(--warn-fg); border-radius: 10px; padding: 10px 12px; font-size: 0.88rem; }
+.flag b { display: block; margin-bottom: 2px; }
+
+/* ===== 手機框 ===== */
+.phone-col { position: sticky; top: 16px; }
+.phone { width: 375px; max-width: 100%; height: 760px; border-radius: 34px; border: 8px solid #0b0c10; background: #000; position: relative; overflow: hidden; margin-inline: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.25); }
+.screen { position: absolute; inset: 0; overflow: hidden; background: linear-gradient(160deg, var(--p-wall-1), var(--p-wall-2)); color: var(--p-text); font-family: var(--font); }
+.sbar { position: absolute; top: 0; left: 0; right: 0; height: 28px; display: flex; justify-content: space-between; align-items: center; padding-inline: 20px; font-size: 12px; z-index: 40; pointer-events: none; }
+.launcher { position: absolute; inset: 56px 18px auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px 10px; opacity: 0.55; }
+.launcher i { display: block; aspect-ratio: 1; border-radius: 16px; background: rgba(255,255,255,0.22); }
+.launcher span { display: block; text-align: center; font-size: 10px; margin-top: 4px; font-style: normal; }
+.launcher div { display: block; }
+
+/* 通知欄卡片（角色模式關） */
+.shade { position: absolute; top: 34px; left: 10px; right: 10px; z-index: 30; background: rgba(250,250,252,0.96); color: #1d2330; border-radius: 16px; padding: 10px 12px; display: grid; grid-template-columns: 36px 1fr; gap: 10px; text-align: left; border: 0; width: calc(100% - 20px); }
+.shade .ic { width: 36px; height: 36px; border-radius: 50%; background: var(--pk-mic); display: grid; place-items: center; font-size: 18px; }
+.shade small { color: #667; font-size: 11px; }
+.shade b { display: block; font-size: 13px; }
+.shade span.t { display: block; font-size: 12.5px; color: #333; }
+
+/* 懸浮角色（照 pet/index.html：角色 96×108、泡泡寬 156） */
+.overlay { position: absolute; right: 6px; bottom: 110px; z-index: 20; display: flex; flex-direction: row; align-items: flex-end; justify-content: flex-end; font-family: sans-serif; }
+.bubble { box-sizing: border-box; width: 156px; max-height: 240px; margin: 0 4px; padding: 6px 8px; background: var(--p-bubble); border-radius: 12px; color: var(--p-ink); font-size: 13px; line-height: 1.35; display: flex; flex-direction: column; gap: 6px; overflow: hidden; }
+.bubble .txt { white-space: pre-wrap; word-break: break-all; min-height: 1em; flex: 1 1 auto; overflow-y: auto; }
+.bubble .sum { display: flex; flex-wrap: wrap; gap: 4px; flex: 0 0 auto; }
+.bubble .sum span { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: #eef0f4; }
+.bubble .sum .u { background: #ffe0e0; } .bubble .sum .d { background: #d6f3e4; }
+.bubble .row { display: flex; flex-wrap: wrap; gap: 4px; flex: 0 0 auto; }
+.bubble .row.f3 button { border: 1px solid #8fb8ff; border-radius: 12px; padding: 3px 8px; background: #fff; color: #222; font-size: 12px; }
+.bubble .row.act { gap: 6px; }
+.bubble .row.act button { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
+.bubble .b-mic { background: var(--pk-mic); } .bubble .b-chat { background: var(--pk-chat); }
+.bubble .b-resist { background: var(--pk-resist); } .bubble .b-hist { background: var(--pk-hist) !important; color: #222 !important; }
+.bubble .b-ma { background: var(--pk-ma) !important; color: #222 !important; outline: 2px dashed #7b5cd6; outline-offset: 1px; }
+.pet { width: 96px; height: 108px; border: 0; background: transparent; padding: 0; flex: 0 0 auto; }
+.pet svg { width: 100%; height: 100%; display: block; }
+.newtag { position: absolute; right: 8px; bottom: 50px; font-size: 10px; color: #c9b0ff; z-index: 19; }
+
+/* 全螢幕頁（明細／管理） */
+.sheet { position: absolute; inset: 0; z-index: 35; background: linear-gradient(160deg, var(--p-wall-1), var(--p-wall-2)); display: flex; flex-direction: column; transform: translateY(0); transition: transform 0.22s ease; padding-top: 28px; }
+.sheet[hidden] { display: none !important; }
+.bar { display: flex; align-items: center; gap: 8px; padding: 6px 12px; min-height: 48px; }
+.bar h3 { font-size: 16px; margin: 0; flex: 1; text-wrap: balance; }
+.ibtn { border: 1px solid var(--p-glass-line); background: var(--p-glass); color: var(--p-text); border-radius: 12px; min-height: 36px; padding: 0 12px; font-size: 13px; }
+.ibtn.sq { width: 36px; padding: 0; }
+.body { flex: 1; overflow-y: auto; padding: 4px 14px 16px; display: grid; gap: 10px; align-content: start; }
+.sub { font-size: 12px; color: var(--p-sub); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12px; padding: 2px 10px; border-radius: 10px; background: var(--p-glass); border: 1px solid var(--p-glass-line); }
+.tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; background: var(--p-glass); border-radius: 12px; padding: 3px; }
+.tabs button { border: 0; background: transparent; color: var(--p-sub); border-radius: 10px; min-height: 34px; font-size: 13px; }
+.tabs button[aria-selected="true"] { background: var(--p-blue); color: #fff; font-weight: 600; }
+.card { background: var(--p-glass); border: 1px solid var(--p-glass-line); border-radius: 18px; padding: 12px 14px; display: grid; gap: 8px; }
+.card.pend { opacity: 0.7; }
+.ctop { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ctop .nm { font-weight: 600; font-size: 15px; }
+.ctop .cd { font-family: var(--mono); font-size: 12px; color: var(--p-sub); margin-right: 6px; }
+.tag { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 10px; white-space: nowrap; color: #14161c; }
+.tag.u { background: var(--p-up); } .tag.d { background: var(--p-down); } .tag.m { background: var(--p-flat); }
+.desc { font-size: 13px; color: var(--p-text); }
+.ma { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; }
+.ma .pill { padding: 1px 8px; border-radius: 8px; color: #14161c; font-variant-numeric: tabular-nums; }
+.ma .gt { color: var(--p-sub); }
+.disc { font-size: 12px; color: var(--p-sub); text-align: center; padding: 6px 0 2px; }
+.note { border: 1px dashed var(--p-glass-line); border-radius: 14px; padding: 14px; font-size: 13px; display: grid; gap: 10px; justify-items: start; }
+.btn { border: 0; background: var(--p-blue); color: #fff; border-radius: 12px; min-height: 38px; padding: 0 16px; font-size: 14px; }
+.btn.ghost { background: var(--p-glass); border: 1px solid var(--p-glass-line); }
+.skel { height: 92px; border-radius: 18px; background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.16), rgba(255,255,255,0.06)); background-size: 200% 100%; animation: sh 1.2s linear infinite; }
+@keyframes sh { to { background-position: -200% 0; } }
+
+.mx { width: 100%; border-collapse: separate; border-spacing: 3px; min-width: 0; font-size: 12px; }
+.mx th { border: 0; color: var(--p-sub); font-weight: 400; padding: 0; text-align: center; font-size: 11px; }
+.mx th.l, .mx td.l { text-align: left; white-space: nowrap; width: 76px; }
+.mx td { border: 0; padding: 0; }
+.cell { width: 100%; height: 32px; border: 2px solid transparent; border-radius: 8px; font-size: 12px; font-weight: 600; color: #14161c; }
+.cell.u { background: var(--p-up); } .cell.d { background: var(--p-down); } .cell.m { background: var(--p-flat); }
+.cell.chg { border-color: #fff; }
+.cell.sel { box-shadow: 0 0 0 2px var(--p-blue); }
+.cell:disabled { background: transparent; color: var(--p-sub); border: 1px dashed var(--p-glass-line); }
+.readout { min-height: 44px; font-size: 13px; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--p-sub); align-items: center; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 4px; vertical-align: -2px; margin-right: 4px; }
+.legend i.ring { background: transparent; border: 2px solid #fff; }
+
+.mrow { background: var(--p-glass); border: 1px solid var(--p-glass-line); border-radius: 14px; padding: 8px 8px 8px 14px; display: flex; align-items: center; gap: 8px; }
+.mrow .mi { flex: 1; min-width: 0; }
+.mrow .mi small { display: block; color: var(--p-sub); font-size: 11px; }
+.addf { display: flex; gap: 8px; }
+.addf input { flex: 1; min-width: 0; min-height: 40px; border-radius: 12px; border: 1px solid var(--p-glass-line); background: rgba(0,0,0,0.25); color: #fff; padding: 0 12px; font: inherit; font-size: 14px; }
+.err { color: #ffb4b4; font-size: 12.5px; min-height: 18px; }
+.snack { position: absolute; left: 12px; right: 12px; bottom: 16px; z-index: 50; background: #f1f2f6; color: #1d2330; border-radius: 12px; padding: 8px 12px; font-size: 13px; display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.snack button { border: 0; background: transparent; color: #0a5fc4; font-weight: 700; font-size: 13px; min-height: 32px; }
+
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); }
+  .phone-col { position: static; order: -1; }
+  .phone { height: 720px; }
+}
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+@media (prefers-reduced-motion: reduce) { .skel { animation: none; } .sheet { transition: none; } }
+</style>
+
+<main class="wrap">
+  <header class="head">
+    <h1>F3 盤前均線：三種介面深度</h1>
+    <p>泡泡、角色、按鈕照目前 <code>pet/index.html</code> 的樣子畫；明細頁沿用 App 主畫面的深色玻璃風格。資料全是範例，不是真實行情。切換 A／B／C，右邊手機實際點一遍。</p>
+  </header>
+
+  <section class="side" aria-label="控制與說明">
+    <div class="panel ctl">
+      <div class="ctl-row"><span>介面深度</span>
+        <div class="seg" id="verSeg" role="group" aria-label="介面深度">
+          <button type="button" data-v="A" aria-pressed="true">A 只看報告</button>
+          <button type="button" data-v="B" aria-pressed="false">B 看報告＋管理清單</button>
+          <button type="button" data-v="C" aria-pressed="false">C B＋歷史</button>
+        </div>
+      </div>
+      <div class="ctl-row"><span>角色模式（快速設定磚）</span>
+        <div class="seg" id="roleSeg" role="group" aria-label="角色模式">
+          <button type="button" data-r="on" aria-pressed="true">開：角色出現說話</button>
+          <button type="button" data-r="off" aria-pressed="false">關：一般通知</button>
+        </div>
+      </div>
+      <div class="ctl-row"><span>資料狀態</span>
+        <div class="seg" id="dataSeg" role="group" aria-label="資料狀態">
+          <button type="button" data-d="ok" aria-pressed="true">正常</button>
+          <button type="button" data-d="loading" aria-pressed="false">載入中</button>
+          <button type="button" data-d="error" aria-pressed="false">取得失敗</button>
+          <button type="button" data-d="empty" aria-pressed="false">清單是空的</button>
+        </div>
+      </div>
+      <button type="button" class="replay" id="replay">▶ 重播 08:30 推播</button>
+      <p class="ver-note" id="verNote"></p>
+    </div>
+
+    <div class="panel">
+      <h2>核心路徑（點過會打勾）</h2>
+      <ol class="steps" id="steps"></ol>
+    </div>
+
+    <div class="panel">
+      <h2>三版差異</h2>
+      <div class="tbl"><table id="cmp"></table></div>
+    </div>
+
+    <div class="flag" role="note">
+      <b>需要你決定的兩件事</b>
+      1. 規格 §3.4 寫「任何刪除第一版不提供」。B／C 的「停止追蹤」會把標的移出清單，原型做成 6 秒內可復原。這算不算刪除？<br />
+      2. 「📈 盤前均線」是新增在泡泡常駐按鈕列的第 5 顆（虛線框那顆）。泡泡只有 156px 寬，按鈕會更擠，要不要改成別的入口？
+    </div>
+  </section>
+
+  <section class="phone-col" aria-label="手機預覽">
+    <div class="phone" id="phone"></div>
+  </section>
+</main>
+
+<script>
+(function () {
+  // ===== 範例資料（假資料；題材名稱與數字都不是真實行情）=====
+  var DAYS = ['10/1', '10/2', '10/5', '10/6', '10/7', '10/8', '10/9'];
+  var UNIVERSE = { '2330': '台積電', '2317': '鴻海', '0050': '元大台灣50', '2454': '聯發科', '2603': '長榮',
+    '2412': '中華電', '2881': '富邦金', '2882': '國泰金', '3008': '大立光', '00878': '國泰永續高股息' };
+  var SHORT = { '0050': '元大50', '00878': '永續高息' };
+  var LIMIT = 10;
+  var LBL = { U: '多頭排列', D: '空頭排列', M: '其他' };
+  var BASE = [
+    { code: '2330', ma: [1085, 1060, 1020], label: 'U', desc: '5 > 20 > 60，三條線依序往上排。', hist: 'UUUUUUU' },
+    { code: '2317', ma: [212, 218, 225], label: 'D', desc: '60 > 20 > 5，三條線依序往下排。', hist: 'MMDDDDD' },
+    { code: '0050', ma: [188.2, 186.5, 187.4], label: 'M', desc: '5 日線站上 60 日線，20 日線仍在最下，短線反彈。', hist: 'UUMMMMM' },
+    { code: '2454', ma: [1320, 1335, 1280], label: 'M', desc: '5 日線跌破 20 日線，短線轉弱。', hist: 'UUUUUMM' },
+    { code: '2603', ma: [190, 185, 200], label: 'M', desc: '5 日線站上 20 日線，仍在 60 日線下方，築底回升。', hist: 'DDDMMMM' }
+  ];
+  var OPENING = '主人早安～今天的均線我整理好了。';
+  var MENU_LINE = '找我有事嗎？';
+
+  var COMPARE = [
+    ['項目', 'A', 'B', 'C'],
+    ['08:30 看開場與摘要', '✓', '✓', '✓'],
+    ['看每檔排列與描述', '✓', '✓', '✓'],
+    ['錯過後從角色再看', '✓', '✓', '✓'],
+    ['新增、停止追蹤標的', '改設定檔', '✓ 畫面操作', '✓ 畫面操作'],
+    ['回看過去幾天的變化', '—', '—', '✓ 近 7 個交易日'],
+    ['後端要加的東西（預估）', '今日報告 1 支 API', '＋清單讀寫 API、D1 清單表', '＋每日結果存 D1']
+  ];
+  var VERNOTE = {
+    A: '<b>A</b>：泡泡說開場，點「看明細」展開清單。標的由設定檔管理。',
+    B: '<b>B</b>：A＋明細右上「追蹤清單」，可新增、停止追蹤（可復原）。',
+    C: '<b>C</b>：B＋明細頁多一個「歷史」分頁，看近 7 個交易日的排列變化。'
+  };
+  var STEPS = {
+    A: [['push', '08:30 推播到：角色出現並說開場（通知模式則出現通知）'], ['open', '點「看明細」（或點通知）進入明細'], ['back', '按返回，回到桌面'], ['reopen', '錯過時：點角色，再按「📈 盤前均線」回到同一份報告']],
+    B: [['push', '08:30 推播到：角色出現並說開場（通知模式則出現通知）'], ['open', '點「看明細」（或點通知）進入明細'], ['manage', '點右上「追蹤清單」'], ['add', '輸入代號或名稱，加入一檔'], ['remove', '停止追蹤一檔，再按「復原」'], ['back', '返回明細，再返回桌面'], ['reopen', '點角色，再按「📈 盤前均線」回到同一份報告']],
+    C: [['push', '08:30 推播到：角色出現並說開場（通知模式則出現通知）'], ['open', '點「看明細」（或點通知）進入明細'], ['history', '切到「歷史」分頁'], ['cell', '點矩陣中的一格，看當天排列'], ['manage', '點右上「追蹤清單」，加入或停止追蹤一檔'], ['add', '輸入代號或名稱，加入一檔'], ['reopen', '返回後，點角色，再按「📈 盤前均線」回到同一份報告']]
+  };
+
+  // ===== 狀態 =====
+  var S = { v: 'A', role: 'on', data: 'ok', screen: 'home', tab: 'today', bubble: 'report', stocks: [], done: {}, sel: null, undo: null, addErr: '' };
+  var typeTimer = null, snackTimer = null, loadTimer = null;
+  var phone = document.getElementById('phone');
+
+  function resetStocks() {
+    S.stocks = BASE.map(function (b) { return { code: b.code, ma: b.ma, label: b.label, desc: b.desc, hist: b.hist, pending: false }; });
+  }
+  function esc(t) { var d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
+  function nameOf(c) { return UNIVERSE[c] || c; }
+  function shortOf(c) { return SHORT[c] || nameOf(c); }
+  function mark(ev) { S.done[ev] = true; renderSteps(); }
+  function counts() {
+    var c = { U: 0, D: 0, M: 0 };
+    S.stocks.forEach(function (s) { if (!s.pending) c[s.label] += 1; });
+    return c;
+  }
+  function hasMgmt() { return S.v !== 'A'; }
+
+  // ===== 手機內畫面 =====
+  function petSvg() {
+    return '<svg viewBox="0 0 96 108" role="img" aria-label="角色預覽圖（實際為角色立繪）"><path d="M18 40 L26 10 L44 28 Z M78 40 L70 10 L52 28 Z" fill="#f4b8c8"/><ellipse cx="48" cy="58" rx="34" ry="30" fill="#ffe3d6"/><rect x="22" y="80" width="52" height="26" rx="10" fill="#7d86c9"/><circle cx="36" cy="56" r="3.2" fill="#3a2f3a"/><circle cx="60" cy="56" r="3.2" fill="#3a2f3a"/><path d="M42 68 Q48 73 54 68" stroke="#b5606c" stroke-width="2.4" fill="none" stroke-linecap="round"/></svg>';
+  }
+
+  function summaryHtml() {
+    var c = counts();
+    return '<div class="sum"><span class="u">多頭 ' + c.U + '</span><span class="d">空頭 ' + c.D + '</span><span>其他 ' + c.M + '</span></div>';
+  }
+
+  function bubbleHtml() {
+    var f3 = '', text = '', sum = '';
+    if (S.bubble === 'report') {
+      if (S.data === 'error') {
+        text = '';
+        f3 = '<div class="row f3"><button type="button" data-a="dismiss">知道了</button></div>';
+      } else if (S.data === 'empty') {
+        f3 = hasMgmt() ? '<div class="row f3"><button type="button" data-a="gomanage">加入標的</button><button type="button" data-a="dismiss">晚點再說</button></div>' : '<div class="row f3"><button type="button" data-a="dismiss">知道了</button></div>';
+      } else {
+        sum = summaryHtml();
+        f3 = '<div class="row f3"><button type="button" data-a="open">看明細</button><button type="button" data-a="dismiss">晚點再看</button></div>';
+      }
+    }
+    return '<div class="bubble" id="bubble"><div class="txt" id="btxt" aria-live="polite"></div>' + sum + f3 +
+      '<div class="row act"><button type="button" class="b-mic" data-a="noop">🎤 說話</button><button type="button" class="b-chat" data-a="noop">💬 聊聊</button><button type="button" class="b-resist" data-a="noop">沒喝</button><button type="button" class="b-hist" data-a="noop">📊 戒飲歷史</button><button type="button" class="b-ma" data-a="reopen">📈 盤前均線</button></div></div>';
+  }
+  function bubbleText() {
+    if (S.bubble === 'menu') return MENU_LINE;
+    if (S.data === 'error') return '證交所的資料今天沒拿到，我晚點再試一次。';
+    if (S.data === 'empty') return hasMgmt() ? '追蹤清單還是空的，先告訴我要看哪幾檔吧。' : '追蹤清單還是空的，要先在設定檔裡加入標的。';
+    return OPENING;
+  }
+  function typeInto(el, text) {
+    clearInterval(typeTimer);
+    el.textContent = '';
+    var i = 0;
+    typeTimer = setInterval(function () {
+      i += 1; el.textContent = text.slice(0, i);
+      if (i >= text.length) clearInterval(typeTimer);
+    }, 40);
+  }
+
+  function shadeHtml() {
+    var body = S.data === 'error' ? '證交所的資料今天沒拿到，我晚點再試一次。' : (S.data === 'empty' ? '追蹤清單還是空的。' : OPENING + ' 多頭 ' + counts().U + '、空頭 ' + counts().D + '、其他 ' + counts().M + '。');
+    return '<button type="button" class="shade" data-a="shade"><span class="ic">🐾</span><span><small>陪伴角色 · 現在</small><b>盤前均線 10/12（一）</b><span class="t">' + esc(body) + '</span></span></button>';
+  }
+
+  function maHtml(s) {
+    var arr = [{ k: '5日', v: s.ma[0], c: 'var(--ma5)' }, { k: '20日', v: s.ma[1], c: 'var(--ma20)' }, { k: '60日', v: s.ma[2], c: 'var(--ma60)' }];
+    arr.sort(function (a, b) { return b.v - a.v; });
+    var label = '由高到低：' + arr.map(function (a) { return a.k + ' ' + a.v; }).join('、');
+    return '<div class="ma" role="img" aria-label="' + esc(label) + '">' + arr.map(function (a) { return '<span class="pill" style="background:' + a.c + '">' + a.k + ' ' + a.v + '</span>'; }).join('<span class="gt" aria-hidden="true">›</span>') + '</div>';
+  }
+  function cardHtml(s) {
+    if (s.pending) {
+      return '<article class="card pend"><div class="ctop"><div><span class="cd">' + s.code + '</span><span class="nm">' + esc(nameOf(s.code)) + '</span></div><span class="tag m">明天納入</span></div><p class="desc">剛加入，下一個交易日 08:30 起出現在報告裡。</p></article>';
+    }
+    return '<article class="card"><div class="ctop"><div><span class="cd">' + s.code + '</span><span class="nm">' + esc(nameOf(s.code)) + '</span></div><span class="tag ' + s.label.toLowerCase() + '">' + LBL[s.label] + '</span></div><p class="desc">' + esc(s.desc) + '</p>' + maHtml(s) + '</article>';
+  }
+
+  function todayHtml() {
+    if (S.data === 'loading') return '<div class="skel"></div><div class="skel"></div><div class="skel"></div>';
+    if (S.data === 'error') return '<div class="note"><p>證交所的資料沒有拿到，所以今天的排列算不出來。</p><button type="button" class="btn" data-a="retry">重試</button></div>';
+    if (S.data === 'empty' || S.stocks.length === 0) {
+      return hasMgmt() ? '<div class="note"><p>追蹤清單是空的。</p><button type="button" class="btn" data-a="gomanage">加入第一檔</button></div>' : '<div class="note"><p>追蹤清單是空的。</p><p class="sub">這一版的清單在設定檔裡，加入標的後下一個交易日起會有報告。</p></div>';
+    }
+    var c = counts();
+    return '<div class="chips"><span class="chip">多頭 ' + c.U + '</span><span class="chip">空頭 ' + c.D + '</span><span class="chip">其他 ' + c.M + '</span></div>' + S.stocks.map(cardHtml).join('') + '<p class="disc">僅供參考，非投資建議。</p>';
+  }
+
+  function historyHtml() {
+    var list = (S.data === 'empty') ? [] : S.stocks;
+    if (S.data === 'loading') return '<div class="skel"></div><div class="skel"></div>';
+    if (S.data === 'error') return '<div class="note"><p>歷史資料沒有拿到。</p><button type="button" class="btn" data-a="retry">重試</button></div>';
+    if (list.length === 0) return '<div class="note"><p>還沒有歷史。</p><p class="sub">從第一次送出報告的那天起開始累積。</p></div>';
+    var head = '<tr><th class="l"></th>' + DAYS.map(function (d) { return '<th>' + d + '</th>'; }).join('') + '</tr>';
+    var rows = list.map(function (s) {
+      var cells = DAYS.map(function (d, i) {
+        if (s.pending) return '<td><button type="button" class="cell" disabled>—</button></td>';
+        var ch = s.hist.charAt(i), prev = i > 0 ? s.hist.charAt(i - 1) : ch;
+        var cls = 'cell ' + ch.toLowerCase() + (ch !== prev ? ' chg' : '') + (S.sel && S.sel.c === s.code && S.sel.i === i ? ' sel' : '');
+        var lab = shortOf(s.code) + ' ' + d + ' ' + LBL[ch] + (ch !== prev ? '，由' + LBL[prev] + '轉入' : '');
+        return '<td><button type="button" class="' + cls + '" data-a="cell" data-c="' + s.code + '" data-i="' + i + '" aria-label="' + esc(lab) + '">' + ({ U: '多', D: '空', M: '其' })[ch] + '</button></td>';
+      }).join('');
+      return '<tr><td class="l">' + s.code + '<br><span class="sub">' + esc(shortOf(s.code)) + '</span></td>' + cells + '</tr>';
+    }).join('');
+    var ro = '點一格看當天的排列。';
+    if (S.sel) {
+      var st = S.stocks.filter(function (x) { return x.code === S.sel.c; })[0];
+      var ch2 = st.hist.charAt(S.sel.i), pv = S.sel.i > 0 ? st.hist.charAt(S.sel.i - 1) : ch2;
+      ro = S.sel.d + ' ' + st.code + ' ' + nameOf(st.code) + '：' + LBL[ch2] + (ch2 !== pv ? '（前一天是' + LBL[pv] + '）' : '（和前一天相同）') + '。';
+    }
+    return '<table class="mx">' + head + rows + '</table><div class="legend"><span><i style="background:var(--p-up)"></i>多頭</span><span><i style="background:var(--p-down)"></i>空頭</span><span><i style="background:var(--p-flat)"></i>其他</span><span><i class="ring"></i>當天轉換</span></div><div class="card readout" id="readout" aria-live="polite">' + esc(ro) + '</div><p class="disc">僅供參考，非投資建議。</p>';
+  }
+
+  function detailHtml() {
+    var tabs = '';
+    if (S.v === 'C') {
+      tabs = '<div class="tabs" role="tablist"><button type="button" role="tab" data-a="tab" data-t="today" aria-selected="' + (S.tab === 'today') + '">今天</button><button type="button" role="tab" data-a="tab" data-t="history" aria-selected="' + (S.tab === 'history') + '">歷史</button></div>';
+    }
+    var inner = (S.v === 'C' && S.tab === 'history') ? historyHtml() : todayHtml();
+    return '<div class="bar"><button type="button" class="ibtn sq" data-a="back" aria-label="返回">‹</button><h3>盤前均線</h3>' + (hasMgmt() ? '<button type="button" class="ibtn" data-a="gomanage">追蹤清單</button>' : '') + '</div><div class="body"><p class="sub">10/12（一）08:30 · 依 10/9 收盤計算</p>' + tabs + inner + '</div>';
+  }
+
+  function manageHtml() {
+    var n = S.stocks.length;
+    var rows = S.stocks.map(function (s) {
+      return '<div class="mrow"><div class="mi"><b>' + s.code + ' ' + esc(nameOf(s.code)) + '</b>' + (s.pending ? '<small>明天起納入報告</small>' : '') + '</div><button type="button" class="ibtn" data-a="untrack" data-c="' + s.code + '" aria-label="停止追蹤 ' + s.code + ' ' + esc(nameOf(s.code)) + '">停止追蹤</button></div>';
+    }).join('');
+    if (!rows) rows = '<div class="note"><p>目前沒有追蹤任何標的。</p></div>';
+    return '<div class="bar"><button type="button" class="ibtn sq" data-a="back" aria-label="返回">‹</button><h3>追蹤清單 ' + n + '/' + LIMIT + '</h3></div><div class="body"><form class="addf" id="addForm" autocomplete="off"><input id="addInput" type="text" inputmode="text" placeholder="代號或名稱，例如 2412 或 中華電" aria-label="要追蹤的代號或名稱" aria-describedby="addErr" /><button class="btn" type="submit">加入</button></form><p class="err" id="addErr" role="alert">' + esc(S.addErr) + '</p>' + rows + '<p class="sub">停止追蹤後 6 秒內可以復原。</p></div>';
+  }
+
+  function render() {
+    clearInterval(typeTimer);
+    var showPet = S.role === 'on' || S.screen !== 'home' || S.bubble !== 'none';
+    var html = '<div class="screen"><div class="sbar"><span>' + (S.screen === 'home' && S.bubble === 'report' ? '08:30' : '08:31') + '</span><span>5G ▮▮▮</span></div>' +
+      '<div class="launcher">' + ['訊息', '相機', '地圖', '音樂', '相簿', '時鐘', '設定', '瀏覽器'].map(function (n) { return '<div><i></i><span>' + n + '</span></div>'; }).join('') + '</div>';
+    var inHome = S.screen === 'home';
+    if (S.role === 'off' && inHome && S.bubble === 'report') html += shadeHtml();
+    if (inHome && ((S.role === 'on') || S.bubble === 'menu')) {
+      html += '<div class="overlay">' + (S.bubble === 'none' ? '' : bubbleHtml()) + '<button type="button" class="pet" data-a="pet" aria-label="角色，點一下開關泡泡">' + petSvg() + '</button></div>';
+    }
+    html += '<div class="sheet" id="sheet"' + (inHome ? ' hidden' : '') + '>' + (S.screen === 'detail' ? detailHtml() : (S.screen === 'manage' ? manageHtml() : '')) + '</div>';
+    if (S.undo) html += '<div class="snack" role="status"><span>已停止追蹤 ' + esc(S.undo.code + ' ' + nameOf(S.undo.code)) + '</span><button type="button" data-a="undo">復原</button></div>';
+    html += '</div>';
+    phone.innerHTML = html;
+    var bt = document.getElementById('btxt');
+    if (bt) { var tx = bubbleText(); if (S.bubble === 'report' && S.fresh) { typeInto(bt, tx); } else { bt.textContent = tx; } }
+    S.fresh = false;
+  }
+
+  // ===== 事件 =====
+  function go(screen) { S.screen = screen; S.addErr = ''; render(); }
+  function findStock(c) { return S.stocks.filter(function (s) { return s.code === c; })[0]; }
+
+  function addStock(raw) {
+    var q = raw.trim();
+    if (!q) { S.addErr = '請輸入股票代號或名稱。'; return; }
+    var code = null;
+    Object.keys(UNIVERSE).forEach(function (k) { if (k === q || UNIVERSE[k] === q) code = k; });
+    if (!code) { S.addErr = '查不到「' + q + '」，請輸入證交所的股票代號或完整名稱。'; return; }
+    if (findStock(code)) { S.addErr = code + ' ' + UNIVERSE[code] + ' 已經在追蹤清單裡了。'; return; }
+    if (S.stocks.length >= LIMIT) { S.addErr = '最多追蹤 ' + LIMIT + ' 檔，請先停止追蹤一檔。'; return; }
+    S.stocks.push({ code: code, ma: [0, 0, 0], label: 'M', desc: '', hist: 'MMMMMMM', pending: true });
+    S.addErr = '';
+    if (S.data === 'empty') S.data = 'ok', syncSegs();
+    mark('add');
+  }
+
+  phone.addEventListener('click', function (e) {
+    var t = e.target.closest('[data-a]');
+    if (!t) return;
+    var a = t.getAttribute('data-a');
+    if (a === 'pet') { S.bubble = S.bubble === 'none' ? 'menu' : 'none'; render(); return; }
+    if (a === 'dismiss') { S.bubble = 'none'; render(); return; }
+    if (a === 'open' || a === 'shade') { S.tab = 'today'; S.sel = null; S.bubble = 'none'; mark('open'); go('detail'); return; }
+    if (a === 'reopen') { S.tab = 'today'; S.sel = null; S.bubble = 'none'; mark('reopen'); go('detail'); return; }
+    if (a === 'back') {
+      if (S.screen === 'manage') { go('detail'); mark('back'); return; }
+      S.bubble = 'none'; mark('back'); go('home'); return;
+    }
+    if (a === 'gomanage') { S.bubble = 'none'; mark('manage'); go('manage'); return; }
+    if (a === 'tab') { S.tab = t.getAttribute('data-t'); S.sel = null; if (S.tab === 'history') mark('history'); render(); return; }
+    if (a === 'cell') {
+      var i = parseInt(t.getAttribute('data-i'), 10);
+      S.sel = { c: t.getAttribute('data-c'), i: i, d: DAYS[i] }; mark('cell'); render(); return;
+    }
+    if (a === 'retry') { S.data = 'loading'; syncSegs(); render(); clearTimeout(loadTimer); loadTimer = setTimeout(function () { S.data = 'ok'; syncSegs(); render(); }, 900); return; }
+    if (a === 'untrack') {
+      var c = t.getAttribute('data-c'), idx = -1;
+      S.stocks.forEach(function (s, k) { if (s.code === c) idx = k; });
+      if (idx < 0) return;
+      S.undo = { code: c, idx: idx, item: S.stocks.splice(idx, 1)[0] };
+      mark('removeDone'); clearTimeout(snackTimer);
+      snackTimer = setTimeout(function () { S.undo = null; render(); }, 6000);
+      render(); return;
+    }
+    if (a === 'undo' && S.undo) {
+      S.stocks.splice(S.undo.idx, 0, S.undo.item); S.undo = null; clearTimeout(snackTimer); mark('remove'); render(); return;
+    }
+  });
+  phone.addEventListener('submit', function (e) {
+    e.preventDefault();
+    var inp = document.getElementById('addInput');
+    addStock(inp ? inp.value : '');
+    render();
+    var again = document.getElementById('addInput'); if (again && S.addErr) again.focus();
+  });
+
+  // ===== 控制列 =====
+  function pressed(id, attr, val) {
+    Array.prototype.forEach.call(document.getElementById(id).querySelectorAll('button'), function (b) { b.setAttribute('aria-pressed', String(b.getAttribute(attr) === val)); });
+  }
+  function syncSegs() { pressed('verSeg', 'data-v', S.v); pressed('roleSeg', 'data-r', S.role); pressed('dataSeg', 'data-d', S.data); }
+
+  function renderSteps() {
+    var list = STEPS[S.v], nowSet = false;
+    document.getElementById('steps').innerHTML = list.map(function (st) {
+      var done = !!S.done[st[0]];
+      var cls = done ? 'done' : (!nowSet ? 'now' : ''); if (!done && !nowSet) nowSet = true;
+      return '<li class="' + cls + '"><span class="dot" aria-hidden="true">' + (done ? '✓' : '') + '</span><span>' + esc(st[1]) + (done ? '<span class="sr"> （已完成）</span>' : '') + '</span></li>';
+    }).join('');
+    document.getElementById('verNote').innerHTML = VERNOTE[S.v];
+    var tb = document.getElementById('cmp'), vi = { A: 1, B: 2, C: 3 }[S.v];
+    tb.innerHTML = COMPARE.map(function (r, ri) {
+      return '<tr>' + r.map(function (c, ci) { var tag = ri === 0 ? 'th' : (ci === 0 ? 'th' : 'td'); return '<' + tag + (ci === vi ? ' class="cur"' : '') + '>' + esc(c) + '</' + tag + '>'; }).join('') + '</tr>';
+    }).join('');
+  }
+
+  function replay() {
+    clearTimeout(snackTimer); S.undo = null; S.done = {}; S.screen = 'home'; S.tab = 'today'; S.sel = null; S.addErr = ''; S.bubble = 'report'; S.fresh = true;
+    resetStocks();
+    if (S.data === 'loading') S.data = 'ok';
+    syncSegs(); renderSteps(); render(); mark('push');
+  }
+
+  document.getElementById('verSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.v = b.getAttribute('data-v'); if (S.v === 'A' && S.tab === 'history') S.tab = 'today'; S.done = {}; replay(); });
+  document.getElementById('roleSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.role = b.getAttribute('data-r'); replay(); });
+  document.getElementById('dataSeg').addEventListener('click', function (e) { var b = e.target.closest('button'); if (!b) return; S.data = b.getAttribute('data-d'); syncSegs(); if (S.screen === 'home') { S.bubble = S.bubble === 'none' ? 'none' : 'report'; S.fresh = S.bubble === 'report'; } render(); });
+  document.getElementById('replay').addEventListener('click', replay);
+
+  // 步驟「remove」要求先停止追蹤再復原：removeDone 只是中間狀態
+  replay();
+})();
+</script>
