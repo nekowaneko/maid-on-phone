@@ -56,3 +56,10 @@
 - 三張 D1 表、`/api/ma/*` 四條路由、設定檔五份（`ma-contract.json`、`ma-defaults.json`、`ma-lines.json`、`ma-glossary.json`、`ma-script-prompt.md`）。
 - 載體決定：明細頁是 Worker B 網頁，不新增給遠端網頁用的 JS 介面；原生只多一個 `onMaPressed()`（第 6 個 `@JavascriptInterface`）。
 - 說明文字與免責聲明不經語言模型。
+
+## M4.1 主畫面入口
+
+1. 主畫面新增「盤前均線」「聊聊」兩張摘要大卡片，取代「女僕對話紀錄」小按鈕。
+2. 盤前均線卡片副標由 App 在 `onResume` 透過 `WorkerApi.get("/api/ma/report")` 取得（只讀取，不呼叫 refresh、不推播）；判斷與文字在 `core/ma/MaEntry.kt`（純函式）。
+3. 明細頁關閉機制：網頁導向 `ma-exit://close`（契約檔 `exitUrl`），`MaActivity` 在 `shouldOverrideUrlLoading` 用 `isMaExitUrl` 辨識後 `finish()`；仍不提供任何 JS 介面（A44）。
+4. 聊聊卡片副標是固定句；App 沒有本地對話紀錄。
