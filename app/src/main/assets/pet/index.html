@@ -18,11 +18,18 @@
   /* 只有台詞區捲動；戒飲按鈕與「說話」「聊聊」「沒喝」固定在泡泡底部 */
   #text { white-space: pre-wrap; word-break: break-all; min-height: 1em; flex: 1 1 auto; overflow-y: auto; }
   #actions { display: flex; flex-direction: row; flex-wrap: wrap; gap: 6px; flex: 0 0 auto; } /* 「說話」「聊聊」「沒喝」依序排，放不下就換行 */
-  #mic, #chat, #resist, #history { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
+  #mic, #chat, #resist, #history, #ma { border: none; border-radius: 16px; padding: 4px 10px; color: #fff; font-size: 13px; }
   #mic { background: #ff8fab; }
   #chat { background: #8fb8ff; }
   #resist { background: #8fd3a8; }
   #history { background: #ffd166; color: #222; }
+  #ma { background: rgb(201, 176, 255); color: #222; }
+  #maSummary { display: none; flex-direction: row; flex-wrap: wrap; gap: 4px; }
+  #maSummary.show { display: flex; flex: 0 0 auto; }
+  #maSummary span { font-size: 11px; padding: 1px 6px; border-radius: 8px; background: #eef0f4; color: #222; }
+  #maSummary .tag-u { background: #ffe0e0; color: #b91c1c; }
+  #maSummary .tag-d { background: #d6f3e4; color: #15803d; }
+  #maSummary .tag-m { background: #eef0f4; color: #4b5563; }
   #drinkActions { display: none; flex-direction: row; flex-wrap: wrap; gap: 4px; } /* 戒飲記錄的按鈕（複述、選項、撤銷） */
   #drinkActions.show { display: flex; flex: 0 0 auto; }
   #drinkActions button { border: 1px solid #ffb3c6; border-radius: 12px; padding: 3px 8px; background: #fff;
@@ -31,6 +38,10 @@
   #todoistActions.show { display: flex; flex: 0 0 auto; }
   #todoistActions button { border: 1px solid #8fb8ff; border-radius: 12px; padding: 3px 8px; background: #fff;
                            color: #222; font-size: 12px; }
+  #maActions { display: none; flex-direction: row; flex-wrap: wrap; gap: 4px; } /* 盤前均線按鈕 */
+  #maActions.show { display: flex; flex: 0 0 auto; }
+  #maActions button { border: 1px solid #8fb8ff; border-radius: 12px; padding: 3px 8px; background: #fff;
+                      color: #222; font-size: 12px; }
   #pet { width: 96px; height: 108px; flex: 0 0 auto; position: relative; }
   #pet img { width: 100%; height: 100%; object-fit: contain; position: absolute; left: 0; top: 0;
              transform-origin: 50% 100%; }
@@ -39,7 +50,7 @@
 </style>
 </head>
 <body>
-  <div id="bubble"><div id="text"></div><div id="drinkActions"></div><div id="todoistActions"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button><button id="resist" type="button">沒喝</button><button id="history" type="button">📊 戒飲歷史</button></div></div>
+  <div id="bubble"><div id="text"></div><div id="maSummary"></div><div id="drinkActions"></div><div id="todoistActions"></div><div id="maActions"></div><div id="actions"><button id="mic" type="button">🎤 說話</button><button id="chat" type="button">💬 聊聊</button><button id="resist" type="button">沒喝</button><button id="history" type="button">📊 戒飲歷史</button><button id="ma" type="button">📈 盤前均線</button></div></div>
   <div id="pet"><img id="idle" alt=""><img id="blink" alt=""></div>
 <script src="emotion-map.js"></script>
 <script src="vendor/stream-parser.js"></script>
@@ -48,6 +59,8 @@
 <script src="drink-view.js"></script>
 <script src="todoist-labels.js"></script>
 <script src="todoist-view.js"></script>
+<script src="ma-labels.js"></script>
+<script src="ma-view.js"></script>
 <script>
   // 常數定義
   var BLINK_MS = 150;        // 眨眼圖顯示時間
@@ -62,6 +75,8 @@
   var DRINK_VIEW = window.PetDrinkView;      // 戒飲記錄的台詞與按鈕（drink-view.js，純函式）
   var TODOIST_LABELS = window.PetTodoistLabels; // Todoist 提醒的文字（todoist-labels.js，契約檔）
   var TODOIST_VIEW = window.PetTodoistView;     // Todoist 提醒的檢視（todoist-view.js，純函式）
+  var MA_LABELS = window.PetMaLabels;           // 盤前均線文字（ma-labels.js，契約檔）
+  var MA_VIEW = window.PetMaView;               // 盤前均線檢視（ma-view.js，純函式）
   var THINKING_EMOTION = 'thinking';         // 等待 Worker 回應時的臉
   var THINKING_TEXT = '…';                   // 等待 Worker 回應時泡泡裡的字
   var RESIST_ACTION = { action: 'resist' };  // 泡泡上「沒喝」交給原生的動作
@@ -254,8 +269,28 @@
     sendTodoistAction(action);
   }
 
+  // 清掉盤前均線摘要與按鈕組
+  function clearMaButtons() {
+    var sum = document.getElementById('maSummary');
+    if (sum) { sum.textContent = ''; sum.classList.remove('show'); }
+    var box = document.getElementById('maActions');
+    if (box) { box.textContent = ''; box.classList.remove('show'); }
+  }
+
+  // 按下一顆盤前均線按鈕：先收掉這組；交給對應動作
+  function onMaButton(action) {
+    clearMaButtons();
+    var act = (action && typeof action === 'object') ? action.action : action;
+    if (act === 'openMa') {
+      callBridge('onMaPressed');
+    } else if (act === 'dismiss') {
+      window.pet.showBubble(false);
+    }
+  }
+
   // 放上一組新的戒飲按鈕（取代舊的一組）；含撤銷時排定自動移除
   function showDrinkButtons(buttons) {
+    clearMaButtons();
     clearTodoistButtons();
     clearDrinkButtons();
     var box = document.getElementById('drinkActions');
@@ -278,6 +313,7 @@
 
   // 放上一組新的 Todoist 按鈕（取代舊的一組，且收掉戒飲按鈕）
   function showTodoistButtons(buttons) {
+    clearMaButtons();
     clearDrinkButtons();
     clearTodoistButtons();
     var box = document.getElementById('todoistActions');
@@ -289,6 +325,44 @@
       box.appendChild(el);
     });
     box.classList.toggle('show', buttons.length > 0);
+    scrollBubbleToBottom();
+  }
+
+  // 放上一組新的盤前均線摘要與按鈕（取代舊的一組，且收掉戒飲與 Todoist 按鈕）
+  function showMaButtons(buttons, summary) {
+    clearDrinkButtons();
+    clearTodoistButtons();
+    clearMaButtons();
+    var sumBox = document.getElementById('maSummary');
+    if (sumBox && summary) {
+      var tagU = document.createElement('span');
+      tagU.className = 'tag-u';
+      tagU.textContent = (MA_LABELS.summary && MA_LABELS.summary.u ? MA_LABELS.summary.u : '多頭') + ' ' + summary.u;
+      sumBox.appendChild(tagU);
+
+      var tagD = document.createElement('span');
+      tagD.className = 'tag-d';
+      tagD.textContent = (MA_LABELS.summary && MA_LABELS.summary.d ? MA_LABELS.summary.d : '空頭') + ' ' + summary.d;
+      sumBox.appendChild(tagD);
+
+      var tagM = document.createElement('span');
+      tagM.className = 'tag-m';
+      tagM.textContent = (MA_LABELS.summary && MA_LABELS.summary.m ? MA_LABELS.summary.m : '其他') + ' ' + summary.m;
+      sumBox.appendChild(tagM);
+
+      sumBox.classList.add('show');
+    }
+    var box = document.getElementById('maActions');
+    if (box && Array.isArray(buttons)) {
+      buttons.forEach(function (item) {
+        var el = document.createElement('button');
+        el.type = 'button';
+        el.textContent = item.label; // 用 textContent，不解析 HTML
+        el.addEventListener('click', function () { onMaButton(item.action); });
+        box.appendChild(el);
+      });
+      box.classList.toggle('show', buttons.length > 0);
+    }
     scrollBubbleToBottom();
   }
 
@@ -347,6 +421,15 @@
       var view = TODOIST_VIEW.viewFor(data, TODOIST_LABELS);
       showTodoistButtons(view.buttons);
       window.pet.say(view.script);
+    },
+    // 顯示盤前均線的回應（推播 JSON）：台詞交給 say 演出，摘要與按鈕取代舊的一組；解析失敗就忽略
+    showMa: function (jsonText) {
+      var data;
+      try { data = JSON.parse(jsonText); } catch (e) { return; }
+      if (!data || typeof data !== 'object') return;
+      var view = MA_VIEW.viewFor(data, MA_LABELS);
+      showMaButtons(view.buttons, view.summary);
+      window.pet.say(view.script);
     }
   };
 
@@ -357,6 +440,8 @@
   document.getElementById('chat').addEventListener('click', function () { callBridge('onChatPressed'); });
   document.getElementById('resist').addEventListener('click', function () { sendDrinkAction(RESIST_ACTION); });
   document.getElementById('history').addEventListener('click', function () { sendDrinkAction(HISTORY_ACTION); });
+  document.getElementById('ma').textContent = (MA_LABELS && MA_LABELS.mainButton) ? MA_LABELS.mainButton : '📈 盤前均線';
+  document.getElementById('ma').addEventListener('click', function () { callBridge('onMaPressed'); });
   window.pet.setRender('playing');
 </script>
 </body>
