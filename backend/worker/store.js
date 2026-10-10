@@ -29,6 +29,18 @@ VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, 0)`
 const LIST_DRINK_LOGS_SQL = 'SELECT * FROM drink_logs WHERE undone = 0 ORDER BY created_at ASC, id ASC'
 const FIND_DRINK_LOG_SQL = 'SELECT * FROM drink_logs WHERE id = ?1'
 const UNDO_DRINK_LOG_SQL = 'UPDATE drink_logs SET undone = 1 WHERE id = ?1 AND undone = 0'
+// M4 盤前均線：追蹤清單、收盤價、均線結果（不含任何 DELETE 語句，架構約束 A42、V35）
+const LIST_WATCH_SQL = 'SELECT code, name, active, added_on, sort FROM ma_watch ORDER BY sort ASC'
+const FIND_WATCH_SQL = 'SELECT code, sort FROM ma_watch WHERE code = ?1'
+const MAX_WATCH_SORT_SQL = 'SELECT MAX(sort) AS maxSort FROM ma_watch'
+const INSERT_WATCH_SQL = 'INSERT INTO ma_watch (code, name, active, added_on, sort) VALUES (?1, ?2, 1, ?3, ?4)'
+const UPDATE_WATCH_ACTIVE_SQL = 'UPDATE ma_watch SET active = ?2 WHERE code = ?1'
+const UPSERT_CLOSE_SQL = `INSERT INTO ma_close (code, date, close) VALUES (?1, ?2, ?3)
+ON CONFLICT(code, date) DO UPDATE SET close = excluded.close`
+const LIST_CLOSES_SQL = 'SELECT date, close FROM ma_close WHERE code = ?1 ORDER BY date DESC LIMIT ?2'
+const UPSERT_RESULT_SQL = `INSERT INTO ma_result (date, code, kind, m5, m20, m60) VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+ON CONFLICT(date, code) DO UPDATE SET kind = excluded.kind, m5 = excluded.m5, m20 = excluded.m20, m60 = excluded.m60`
+const LIST_RESULT_DATES_SQL = 'SELECT DISTINCT date FROM ma_result ORDER BY date DESC LIMIT ?1'
 
 // 功能函數定義
 
@@ -145,6 +157,80 @@ export const createStore = (env) => {
     markDrinkUndone: async (id) => {
       const result = await db.prepare(UNDO_DRINK_LOG_SQL).bind(id).run()
       return Number(result?.meta?.changes) > 0
+    },
+    // 取得追蹤清單，依 sort 由小到大排序
+    listWatch: async () => {
+      const result = await db.prepare(LIST_WATCH_SQL).all()
+      return (result?.results ?? []).map((r) => ({
+        code: r.code,
+        name: r.name,
+        active: Number(r.active) === 1,
+        addedOn: r.added_on,
+        sort: Number(r.sort)
+      }))
+    },
+    // 新增追蹤標的，sort 為目前最大 sort + 1；已存在則不重複新增
+    addWatch: async ({ code, name, addedOn }) => {
+      const existing = await db.prepare(FIND_WATCH_SQL).bind(code).first()
+      if (existing) return
+      const maxRow = await db.prepare(MAX_WATCH_SORT_SQL).first()
+      const nextSort = (maxRow?.maxSort !== null && maxRow?.maxSort !== undefined ? Number(maxRow.maxSort) : 0) + 1
+      await db.prepare(INSERT_WATCH_SQL).bind(code, name, addedOn, nextSort).run()
+    },
+    // 標記是否追蹤（停止追蹤或復原）；標的不存在丟例外
+    setWatchActive: async (code, active) => {
+      const existing = await db.prepare(FIND_WATCH_SQL).bind(code).first()
+      if (!existing) {
+        throw new Error('MA_NOT_FOUND')
+      }
+      await db.prepare(UPDATE_WATCH_ACTIVE_SQL).bind(active ? 1 : 0, code).run()
+    },
+    // 批次寫入或更新收盤價快取（INSERT OR REPLACE）
+    upsertCloses: async (code, rows) => {
+      if (!Array.isArray(rows) || rows.length === 0) return
+      const stmts = rows.map((r) => db.prepare(UPSERT_CLOSE_SQL).bind(code, r.date, Number(r.close)))
+      await db.batch(stmts)
+    },
+    // 取得指定代號收盤價，由舊到新排序，取最新 limit 筆
+    listCloses: async (code, limit = 70) => {
+      const result = await db.prepare(LIST_CLOSES_SQL).bind(code, limit).all()
+      const rows = (result?.results ?? []).map((r) => ({
+        date: r.date,
+        close: Number(r.close)
+      }))
+      rows.reverse()
+      return rows
+    },
+    // 批次寫入或更新計算結果
+    upsertResults: async (asOf, results) => {
+      if (!Array.isArray(results) || results.length === 0) return
+      const stmts = results.map((r) => {
+        const m5 = r.ma ? numberOrNull(r.ma[0]) : null
+        const m20 = r.ma ? numberOrNull(r.ma[1]) : null
+        const m60 = r.ma ? numberOrNull(r.ma[2]) : null
+        return db.prepare(UPSERT_RESULT_SQL).bind(asOf, r.code, r.kind, m5, m20, m60)
+      })
+      await db.batch(stmts)
+    },
+    // 取得收盤日清單（由新到舊，不重複，最多 limit 筆）
+    listResultDates: async (limit = 7) => {
+      const result = await db.prepare(LIST_RESULT_DATES_SQL).bind(limit).all()
+      return (result?.results ?? []).map((r) => r.date)
+    },
+    // 取得指定日期清單的計算結果
+    listResults: async (dates) => {
+      if (!Array.isArray(dates) || dates.length === 0) return []
+      const placeholders = dates.map((_, i) => `?${i + 1}`).join(', ')
+      const sql = `SELECT date, code, kind, m5, m20, m60 FROM ma_result WHERE date IN (${placeholders})`
+      const result = await db.prepare(sql).bind(...dates).all()
+      return (result?.results ?? []).map((r) => ({
+        date: r.date,
+        code: r.code,
+        kind: r.kind,
+        m5: numberOrNull(r.m5),
+        m20: numberOrNull(r.m20),
+        m60: numberOrNull(r.m60)
+      }))
     }
   }
 }

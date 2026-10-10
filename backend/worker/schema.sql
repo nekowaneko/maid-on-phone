@@ -44,3 +44,10 @@ CREATE TABLE IF NOT EXISTS drink_logs (
 
 -- 依日期查詢（統計、同時段判定、每日詢問）
 CREATE INDEX IF NOT EXISTS idx_drink_logs_date ON drink_logs (date);
+
+-- M4 盤前均線：追蹤清單、收盤價快取與均線計算結果；不提供刪除操作（A42）
+CREATE TABLE IF NOT EXISTS ma_watch (code TEXT PRIMARY KEY, name TEXT NOT NULL, active INTEGER NOT NULL DEFAULT 1, added_on TEXT NOT NULL, sort INTEGER NOT NULL);
+CREATE TABLE IF NOT EXISTS ma_close (code TEXT NOT NULL, date TEXT NOT NULL, close REAL NOT NULL, PRIMARY KEY (code, date));
+CREATE TABLE IF NOT EXISTS ma_result (date TEXT NOT NULL, code TEXT NOT NULL, kind TEXT NOT NULL, m5 REAL, m20 REAL, m60 REAL, PRIMARY KEY (date, code));
+CREATE INDEX IF NOT EXISTS idx_ma_result_code ON ma_result (code);
+
