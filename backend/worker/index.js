@@ -23,6 +23,11 @@ import todoistDefaults from '../config/todoist-defaults.json' with { type: 'json
 import todoistLines from '../config/todoist-lines.json' with { type: 'json' }
 import todoistSplitPrompt from '../config/todoist-split-prompt.md'
 import todoistScriptPrompt from '../config/todoist-script-prompt.md'
+import maContract from '../config/ma-contract.json' with { type: 'json' }
+import maDefaults from '../config/ma-defaults.json' with { type: 'json' }
+import maLines from '../config/ma-lines.json' with { type: 'json' }
+import maGlossary from '../config/ma-glossary.json' with { type: 'json' }
+import maScriptPrompt from '../config/ma-script-prompt.md'
 import { createHandler, runScheduled } from './handlers.js'
 import { streamCompletion as realStream } from './llm-client.js'
 import { streamCompletion as stubStream } from './llm-client.stub.js'
@@ -32,6 +37,8 @@ import { sendFcm as realPusher } from './fcm-client.js'
 import { sendFcm as stubPusher } from './fcm-client.stub.js'
 import { createTodoistClient as realTodoistClient } from './todoist-client.js'
 import { createTodoistStub as stubTodoistClient } from './todoist-client.stub.js'
+import { createTwseClient as realTwseClient } from './twse-client.js'
+import { createTwseStub as stubTwseClient } from './twse-client.stub.js'
 
 // 常數定義
 const STUB_FLAG = 'true'
@@ -49,6 +56,9 @@ const pickPusher = (env) => (env?.USE_STUB === STUB_FLAG ? stubPusher : realPush
 
 // Todoist 用戶端也跟同一個開關
 const pickTodoist = (env) => (env?.USE_STUB === STUB_FLAG ? stubTodoistClient : realTodoistClient)
+
+// 證交所用戶端也跟同一個開關
+const pickTwse = (env) => (env?.USE_STUB === STUB_FLAG ? stubTwseClient : realTwseClient)
 
 // 組出這一次請求要用的相依。streamer 在這裡就把 env 綁好，
 // 路由層因此完全不必認識環境變數，也碰不到憑證。
@@ -72,6 +82,14 @@ const buildDeps = (env) => ({
   todoistDefaults,
   todoistLines,
   todoistPrompts: { split: todoistSplitPrompt, script: todoistScriptPrompt },
+  // M4 盤前均線（§4.4）
+  maContract,
+  maDefaults,
+  maLines,
+  maGlossary,
+  maPrompt: maScriptPrompt,
+  twse: pickTwse(env)(fetch, maDefaults),
+  sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
   secret: env?.APP_SECRET,
   store: pickStore(env)(env),
   streamer: (messages) => pickStreamer(env)(messages, env),
