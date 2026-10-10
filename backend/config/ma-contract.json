@@ -38,6 +38,7 @@
   "backfillMonths": 4,
   "minCloses": 60,
   "page": "/web/ma.html",
+  "exitUrl": "ma-exit://close",
   "bridge": {
     "webToNative": "onMaPressed",
     "nativeToWeb": "showMa"
