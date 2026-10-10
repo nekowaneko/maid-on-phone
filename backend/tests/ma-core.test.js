@@ -154,11 +154,11 @@ test('validateWatchInput 完整驗證各種錯誤與通過情形', () => {
   assert.deepEqual(validateWatchInput('鴻海', rows, active, 10, contract), { ok: false, error: 'notFound' })
 
   // 重複追蹤
-  assert.deepEqual(validateWatchInput('2330', rows, active, 10, contract), { ok: false, error: 'duplicate' })
-  assert.deepEqual(validateWatchInput('台積電', rows, active, 10, contract), { ok: false, error: 'duplicate' })
+  assert.deepEqual(validateWatchInput('2330', rows, active, 10, contract), { ok: false, error: 'duplicate', code: '2330', name: '台積電' })
+  assert.deepEqual(validateWatchInput('台積電', rows, active, 10, contract), { ok: false, error: 'duplicate', code: '2330', name: '台積電' })
 
   // 超過上限
-  assert.deepEqual(validateWatchInput('2412', rows, ['2330'], 1, contract), { ok: false, error: 'limit' })
+  assert.deepEqual(validateWatchInput('2412', rows, ['2330'], 1, contract), { ok: false, error: 'limit', code: '2412', name: '中華電' })
 
   // 成功（代號匹配）
   assert.deepEqual(validateWatchInput('2412', rows, active, 10, contract), { ok: true, code: '2412', name: '中華電' })
