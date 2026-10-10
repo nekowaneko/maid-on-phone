@@ -21,6 +21,9 @@ export const createStore = (env) => {
   const settings = new Map()
   const daily = new Map()
   const drinkLogs = [] // M2 戒飲紀錄，撤銷只標記 undone
+  const watchList = [] // M4 追蹤清單 [{ code, name, active: boolean, addedOn, sort }]
+  const closeRecords = new Map() // M4 收盤價 `${code}:${date}` -> { code, date, close }
+  const resultRecords = new Map() // M4 均線結果 `${date}:${code}` -> { date, code, kind, m5, m20, m60 }
   let requestTimes = []
 
   // 兩分鐘以前的時間戳沒有用處，順手丟掉，免得無限長大
@@ -70,6 +73,78 @@ export const createStore = (env) => {
       if (!found || found.undone) return false
       found.undone = true
       return true
+    },
+    // 取得追蹤清單，依 sort 由小到大排序
+    listWatch: async () =>
+      watchList
+        .map((w) => ({ ...w }))
+        .sort((a, b) => a.sort - b.sort),
+    // 新增追蹤標的，sort 為目前最大 sort + 1；已存在則不重複新增
+    addWatch: async ({ code, name, addedOn }) => {
+      const found = watchList.find((w) => w.code === code)
+      if (found) return
+      const maxSort = watchList.reduce((max, w) => Math.max(max, w.sort), 0)
+      watchList.push({ code, name, active: true, addedOn, sort: maxSort + 1 })
+    },
+    // 標記是否追蹤（停止追蹤或復原）；標的不存在丟例外
+    setWatchActive: async (code, active) => {
+      const found = watchList.find((w) => w.code === code)
+      if (!found) {
+        throw new Error('MA_NOT_FOUND')
+      }
+      found.active = Boolean(active)
+    },
+    // 批次寫入收盤價快取
+    upsertCloses: async (code, rows) => {
+      if (!Array.isArray(rows)) return
+      for (const r of rows) {
+        closeRecords.set(`${code}:${r.date}`, { code, date: r.date, close: Number(r.close) })
+      }
+    },
+    // 取得指定標的收盤價，由舊到新排序，取最新 limit 筆
+    listCloses: async (code, limit = 70) => {
+      const matched = []
+      for (const item of closeRecords.values()) {
+        if (item.code === code) matched.push({ date: item.date, close: item.close })
+      }
+      matched.sort((a, b) => b.date.localeCompare(a.date))
+      const picked = matched.slice(0, limit)
+      picked.reverse()
+      return picked.map((r) => ({ ...r }))
+    },
+    // 批次寫入或更新均線計算結果
+    upsertResults: async (asOf, results) => {
+      if (!Array.isArray(results)) return
+      for (const r of results) {
+        const m5 = r.ma ? r.ma[0] : null
+        const m20 = r.ma ? r.ma[1] : null
+        const m60 = r.ma ? r.ma[2] : null
+        resultRecords.set(`${asOf}:${r.code}`, {
+          date: asOf,
+          code: r.code,
+          kind: r.kind,
+          m5,
+          m20,
+          m60
+        })
+      }
+    },
+    // 取得收盤日清單（由新到舊，不重複，最多 limit 筆）
+    listResultDates: async (limit = 7) => {
+      const dates = Array.from(new Set(Array.from(resultRecords.values()).map((r) => r.date)))
+      dates.sort((a, b) => b.localeCompare(a))
+      return dates.slice(0, limit)
+    },
+    // 取得指定日期清單的計算結果
+    listResults: async (dates) => {
+      if (!Array.isArray(dates) || dates.length === 0) return []
+      const matched = []
+      for (const item of resultRecords.values()) {
+        if (dates.includes(item.date)) {
+          matched.push({ ...item })
+        }
+      }
+      return matched
     }
   }
 }

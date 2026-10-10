@@ -52,6 +52,15 @@ import {
   validateSplitSteps,
   validateTodoistAction
 } from '../core/todoist.js'
+import {
+  computeStock,
+  descFor,
+  countKinds,
+  isTradingDay,
+  prevTradingDay,
+  buildMaPayload,
+  validateWatchInput
+} from '../core/ma.js'
 
 // 常數定義
 const API_PREFIX = '/api/' // 授權只掛在這個前綴底下（架構約束 A8）
@@ -62,6 +71,11 @@ const USAGE_PATH = '/api/usage'
 const PUSH_PATH = '/api/push' // M1.5：送一則純資料推播到手機
 const TODOIST_ACTION_PATH = '/api/todoist/action'
 const TODOIST_PREFIX = '/api/todoist/'
+const MA_PREFIX = '/api/ma/'
+const MA_REPORT_PATH = '/api/ma/report'
+const MA_HISTORY_PATH = '/api/ma/history'
+const MA_WATCHLIST_PATH = '/api/ma/watchlist'
+const MA_REFRESH_PATH = '/api/ma/refresh'
 const RANDOM_ID_LENGTH = 8 // 推播編號的亂數段取 randomUUID 前 8 碼
 const UNKNOWN_CODE = 'UNKNOWN'
 const PUSH_TOO_LONG_REASON = 'too_long'
@@ -1016,6 +1030,503 @@ const runNightFollowup = async (deps, todayKey) => {
   }
 }
 
+// 產生盤前均線開場台詞（依人設，不得含數字，不超過 40 字）
+const generateMaOpeningScript = async (deps) => {
+  const personaText = await readPersona(deps)
+  const emotionList = drinkEmotionList(deps)
+  const systemPrompt = buildSystemPrompt(deps.templateText, {
+    persona: personaText,
+    emotionList,
+    timeGap: EMPTY_TEXT,
+    history: EMPTY_TEXT
+  })
+  const promptContent = `${systemPrompt}\n\n${deps.maPrompt || ''}`
+  const messages = [
+    { role: 'system', content: promptContent },
+    { role: 'user', content: '早晨開盤前問候' }
+  ]
+  const maxChars = deps.maDefaults?.openingMaxChars ?? 40
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const reply = await askLlm(deps, messages)
+    if (reply) {
+      const plain = stripTags(reply).trim()
+      if (plain.length > 0 && countChars(plain) <= maxChars && !/[0-9０-９]/.test(plain)) {
+        return reply.trim()
+      }
+    }
+  }
+
+  return deps.maLines?.opening?.[0] || ''
+}
+
+// 執行盤前均線報告（§4.4）：取得資料、計算均線、寫入儲存層與發送推播
+export const runMaReport = async (deps, nowMs = null, { push = false } = {}) => {
+  const currentMs = nowMs ?? readNow(deps)
+  const today = toTaipeiDateString(currentMs)
+
+  if (!deps.twse) {
+    return { status: 'skipped', reportDate: today, asOf: null }
+  }
+
+  const year = Number(today.slice(0, 4))
+  const month = Number(today.slice(5, 7))
+  let closedDates = []
+  try {
+    closedDates = await deps.twse.listClosedDates(year)
+    if (month === 1) {
+      if (deps.sleep) await deps.sleep(deps.maDefaults?.twseDelayMs ?? 1000)
+      const prevClosed = await deps.twse.listClosedDates(year - 1)
+      closedDates = [...closedDates, ...prevClosed]
+    }
+  } catch (error) {
+    console.error('TWSE_CLOSED_DATES_ERROR', error?.message)
+    return { status: 'unknown', reportDate: today, asOf: null }
+  }
+
+  if (!isTradingDay(today, closedDates)) {
+    return { status: 'holiday', reportDate: today, asOf: null }
+  }
+
+  const watchList = await deps.store.listWatch()
+  const activeList = watchList.filter((w) => w.active).sort((a, b) => a.sort - b.sort)
+  if (activeList.length === 0) {
+    return { status: 'empty', reportDate: today, asOf: null }
+  }
+
+  const sentOnKey = deps.maContract?.settingsKeys?.sentOn ?? 'ma.sentOn'
+  const lastKey = deps.maContract?.settingsKeys?.last ?? 'ma.last'
+  const sentOn = await deps.store.readSetting(sentOnKey)
+
+  if (push && sentOn === today) {
+    const lastRaw = await deps.store.readSetting(lastKey)
+    let last = null
+    try {
+      last = JSON.parse(lastRaw)
+    } catch {}
+    return { status: last?.status ?? 'ok', reportDate: today, asOf: last?.asOf ?? null }
+  }
+
+  let asOf = null
+  try {
+    asOf = prevTradingDay(today, closedDates)
+  } catch (error) {
+    console.error('PREV_TRADING_DAY_ERROR', error?.message)
+    return { status: 'unknown', reportDate: today, asOf: null }
+  }
+
+  const minCloses = deps.maContract?.minCloses ?? 60
+  const backfillMonths = deps.maContract?.backfillMonths ?? 4
+  const delayMs = deps.maDefaults?.twseDelayMs ?? 1000
+  const successfulResults = []
+  const failedCodes = []
+
+  for (const stock of activeList) {
+    const code = stock.code
+    try {
+      let closes = await deps.store.listCloses(code, 70)
+      const asOfYm = `${asOf.slice(0, 4)}${asOf.slice(5, 7)}`
+      const latestCloseDate = closes.length > 0 ? closes[closes.length - 1].date : null
+
+      if (closes.length < minCloses) {
+        const [asOfYear, asOfMon] = asOf.split('-').map(Number)
+        for (let m = backfillMonths - 1; m >= 0; m -= 1) {
+          if (deps.sleep) await deps.sleep(delayMs)
+          const targetD = new Date(Date.UTC(asOfYear, asOfMon - 1 - m, 1))
+          const ym = `${targetD.getUTCFullYear()}${String(targetD.getUTCMonth() + 1).padStart(2, '0')}`
+          const monthRows = await deps.twse.getMonth(code, ym)
+          if (monthRows.length > 0) {
+            await deps.store.upsertCloses(code, monthRows)
+          }
+        }
+      } else if (!latestCloseDate || latestCloseDate < asOf) {
+        if (deps.sleep) await deps.sleep(delayMs)
+        const monthRows = await deps.twse.getMonth(code, asOfYm)
+        if (monthRows.length > 0) {
+          await deps.store.upsertCloses(code, monthRows)
+        }
+      }
+
+      closes = await deps.store.listCloses(code, 70)
+      const newestDate = closes.length > 0 ? closes[closes.length - 1].date : null
+      if (newestDate !== asOf) {
+        failedCodes.push(code)
+      } else {
+        const computed = computeStock(closes.map((c) => c.close), deps.maContract)
+        successfulResults.push({
+          code,
+          name: stock.name,
+          kind: computed.kind,
+          ma: computed.ma
+        })
+      }
+    } catch (err) {
+      console.error('FETCH_STOCK_ERROR', code, err?.message)
+      failedCodes.push(code)
+    }
+  }
+
+  if (successfulResults.length === 0) {
+    await deps.store.writeSetting(
+      lastKey,
+      JSON.stringify({ reportDate: today, asOf: null, status: 'failed', failed: failedCodes })
+    )
+    if (push && isPushConfigured(deps.pushConfig?.serviceAccount, deps.pushConfig?.deviceToken)) {
+      const idPrefix = deps.maContract?.push?.idPrefix ?? 'ma-'
+      const id = `${idPrefix}${today.replace(/-/g, '')}`
+      const failedText = deps.maLines?.failed ?? ''
+      const maPayload = buildMaPayload(today, '', { u: 0, d: 0, m: 0 }, 'failed')
+      const msg = buildFcmMessage(deps.pushConfig.deviceToken, id, failedText, null)
+      msg.message.data.ma = maPayload
+      await sendOnce(deps, msg)
+    }
+    return { status: 'failed', reportDate: today, asOf: null }
+  }
+
+  await deps.store.upsertResults(asOf, successfulResults)
+  await deps.store.writeSetting(
+    lastKey,
+    JSON.stringify({ reportDate: today, asOf, status: 'ok', failed: failedCodes })
+  )
+
+  if (push && isPushConfigured(deps.pushConfig?.serviceAccount, deps.pushConfig?.deviceToken)) {
+    const script = await generateMaOpeningScript(deps)
+    const plainOpening = stripTags(script).trim()
+    const counts = countKinds(successfulResults)
+    const countsSentence = (deps.maLines?.countsSentence ?? '')
+      .replace('{u}', String(counts.u))
+      .replace('{d}', String(counts.d))
+      .replace('{m}', String(counts.m))
+    const text = `${plainOpening} ${countsSentence}`
+    const idPrefix = deps.maContract?.push?.idPrefix ?? 'ma-'
+    const id = `${idPrefix}${today.replace(/-/g, '')}`
+    const maPayload = buildMaPayload(today, asOf, counts, 'ok')
+    const msg = buildFcmMessage(deps.pushConfig.deviceToken, id, text, script)
+    msg.message.data.ma = maPayload
+    const res = await sendOnce(deps, msg)
+    if (res?.ok) {
+      await deps.store.writeSetting(sentOnKey, today)
+    }
+  }
+
+  return { status: 'ok', reportDate: today, asOf }
+}
+
+// 取得最新均線報告
+const handleMaReport = async (deps, request) => {
+  const watchList = await deps.store.listWatch()
+  const activeList = watchList.filter((w) => w.active).sort((a, b) => a.sort - b.sort)
+  const lastKey = deps.maContract?.settingsKeys?.last ?? 'ma.last'
+  const lastRaw = await deps.store.readSetting(lastKey)
+  const disclaimer = deps.maLines?.disclaimer ?? ''
+  const today = toTaipeiDateString(readNow(deps))
+
+  if (activeList.length === 0) {
+    return jsonResponse({
+      kind: 'report',
+      status: 'empty',
+      reportDate: today,
+      asOf: null,
+      counts: { u: 0, d: 0, m: 0 },
+      items: [],
+      disclaimer
+    })
+  }
+
+  if (!lastRaw) {
+    return jsonResponse({
+      kind: 'report',
+      status: 'none',
+      reportDate: today,
+      asOf: null,
+      counts: { u: 0, d: 0, m: 0 },
+      items: [],
+      disclaimer
+    })
+  }
+
+  let last = null
+  try {
+    last = JSON.parse(lastRaw)
+  } catch {
+    return jsonResponse({
+      kind: 'report',
+      status: 'none',
+      reportDate: today,
+      asOf: null,
+      counts: { u: 0, d: 0, m: 0 },
+      items: [],
+      disclaimer
+    })
+  }
+
+  if (last.status === 'failed') {
+    return jsonResponse({
+      kind: 'report',
+      status: 'failed',
+      reportDate: last.reportDate,
+      asOf: null,
+      counts: { u: 0, d: 0, m: 0 },
+      items: [],
+      disclaimer
+    })
+  }
+
+  const results = last.asOf ? await deps.store.listResults([last.asOf]) : []
+  const resultMap = new Map(results.map((r) => [r.code, r]))
+  const failedSet = new Set(last.failed || [])
+
+  const items = activeList.map((stock) => {
+    const code = stock.code
+    const name = stock.name
+    if (resultMap.has(code)) {
+      const r = resultMap.get(code)
+      return {
+        code,
+        name,
+        kind: r.kind,
+        desc: descFor(r.kind, deps.maLines),
+        ma: r.m5 !== null && r.m20 !== null && r.m60 !== null ? [r.m5, r.m20, r.m60] : null
+      }
+    }
+    if (failedSet.has(code)) {
+      return {
+        code,
+        name,
+        failed: true,
+        tag: deps.maLines?.tags?.failedStock,
+        desc: deps.maLines?.failedStock
+      }
+    }
+    return {
+      code,
+      name,
+      pending: true,
+      tag: deps.maLines?.tags?.pending,
+      desc: deps.maLines?.pending
+    }
+  })
+
+  const counts = countKinds(items)
+
+  return jsonResponse({
+    kind: 'report',
+    status: 'ok',
+    reportDate: last.reportDate,
+    asOf: last.asOf,
+    counts,
+    items,
+    disclaimer
+  })
+}
+
+// 取得最近 7 個交易日之歷史種類矩陣
+const handleMaHistory = async (deps, request) => {
+  const historyDays = deps.maContract?.historyDays ?? 7
+  const dateList = await deps.store.listResultDates(historyDays)
+  const days = [...dateList].reverse()
+
+  const watchList = await deps.store.listWatch()
+  const activeList = watchList.filter((w) => w.active).sort((a, b) => a.sort - b.sort)
+
+  if (days.length === 0) {
+    return jsonResponse({
+      kind: 'history',
+      days: [],
+      rows: []
+    })
+  }
+
+  const results = await deps.store.listResults(days)
+  const resultMap = new Map()
+  for (const r of results) {
+    resultMap.set(`${r.date}:${r.code}`, r.kind)
+  }
+
+  const rows = activeList.map((stock) => {
+    const cells = []
+    let prevKind = null
+    for (let i = 0; i < days.length; i += 1) {
+      const day = days[i]
+      const kind = resultMap.get(`${day}:${stock.code}`) ?? null
+      const changed = kind !== null && prevKind !== null && kind !== prevKind
+      cells.push({ kind, prev: prevKind, changed })
+      prevKind = kind
+    }
+    return {
+      code: stock.code,
+      name: stock.name,
+      cells
+    }
+  })
+
+  return jsonResponse({
+    kind: 'history',
+    days,
+    rows
+  })
+}
+
+// 取得追蹤清單
+const handleMaWatchlistGet = async (deps, request) => {
+  const watchList = await deps.store.listWatch()
+  const activeList = watchList.filter((w) => w.active).sort((a, b) => a.sort - b.sort)
+  const latestDates = await deps.store.listResultDates(1)
+  const latestAsOf = latestDates[0] || null
+  const results = latestAsOf ? await deps.store.listResults([latestAsOf]) : []
+  const hasResultSet = new Set(results.map((r) => r.code))
+
+  const items = activeList.map((w) => ({
+    code: w.code,
+    name: w.name,
+    pending: !hasResultSet.has(w.code)
+  }))
+
+  return jsonResponse({
+    kind: 'watchlist',
+    items,
+    limit: deps.maContract?.limit ?? 10
+  })
+}
+
+// 寫入追蹤清單（新增、停止追蹤、復原）
+const handleMaWatchlistPost = async (deps, request) => {
+  let body = null
+  try {
+    body = await request.json()
+  } catch {
+    return jsonResponse({ error: 'format' }, 400)
+  }
+
+  const action = body?.action
+  const code = body?.code
+  const allowedActions = deps.maContract?.watchActions ?? ['add', 'untrack', 'restore']
+  if (typeof action !== 'string' || !allowedActions.includes(action) || typeof code !== 'string') {
+    return jsonResponse({ error: 'format' }, 400)
+  }
+
+  const allWatch = await deps.store.listWatch()
+  const activeList = allWatch.filter((w) => w.active)
+  const activeCodes = activeList.map((w) => w.code)
+  const limit = deps.maContract?.limit ?? 10
+  const trimmedCode = code.trim()
+
+  if (action === 'add') {
+    if (trimmedCode.length < 1 || trimmedCode.length > 40) {
+      return jsonResponse({ error: 'format', message: deps.maLines?.errors?.format }, 400)
+    }
+
+    let twseData = null
+    try {
+      twseData = await deps.twse.listAll()
+    } catch {
+      return jsonResponse({ error: 'unavailable', message: deps.maLines?.errors?.unavailable }, 502)
+    }
+
+    const validation = validateWatchInput(trimmedCode, twseData?.rows ?? [], activeCodes, limit, deps.maContract)
+    if (!validation.ok) {
+      const template = deps.maLines?.errors?.[validation.error] ?? ''
+      const message = template
+        .replace('{input}', trimmedCode)
+        .replace('{code}', validation.code ?? trimmedCode)
+        .replace('{name}', validation.name ?? '')
+        .replace('{limit}', String(limit))
+      return jsonResponse({ error: validation.error, message }, 400)
+    }
+
+    const { code: validCode, name: validName } = validation
+    const existing = allWatch.find((w) => w.code === validCode)
+    if (existing && !existing.active) {
+      await deps.store.setWatchActive(validCode, true)
+    } else {
+      const today = toTaipeiDateString(readNow(deps))
+      await deps.store.addWatch({ code: validCode, name: validName, addedOn: today })
+      const backfillMonths = deps.maContract?.backfillMonths ?? 4
+      const [curY, curM] = today.split('-').map(Number)
+      const delayMs = deps.maDefaults?.twseDelayMs ?? 1000
+      for (let m = backfillMonths - 1; m >= 0; m -= 1) {
+        try {
+          if (deps.sleep) await deps.sleep(delayMs)
+          const targetD = new Date(Date.UTC(curY, curM - 1 - m, 1))
+          const ym = `${targetD.getUTCFullYear()}${String(targetD.getUTCMonth() + 1).padStart(2, '0')}`
+          const mRows = await deps.twse.getMonth(validCode, ym)
+          if (mRows.length > 0) {
+            await deps.store.upsertCloses(validCode, mRows)
+          }
+        } catch (err) {
+          console.error('BACKFILL_MONTH_ERROR', validCode, err?.message)
+        }
+      }
+    }
+
+    return jsonResponse({ ok: true, item: { code: validCode, name: validName, pending: true } }, 200)
+  }
+
+  if (action === 'untrack') {
+    const existing = allWatch.find((w) => w.code === trimmedCode)
+    if (!existing) {
+      const template = deps.maLines?.errors?.notFound ?? ''
+      return jsonResponse({ error: 'notFound', message: template.replace('{input}', trimmedCode) }, 400)
+    }
+    await deps.store.setWatchActive(existing.code, false)
+    return jsonResponse({ ok: true }, 200)
+  }
+
+  if (action === 'restore') {
+    const existing = allWatch.find((w) => w.code === trimmedCode)
+    if (!existing) {
+      const template = deps.maLines?.errors?.notFound ?? ''
+      return jsonResponse({ error: 'notFound', message: template.replace('{input}', trimmedCode) }, 400)
+    }
+    if (activeCodes.length >= limit) {
+      const template = deps.maLines?.errors?.limit ?? ''
+      return jsonResponse({ error: 'limit', message: template.replace('{limit}', String(limit)) }, 400)
+    }
+    await deps.store.setWatchActive(existing.code, true)
+    return jsonResponse({ ok: true }, 200)
+  }
+
+  return jsonResponse({ error: 'format' }, 400)
+}
+
+// 重算今日報告（頻率限制 60 秒）
+const handleMaRefresh = async (deps, request) => {
+  const refreshedAtKey = deps.maContract?.settingsKeys?.refreshedAt ?? 'ma.refreshedAt'
+  const lastRefreshed = await deps.store.readSetting(refreshedAtKey)
+  const now = readNow(deps)
+  const minIntervalSec = deps.maDefaults?.refreshMinIntervalSec ?? 60
+
+  if (lastRefreshed && now - Number(lastRefreshed) < minIntervalSec * 1000) {
+    return jsonResponse({ error: 'tooSoon' }, 429)
+  }
+
+  await deps.store.writeSetting(refreshedAtKey, String(now))
+  await runMaReport(deps, now, { push: false })
+  return handleMaReport(deps, request)
+}
+
+// 盤前均線路由總入口
+const handleMa = async (deps, request, pathname) => {
+  if (pathname === MA_REPORT_PATH) {
+    if (request.method !== GET_METHOD) return jsonResponse({ error: METHOD_NOT_ALLOWED_MESSAGE }, 405)
+    return handleMaReport(deps, request)
+  }
+  if (pathname === MA_HISTORY_PATH) {
+    if (request.method !== GET_METHOD) return jsonResponse({ error: METHOD_NOT_ALLOWED_MESSAGE }, 405)
+    return handleMaHistory(deps, request)
+  }
+  if (pathname === MA_WATCHLIST_PATH) {
+    if (request.method === GET_METHOD) return handleMaWatchlistGet(deps, request)
+    if (request.method === POST_METHOD) return handleMaWatchlistPost(deps, request)
+    return jsonResponse({ error: METHOD_NOT_ALLOWED_MESSAGE }, 405)
+  }
+  if (pathname === MA_REFRESH_PATH) {
+    if (request.method !== POST_METHOD) return jsonResponse({ error: METHOD_NOT_ALLOWED_MESSAGE }, 405)
+    return handleMaRefresh(deps, request)
+  }
+  return jsonResponse({ error: NOT_FOUND_MESSAGE }, 404)
+}
+
 // 排程觸發（§4.2）：整點戒飲詢問，以及台北時間 08:30 P3、09:00 P2、21:00 追問
 export const runScheduled = async (deps, nowMs) => {
   const tpeMs = nowMs + 8 * 60 * 60 * 1000
@@ -1049,7 +1560,16 @@ export const runScheduled = async (deps, nowMs) => {
     }
   }
 
-  // 2. Todoist 雙軌提醒排程：需具備 todoist 實例與推播設定
+  // 2. F3 盤前均線排程（08:30）：必須在 Todoist 判斷之前，有獨立 try/catch（A41、V34）
+  if (timeStr === '08:30') {
+    try {
+      await runMaReport(deps, nowMs, { push: true })
+    } catch (error) {
+      console.error('盤前均線排程失敗：', error?.message)
+    }
+  }
+
+  // 3. Todoist 雙軌提醒排程：需具備 todoist 實例與推播設定
   if (!deps.todoist || !deps.pushConfig?.deviceToken) {
     return
   }
@@ -1113,6 +1633,9 @@ export const createHandler = (deps) => async (request) => {
   }
   if (url.pathname.startsWith(TODOIST_PREFIX)) {
     return jsonResponse({ error: NOT_FOUND_MESSAGE }, 404)
+  }
+  if (url.pathname.startsWith(MA_PREFIX)) {
+    return handleMa(deps, request, url.pathname)
   }
   if (url.pathname === USAGE_PATH) {
     return handleUsage(deps, request)
