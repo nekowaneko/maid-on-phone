@@ -114,3 +114,12 @@ M4 計畫書 §2.1 列的五個高風險模組都在此清單中（`backend/work
 | 63 | `PetBridge.onMaPressed`、`OverlayService.onMaPressed` | `PetBridge.kt`、`OverlayService.kt` | 第 6 個 JS 介面，通知原生開明細頁 | 背景執行緒呼叫要轉回主執行緒；聊天網址沒設定時要擋下 |
 | 64 | `parseReminder`（ma 欄位）、`pickMaPayload`、`maPageUrl` | `core/.../Reminder.kt`、`MaModels.kt` | 解析推播的 ma 欄位、算明細網頁網址 | 超長或格式錯誤要丟掉；非 https 網址要回 null |
 | 65 | `ReminderNotifications.showReminderNotification` | `ReminderNotifications.kt` | 角色模式關時發通知，點擊開明細頁 | `PendingIntent` 必須是 immutable |
+
+## M4.1（主畫面均線與聊聊入口、明細頁關閉）
+
+| # | 函式 | 檔案 | 白話說明 | 可能出錯的方式 |
+|---|---|---|---|---|
+| 66 | `MainActivity.refreshMaEntry` | `app/.../MainActivity.kt` | 主畫面卡片在 `onResume` 向 `/api/ma/report` 取摘要；不能寫死任何副標句子或範例數字 | 生命週期銷毀時需捨棄回呼；日誌不記錄回應內容；嚴禁寫死副標或範例數字（V43、A49、A53） |
+| 67 | `MaActivity.MaWebViewClient.shouldOverrideUrlLoading` | `app/.../MaActivity.kt` | 攔截 `isMaExitUrl(request.url.toString())` 並呼叫 `finish()` 回傳 true | 關閉導向網址若未精確比對會被外部網址混淆；維持不新增 `@JavascriptInterface`（A44） |
+| 68 | `backend/web/ma-render.js`（`decideBack`）與 `backend/web/ma.js`（返回點擊） | `backend/web/ma-render.js`、`ma.js` | 明細頁「‹」按鈕點擊透過 `decideBack` 導向 `MA_EXIT_URL = "ma-exit://close"` | 移除 `history.back`；維持 `innerHTML` 恰好 1 次限制（V33、V41、A50、A51） |
+| 69 | `core/.../MaEntry.kt`（`maEntrySubtitle`、`parseMaReportBrief`） | `core/.../ma/MaEntry.kt` | 純函式解析 JSON 與格式化日期副標 | 處理各類異常、缺漏欄位、負數檔數，確保不丟例外且無靜默降級（A49、A53） |

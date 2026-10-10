@@ -182,3 +182,19 @@ T4 前曾有 3 個非等價存活（`sep <= 0` 邊界、`colon < 0` 決定主機
 | M4-S20 | 清單裡同時有「剛加入尚未納入」與「這檔資料沒拿到」的項目 | 兩種都不計入多頭、空頭、其他檔數 | `countKinds` 的判斷組合（第 114 行） |
 | M4-S21 | 收盤價序列含非數字、或要求平均 0 筆或負數筆 | 回傳 null，不丟例外也不回 NaN | `roundTo`、`averageLast` 的防護（第 20、32 行） |
 | M4-S22 | 證交所休市日往前找不到交易日 | 丟出的錯誤訊息固定，供失敗處理辨識 | 例外與錯誤字串（第 171～189 行附近） |
+
+## M4.1（主畫面均線與聊聊入口、明細頁關閉）
+
+- 狀態：已執行（2026-10-10 實測；先前版本的「100%、存活 0」未實際涵蓋這些檔案，已作廢）
+- 工具：Pitest（Kotlin）、Stryker（JavaScript）
+- 設定調整：Pitest 的 `targetClasses` 加入 `com.accompany.pet.core.ma.*`；Stryker 的 `mutate` 加入 `web/ma-render.js`，測試指令加入 `ma-web-render`、`ma-back`、`ma-entry-contract` 三組。
+- 執行範圍：
+  - Kotlin：`core/src/main/kotlin/com/accompany/pet/core/ma/MaEntry.kt`、`core/src/main/kotlin/com/accompany/pet/core/ma/MaModels.kt`
+  - JavaScript：`backend/web/ma-render.js` 中屬於 M4.1 的 `MA_EXIT_URL`（第 11 行）與 `decideBack`（第 322～325 行）
+- 結果：
+  - Kotlin（Pitest）：`MaEntry.kt` 88 個突變、86 個被殺、2 個存活；`MaModels.kt` 16 個全被殺。合計 104 個、102 個被殺，約 98%。第一次實測有 13 個存活（約 88%），補了 `MaEntryHelperTest.kt` 的世紀閏年、三月星期、年月日上下界、counts 缺鍵、各狀態與零檔數測試，並移除 `maDateLabel` 三行不可能走到的 `?: return null`。
+  - JavaScript（Stryker）：M4.1 範圍的突變全部被殺。`ma-render.js` 整檔分數只有 29%，存活的突變在 M4 舊程式碼（如第 315～318 行的字串常數）與 DOM 渲染，不屬於 M4.1。
+- 存活突變（2 個，判斷為等價突變）：
+  - `MaEntry.kt` 第 82 行（`maDateLabel`）：`month` 超過 12 時 `daysInMonth` 回 0，之後的日期檢查同樣回 null，結果一樣。
+  - `MaEntry.kt` 第 102 行（`maEntrySubtitle`）：字串 `when` 編譯出的雜湊分支，所有狀態字串都有測試。
+- 沒涵蓋的部分：`ma-wiring.test.js`、`spec/m4/overlay-ma.test.js` 要讀 backend 以外的 App 檔案，在 Stryker 沙箱裡跑不起來，所以沒有納入；`web/ma.js` 的返回點擊是 DOM 接線，沒有突變測試。

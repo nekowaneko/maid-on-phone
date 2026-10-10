@@ -75,9 +75,9 @@ fun parseMaReportBrief(body: String?): MaReportBrief {
 fun maDateLabel(reportDate: String?): String? {
     if (reportDate == null) return null
     val match = Regex("""^(\d{4})-(\d{2})-(\d{2})$""").find(reportDate) ?: return null
-    val year = match.groupValues[1].toIntOrNull() ?: return null
-    val month = match.groupValues[2].toIntOrNull() ?: return null
-    val day = match.groupValues[3].toIntOrNull() ?: return null
+    val year = match.groupValues[1].toInt() // 正規式已保證是純數字
+    val month = match.groupValues[2].toInt()
+    val day = match.groupValues[3].toInt()
 
     if (year < 1 || month !in 1..12) return null // 年份月數超出範圍
     val maxDay = daysInMonth(year, month)

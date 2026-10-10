@@ -96,3 +96,13 @@ gitleaks 未安裝，改用計畫指定的 grep 樣式掃描所有追蹤檔：�
 - 角色頁仍只從 `file:///android_asset/pet/` 載入本機 script（V28 檢查不用 module、不讀檔、不連外），`@JavascriptInterface` 維持 3 個（V08）。
 - Worker 的 `/api/push` 仍在 `/api/` 授權中介之後；剝標籤沿用 accompany_bot 的解析程式，不新增正規式；日誌不記內容。
 - 依賴套件：本案沒有新增任何 npm 或 Gradle 依賴。
+
+## M4.1（主畫面均線與聊聊入口、明細頁關閉）
+
+- 架構約束檢查：
+  - A44：明細頁 `MaActivity` 仍為非導出畫面（`exported="false"`），維持同源檢查，子資源非同源回 403。
+  - A48：主畫面只呼叫 `WorkerApi.get("/api/ma/report")` 取摘要（由常數 `MA_REPORT_PATH` 指定），不呼叫 post/put，不呼叫未授權路徑。
+  - A49 / A53：無靜默降級，副標文字依規格由 `maEntrySubtitle` 與常數提供，無寫死字串或多頭範例數字（V43 檢查通過）。
+  - A50 / A51：明細頁關閉攔截使用專用 scheme `ma-exit://close`，`MaActivity` 攔截 `isMaExitUrl` 執行 `finish()`，不開放任何 `@JavascriptInterface`，WebView 維持無原生 JS 介面。
+  - A52：主畫面「聊聊」大卡片點擊時若未設定聊天網址，只在主狀態顯示提示，不開啟畫面。
+
