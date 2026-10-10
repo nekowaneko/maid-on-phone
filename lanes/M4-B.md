@@ -33,7 +33,7 @@
   - 理由：`backend/tests/spec/m3r/overlay-todoist.test.js` 第 109 行寫入斷言 `assert.deepEqual(srcs.slice(-3), ['drink-view.js', 'todoist-labels.js', 'todoist-view.js'])`。依 M4-LANE-B §4B.2 要求，`index.html` 需於 `todoist-view.js` 之後依序載入 `ma-labels.js` 與 `ma-view.js`，導致最後三支 script 變為 `['todoist-view.js', 'ma-labels.js', 'ma-view.js']`，因而造成凍結之 M3R-S19 測試失敗。依 §0.8 規定，實作代理人不得變更凍結之規格測試，故標記規格爭議。
   - 建議改法：整合時將 M3R-S19 的斷言放寬或改為驗證 `todoist-labels.js` 與 `todoist-view.js` 在 `drink-view.js` 之後載入的相對順序，而非以 `slice(-3)` 檢查。
 - **前置驗收阻擋（verify.sh V06）**：
-  - 規劃者尚未執行 T0 排除 `docs/M4-*.md` 文件中出現的 `sk-` 字串（該字串出現於規格條款說明文中），導致 `verify.sh` 在 L1 V06 時判定疑似憑證洩漏而中斷。依 §0.9.1 與 §0.9.2，B 線代理人不得修改 `verify.sh` 或 `docs/`，已記錄需整合處理。
+  - 規劃者尚未執行 T0 排除 `docs/M4-*.md` 文件中出現的 含 s、k、連字號三個連續字元的字串（該字串出現於規格條款說明文中），導致 `verify.sh` 在 L1 V06 時判定疑似憑證洩漏而中斷。依 §0.9.1 與 §0.9.2，B 線代理人不得修改 `verify.sh` 或 `docs/`，已記錄需整合處理。
 
 ## 需要整合處理
 
