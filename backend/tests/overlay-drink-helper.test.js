@@ -8,7 +8,7 @@ import vm from 'node:vm'
 
 // 常數定義
 const PET_DIR = new URL('../../app/src/main/assets/pet/', import.meta.url)
-const PET_SCRIPTS = ['emotion-map.js', 'vendor/stream-parser.js', 'performance.js', 'drink-labels.js', 'drink-view.js', 'todoist-labels.js', 'todoist-view.js']
+const PET_SCRIPTS = ['emotion-map.js', 'vendor/stream-parser.js', 'performance.js', 'ma-labels.js', 'ma-view.js', 'drink-labels.js', 'drink-view.js', 'todoist-labels.js', 'todoist-view.js']
 const INDEX_HTML = readFileSync(new URL('index.html', PET_DIR), 'utf8')
 
 // 功能函數定義
@@ -131,7 +131,7 @@ test('sugarMenu：每顆的草稿互相獨立，不改動傳入的草稿', () =>
   assert.deepEqual(plain(menu[1].action.draft.toppingIds), ['boba'])
 })
 
-test('index.html 依序載入七支 script，戒飲按鈕列在 #text 與 #actions 之間', () => {
+test('index.html 依序載入九支 script，戒飲按鈕列在 #text 與 #actions 之間', () => {
   const srcs = [...INDEX_HTML.matchAll(/<script src="([^"]+)"/g)].map((m) => m[1])
   assert.deepEqual(srcs, PET_SCRIPTS)
   const text = INDEX_HTML.indexOf('id="text"')
@@ -140,9 +140,9 @@ test('index.html 依序載入七支 script，戒飲按鈕列在 #text 與 #actio
   assert.ok(text >= 0 && text < drink && drink < actions)
 })
 
-test('index.html 泡泡按鈕列為說話、聊聊、沒喝、歷史，戒飲按鈕用 textContent 設文字', () => {
+test('index.html 泡泡按鈕列為說話、聊聊、沒喝、歷史、盤前均線，戒飲按鈕用 textContent 設文字', () => {
   const ids = [...INDEX_HTML.matchAll(/<button id="([^"]+)"/g)].map((m) => m[1])
-  assert.deepEqual(ids, ['mic', 'chat', 'resist', 'history'])
+  assert.deepEqual(ids, ['mic', 'chat', 'resist', 'history', 'ma'])
   assert.ok(!/innerHTML/.test(INDEX_HTML))
   assert.match(INDEX_HTML, /showDrink:/)
   assert.match(INDEX_HTML, /thinking:/)
