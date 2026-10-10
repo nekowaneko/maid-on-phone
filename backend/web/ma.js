@@ -7,7 +7,9 @@ import {
   renderToday,
   renderHistory,
   renderWatchlist,
-  renderGlossary
+  renderGlossary,
+  decideBack,
+  MA_EXIT_URL
 } from './ma-render.js'
 
 // 常數定義
@@ -294,11 +296,12 @@ function bindEvents() {
     const action = target.getAttribute('data-a')
 
     if (action === 'back') {
-      if (state.screen === 'manage' || state.screen === 'glossary') {
+      const next = decideBack(state.screen)
+      if (next === 'detail') {
         state.screen = 'detail'
         render()
-      } else if (window.history.length > 1) {
-        window.history.back()
+      } else {
+        window.location.href = MA_EXIT_URL
       }
       return
     }

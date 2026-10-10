@@ -8,6 +8,7 @@ const CHART_DX = 34
 const CHART_TOP = 8
 const CHART_SCALE = 0.8
 const LABEL_GAP = 14
+export const MA_EXIT_URL = 'ma-exit://close' // 與 ma-contract.json 的 exitUrl 相同
 
 // 功能函數定義
 
@@ -316,3 +317,10 @@ export function renderWatchlist(watchlistData, limit, lines, addErr) {
     emptyNote +
     '<p class="sub">停止追蹤後 6 秒內可以復原。</p>'
 }
+
+// 依目前畫面決定「‹」的行為：追蹤清單與看懂排列頁回明細（'detail'），明細最上層關閉明細頁（'exit'）
+export const decideBack = (screen) => {
+  if (screen === 'manage' || screen === 'glossary') return 'detail'
+  return 'exit'
+}
+

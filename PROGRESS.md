@@ -158,3 +158,9 @@
 - 修正輪數：0；錯誤指紋：無。
 - 驗收項失敗次數：全部 0。
 - `./verify.sh --stage 1` 全綠（Kotlin 規格測試 48/48 全部通過）。
+
+### T2
+- 實作 `ma-render.js`（`decideBack`、`MA_EXIT_URL`）、`ma.js`（改用 `decideBack` 與 `MA_EXIT_URL`），以及 W-A 契約測試 `ma-entry-contract.test.js`。
+- 修正輪數：0；錯誤指紋：無。
+- 驗收項失敗次數：全部 0。
+- `./verify.sh --stage 2` 全綠（backend 通過 561 個測試，含 2 個 JS 規格測試與 3 個 W-A 測試）。
