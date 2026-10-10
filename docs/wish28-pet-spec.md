@@ -321,3 +321,12 @@
 - 明細頁左上「‹」在最上層時原本沒有作用，改為關閉明細頁。
 - 介面規格：design/prototype/app-home.html、screens.md（S8、S9）、ui-assertions.md（U17～U21）。
 
+
+## 聊天頁視訊版追加（2026-10-11，使用者決定）
+
+- F0.5 追加：Worker B 的聊天頁（`backend/web/index.html`）改為視訊通話風格：角色整張表情圖在視訊區，對話框貼在角色頭頂；有「呼叫中、通話中、她在想、連線失敗、通話結束」五種狀態，輸入列左邊有紅色「掛斷」。
+- **定案 §4 F0.5 入口**原寫「聊天畫面改以角色頭貼呈現表情，待複製 accompany_bot 後再討論」：改為此視訊風格，直接使用懸浮窗已有的整張表情圖（`frames/local/`，不進 git），不再製作分層 PNG；M1.5 的「分層 PNG」不再適用於聊天頁。
+- 「⋯」選單收納原本的七顆小按鈕；**換裝與試穿移除**。
+- 聊天頁名稱改為「手機女僕」。App 端名稱（快速設定磚「🐾 陪伴角色」等）是否一併改，未決定，見 design/prototype/later.md。
+- 沿用聊天頁現況風格，不換設計系統。
+- 介面規格：design/prototype/chat-video.html、screens.md（V1～V7）、ui-assertions.md（U22～U35）。

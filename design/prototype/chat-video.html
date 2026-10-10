@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>聊聊 視訊版原型</title>
+<style>
+/* 色票沿用 backend/web/style.css 的現況（米色底、漫畫黑框、白色表面），不另發明設計系統 */
+:root {
+  --bg: #ece2cf;
+  --ink: #1b1917;
+  --panel: #ffffff;
+  --muted: #6f675a;
+  --muted-surface: #d6cdba;
+  --accent: #3f5bc8;
+  --danger: #c0392b;
+  --radius: 14px;
+  --bubble-radius: 22px;
+  --bubble-border: 3px;
+  --gap: 12px;
+  --font: system-ui, "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", sans-serif;
+
+  /* 原型側欄專用，不屬於產品畫面 */
+  --side-bg: #f6f3ec;
+  --side-line: #d9d1bf;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--side-bg); color: var(--ink); font-family: var(--font); line-height: 1.6; }
+button { font: inherit; cursor: pointer; color: inherit; }
+p { margin: 0; }
+
+/* ========== 原型外框 ========== */
+.shell { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; padding: 16px; max-width: 1100px; margin: 0 auto; }
+@media (min-width: 900px) { .shell { grid-template-columns: 340px 1fr; padding: 24px; align-items: start; } }
+.side h1 { font-size: 1.2rem; margin: 0 0 4px; }
+.side .sub { color: var(--muted); font-size: .85rem; margin-bottom: 16px; }
+.side h2 { font-size: .75rem; letter-spacing: .08em; color: var(--muted); margin: 18px 0 8px; font-weight: 600; }
+.steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 6px; }
+.steps li { display: flex; gap: 8px; align-items: flex-start; font-size: .9rem; }
+.steps li::before { content: "○"; color: var(--muted); }
+.steps li.done::before { content: "●"; color: #1b7f4b; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1.5px solid var(--ink); background: var(--panel); border-radius: 999px; padding: 4px 12px; font-size: .85rem; }
+.chip:hover { background: var(--muted-surface); }
+.note { font-size: .8rem; color: var(--muted); margin-top: 6px; }
+.stagewrap { display: flex; justify-content: center; }
+
+/* ========== 手機（375px） ========== */
+.phone { width: 375px; max-width: 100%; height: 760px; max-height: calc(100dvh - 32px); background: var(--bg); border: 2px solid var(--ink); border-radius: 28px; overflow: hidden; position: relative; display: flex; flex-direction: column; }
+@media (max-width: 420px) { .phone { border-radius: 0; border-width: 0; height: 100dvh; max-height: none; } .shell { padding: 0; } .side { padding: 16px; } }
+
+.topbar { position: absolute; top: 10px; left: 0; right: 0; z-index: 3; display: flex; align-items: center; gap: var(--gap); padding: 10px 22px; }
+.topbar .who { flex: 1; min-width: 0; }
+.topbar .name { font-weight: 700; }
+.topbar .status { font-size: .8rem; color: var(--muted); }
+.topbar .status.live::before { content: "● "; color: #1b7f4b; }
+.topbar .status.bad::before { content: "● "; color: var(--danger); }
+.icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ink); background: var(--panel); font-size: 1.1rem; line-height: 1; }
+
+/* 視訊區：背景＋她的整張表情圖＋字幕 */
+.video { position: relative; container-type: inline-size; flex: 1 1 auto; margin: 10px var(--gap) 0; border: var(--bubble-border) solid var(--ink); border-radius: var(--bubble-radius); overflow: hidden; background: linear-gradient(180deg, #f3e6cf 0%, #d9bfa0 100%); min-height: 0; }
+.video::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 20% 15%, rgba(255,255,255,.55), transparent 45%), radial-gradient(circle at 85% 30%, rgba(255,214,150,.45), transparent 40%); }
+.face { position: absolute; left: 50%; bottom: 0; transform: translateX(-50%); width: 118%; max-width: none; height: auto; transition: opacity .15s; }
+.face.dim { opacity: .25; filter: grayscale(.6); }
+.caption { position: absolute; left: 12px; right: 12px; bottom: calc(137cqw - 14px); z-index: 2; height: calc(2 * 1.7 * 1.05rem + 2 * 10px + 2 * var(--bubble-border)); padding: 10px; border: var(--bubble-border) solid var(--ink); border-radius: var(--bubble-radius); background: var(--panel); font-size: 1.05rem; line-height: 1.7; overflow: visible; }
+#line { height: 100%; overflow-y: auto; overscroll-behavior: contain; }
+.caption.empty { opacity: 0; }
+.caption::after { content: ""; position: absolute; left: 50%; bottom: -11px; width: 16px; height: 16px; background: var(--panel); border-right: var(--bubble-border) solid var(--ink); border-bottom: var(--bubble-border) solid var(--ink); transform: translateX(-50%) rotate(45deg); }
+.thinking-dots::after { content: ""; display: inline-block; width: 1.2em; text-align: left; animation: dots 1.2s steps(4) infinite; }
+@keyframes dots { 0% { content: ""; } 25% { content: "."; } 50% { content: ".."; } 75% { content: "..."; } }
+
+/* 疊在視訊區上的狀態層 */
+.overlay { position: absolute; inset: 0; z-index: 3; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 24px; text-align: center; background: rgba(236, 226, 207, .88); }
+.overlay.show { display: flex; }
+.overlay h3 { margin: 0; font-size: 1.1rem; }
+.overlay p { color: var(--muted); font-size: .9rem; }
+.ring { width: 84px; height: 84px; border-radius: 50%; border: 3px solid var(--ink); display: grid; place-items: center; font-size: 2rem; background: var(--panel); position: relative; }
+.ring::after { content: ""; position: absolute; inset: -10px; border-radius: 50%; border: 2px solid var(--ink); opacity: .4; animation: pulse 1.4s ease-out infinite; }
+@keyframes pulse { from { transform: scale(.85); opacity: .5; } to { transform: scale(1.25); opacity: 0; } }
+.btn { border: 2px solid var(--ink); background: var(--panel); border-radius: var(--radius); padding: 8px 16px; font-weight: 600; }
+.btn.primary { background: var(--ink); color: var(--panel); }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; }
+
+/* 腳下：回聲＋輸入列 */
+.echo { flex: 0 0 auto; margin: 8px var(--gap) 0; min-height: calc(1.7 * .85rem + 12px); padding: 3px 10px; font-size: .85rem; color: var(--muted); text-align: right; }
+.composer { flex: 0 0 auto; display: flex; align-items: flex-end; gap: 8px; padding: 6px var(--gap) max(var(--gap), env(safe-area-inset-bottom)); }
+.hangup { width: 48px; height: 48px; flex: 0 0 auto; border-radius: 50%; border: 2px solid var(--ink); background: var(--danger); color: #fff; font-size: 1.2rem; }
+.composer textarea { flex: 1; min-width: 0; resize: none; border: 2px solid var(--ink); border-radius: var(--radius); padding: 10px 12px; font: inherit; background: var(--panel); height: 48px; }
+.composer .send { height: 48px; padding: 0 16px; border-radius: var(--radius); border: 2px solid var(--ink); background: var(--ink); color: var(--panel); font-weight: 600; }
+.composer .send:disabled, .composer textarea:disabled, .hangup:disabled { background: var(--muted-surface); color: var(--muted); border-color: var(--muted); }
+
+/* 底部面板（更多選單、對話紀錄） */
+.sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--panel); border-top: var(--bubble-border) solid var(--ink); border-radius: var(--bubble-radius) var(--bubble-radius) 0 0; padding: 14px var(--gap) 20px; transform: translateY(105%); transition: transform .28s; max-height: 62%; overflow-y: auto; z-index: 5; }
+.sheet.show { transform: none; }
+.sheet h3 { margin: 0 0 8px; font-size: 1rem; display: flex; justify-content: space-between; align-items: center; }
+.menu-item { display: flex; gap: 10px; width: 100%; text-align: left; padding: 12px 6px; border: 0; border-bottom: 1px solid var(--muted-surface); background: none; }
+.log-item { padding: 8px 0; border-bottom: 1px solid var(--muted-surface); font-size: .9rem; }
+.log-item b { display: block; color: var(--muted); font-size: .75rem; font-weight: 600; }
+.toast { position: absolute; left: 50%; top: 64px; transform: translateX(-50%); background: var(--ink); color: var(--panel); border-radius: 999px; padding: 6px 14px; font-size: .85rem; opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 9; white-space: nowrap; }
+.toast.show { opacity: 1; }
+.scrim { position: absolute; inset: 0; background: rgba(0,0,0,.25); display: none; z-index: 4; }
+.scrim.show { display: block; }
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <h1>聊聊：視訊通話版（原型 v1）</h1>
+    <p class="sub">用 frames 的整張表情圖，不再疊分層 PNG。假資料、不接後端。</p>
+
+    <h2>核心路徑（走完會自動打勾）</h2>
+    <ol class="steps" id="steps">
+      <li data-step="connect">按「聊聊」後呼叫，接通，她開口說話</li>
+      <li data-step="send">打字送出一句話，看她「想」之後回覆</li>
+      <li data-step="faces">她回覆時，表情隨台詞換 3 種以上</li>
+      <li data-step="menu">開「⋯」選單，找到對話紀錄等原有功能</li>
+      <li data-step="hangup">按紅色掛斷，看到通話結束</li>
+    </ol>
+
+    <h2>直接跳到某個狀態</h2>
+    <div class="chips" id="states">
+      <button class="chip" data-go="connecting">呼叫中</button>
+      <button class="chip" data-go="live">通話中</button>
+      <button class="chip" data-go="thinking">她在想</button>
+      <button class="chip" data-go="error">連線失敗</button>
+      <button class="chip" data-go="ended">通話結束</button>
+      <button class="chip" data-go="menu">更多選單</button>
+      <button class="chip" data-go="log">對話紀錄</button>
+    </div>
+
+    <h2>表情測試（只看圖，不影響流程）</h2>
+    <div class="chips" id="faces"></div>
+    <p class="note">圖來自 frames/local（本機素材，不進 git），原型不上傳雲端，只能在本機打開。</p>
+    <p class="note">畫質提醒：來源只有 300×349，手機高解析螢幕上會偏軟。這是原型要你判斷的重點之一。</p>
+  </aside>
+
+  <main class="stagewrap">
+    <div class="phone" id="phone">
+      <header class="topbar">
+        <div class="who">
+          <div class="name">手機女僕</div>
+          <div class="status" id="status">呼叫中…</div>
+        </div>
+        <button class="icon-btn" id="more" aria-label="更多">⋯</button>
+      </header>
+
+      <section class="video" id="video">
+        <img class="face" id="face" alt="她的表情" src="">
+        <div class="caption empty" id="caption"><div id="line"></div></div>
+
+        <div class="overlay" id="ov-connecting">
+          <div class="ring">🐾</div>
+          <h3>呼叫中…</h3>
+          <p>正在連上她</p>
+        </div>
+        <div class="overlay" id="ov-error">
+          <div class="ring" style="border-color: var(--danger)">!</div>
+          <h3>連不上她</h3>
+          <p>請檢查網路，或確認「App 存取密鑰」有填對。</p>
+          <div class="btn-row">
+            <button class="btn primary" data-act="redial">重撥</button>
+            <button class="btn" data-act="secret">開啟密鑰設定</button>
+          </div>
+        </div>
+        <div class="overlay" id="ov-ended">
+          <div class="ring">☎</div>
+          <h3>通話結束</h3>
+          <p id="ended-time">通話時間 00:00</p>
+          <div class="btn-row">
+            <button class="btn primary" data-act="redial">再撥一次</button>
+            <button class="btn" data-act="close">關閉聊天</button>
+          </div>
+        </div>
+      </section>
+
+      <p class="echo" id="echo"></p>
+      <form class="composer" id="composer" autocomplete="off">
+        <button class="hangup" id="hangup" type="button" aria-label="掛斷">✆</button>
+        <textarea id="message" rows="1" placeholder="想說點什麼？" aria-label="想說的話"></textarea>
+        <button class="send" id="send" type="submit">送出</button>
+      </form>
+
+      <div class="scrim" id="scrim"></div>
+      <section class="sheet" id="menu-sheet" aria-label="更多">
+        <h3>更多 <button class="icon-btn" data-close aria-label="關閉" style="width:32px;height:32px">✕</button></h3>
+        <button class="menu-item" data-open="log">☰ 對話紀錄</button>
+        <button class="menu-item" data-todo>✎ 小檔案</button>
+        <button class="menu-item" data-todo>◔ 用量</button>
+        <button class="menu-item" data-todo>⊕ 上傳背景圖</button>
+        <button class="menu-item" data-todo>▦ 更換背景圖</button>
+        <button class="menu-item" data-todo>⚑ 制式回覆</button>
+        <p class="note" style="padding:8px 6px 0">換裝已移除（沒有分層，就沒有換裝）。其餘沿用原本抽屜，這次不改。</p>
+      </section>
+      <section class="sheet" id="log-sheet" aria-label="對話紀錄">
+        <h3>對話紀錄 <button class="icon-btn" data-close aria-label="關閉" style="width:32px;height:32px">✕</button></h3>
+        <div id="log-list"></div>
+      </section>
+      <div class="toast" id="toast"></div>
+    </div>
+  </main>
+</div>
+
+<script>
+const FRAME_ROOT = '../../app/src/main/assets/pet/frames/local/'
+const FRAMES = { neutral: 'idle.png', laugh: 'idle.png', smile: 'smile.png', thinking: 'thinking.png', troubled: 'troubled.png', pout: 'pout.png', shy: 'shy.png' }
+const NAMES = { neutral: '平常', smile: '微笑', thinking: '思考', troubled: '困擾', pout: '微傲', shy: '嬌' }
+const CHAR_MS = 30, END_PAUSE_MS = 0, BACK_TO_IDLE_MS = 3000
+const GREETING = '[smile]接通了。[pout]……主人這次想聊什麼呢？'
+const REPLIES = [
+  '[smile]主人回來啦。[pout]……才沒有在等你，只是剛好有空而已。',
+  '[thinking]嗯……讓我想想。[smile]這樣安排的話，下午會輕鬆很多喔。[shy]……不用特別謝我。',
+  '[troubled]主人又熬夜了對不對？[pout]哼，我可是會擔心的。[shy]……今天早點睡。'
+]
+
+const $ = (s) => document.querySelector(s)
+const face = $('#face'), line = $('#line'), caption = $('#caption'), statusEl = $('#status')
+let state = 'connecting', replyIndex = 0, playToken = 0, idleTimer = 0, blinkTimer = 0, startedAt = 0, tickTimer = 0
+const seenFaces = new Set(), log = []
+
+Object.values(FRAMES).concat(['blink.png']).forEach((f) => { const i = new Image(); i.src = FRAME_ROOT + f })
+
+function tick(step) { const li = document.querySelector(`[data-step="${step}"]`); if (li) li.classList.add('done') }
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(t._t); t._t = setTimeout(() => t.classList.remove('show'), 1600) }
+function fmt(ms) { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0') }
+
+function setFace(key) { face.src = FRAME_ROOT + FRAMES[key]; face.dataset.key = key; seenFaces.add(key); if (seenFaces.size >= 4) tick('faces') }
+function scheduleBlink() {
+  clearTimeout(blinkTimer)
+  blinkTimer = setTimeout(() => {
+    if (face.dataset.key === 'neutral' && (state === 'live' || state === 'thinking')) {
+      face.src = FRAME_ROOT + 'blink.png'
+      setTimeout(() => { if (face.dataset.key === 'neutral') face.src = FRAME_ROOT + 'idle.png' }, 140)
+    }
+    scheduleBlink()
+  }, 3000 + Math.random() * 2500)
+}
+
+function parse(text) {
+  const out = []; const re = /\[(\w+)\]([^\[]*)/g; let m
+  while ((m = re.exec(text))) out.push({ tag: m[1], text: m[2] })
+  return out
+}
+function plain(text) { return parse(text).map((p) => p.text).join('') }
+
+// 逐字演出：每字 0.08 秒、句尾停 0.5 秒、3 秒後回到平常的臉（與 M1.6 懸浮窗相同）
+async function play(text) {
+  const token = ++playToken
+  clearTimeout(idleTimer)
+  line.textContent = ''; caption.classList.remove('empty')
+  for (const seg of parse(text)) {
+    setFace(FRAMES[seg.tag] ? seg.tag : 'neutral')
+    for (const ch of seg.text) {
+      if (token !== playToken) return
+      line.textContent += ch
+      line.scrollTop = line.scrollHeight
+      await new Promise((r) => setTimeout(r, CHAR_MS))
+    }
+  }
+  await new Promise((r) => setTimeout(r, END_PAUSE_MS))
+  if (token !== playToken) return
+  idleTimer = setTimeout(() => { if (token === playToken) setFace('neutral') }, BACK_TO_IDLE_MS)
+}
+
+function show(id, on) { $(id).classList.toggle('show', on) }
+function closeSheets() { document.querySelectorAll('.sheet').forEach((s) => s.classList.remove('show')); $('#scrim').classList.remove('show') }
+function openSheet(id) { closeSheets(); $(id).classList.add('show'); $('#scrim').classList.add('show') }
+
+function setEnabled(on) { ['#message', '#send'].forEach((s) => ($(s).disabled = !on)) }
+
+function go(next) {
+  state = next
+  playToken++; clearTimeout(idleTimer); clearInterval(tickTimer)
+  ;['#ov-connecting', '#ov-error', '#ov-ended'].forEach((o) => show(o, false))
+  face.classList.remove('dim'); closeSheets()
+  statusEl.className = 'status'
+  if (next === 'connecting') {
+    show('#ov-connecting', true); face.classList.add('dim'); setFace('neutral'); caption.classList.add('empty'); line.textContent = ''
+    statusEl.textContent = '呼叫中…'; setEnabled(false)
+    clearTimeout(go._t); go._t = setTimeout(() => { if (state === 'connecting') go('live') }, 1800)
+  } else if (next === 'live' || next === 'thinking') {
+    statusEl.className = 'status live'; setEnabled(next === 'live')
+    if (!startedAt) startedAt = Date.now()
+    const upd = () => { statusEl.textContent = (state === 'thinking' ? '她在想… ' : '通話中 ') + fmt(Date.now() - startedAt) }
+    upd(); tickTimer = setInterval(upd, 1000)
+    if (next === 'live') { if (!go._greeted) { go._greeted = true; tick('connect'); play(GREETING) } }
+    else { setFace('thinking'); caption.classList.remove('empty'); line.innerHTML = '<span class="thinking-dots">……</span>' }
+  } else if (next === 'error') {
+    show('#ov-error', true); face.classList.add('dim'); caption.classList.add('empty'); line.textContent = ''; statusEl.className = 'status bad'; statusEl.textContent = '連線失敗'; setEnabled(false)
+  } else if (next === 'ended') {
+    show('#ov-ended', true); face.classList.add('dim'); caption.classList.add('empty'); line.textContent = ''; setEnabled(false)
+    statusEl.textContent = '已結束'; $('#ended-time').textContent = '通話時間 ' + fmt(startedAt ? Date.now() - startedAt : 0); tick('hangup')
+    startedAt = 0; go._greeted = false
+  }
+}
+
+$('#composer').addEventListener('submit', (e) => {
+  e.preventDefault()
+  const box = $('#message'), text = box.value.trim()
+  if (!text || state !== 'live') return
+  box.value = ''; $('#echo').textContent = text; log.push({ who: '你', text })
+  tick('send'); go('thinking')
+  setTimeout(() => {
+    if (state !== 'thinking') return
+    const reply = REPLIES[replyIndex++ % REPLIES.length]
+    state = 'live'; statusEl.className = 'status live'; setEnabled(true)
+    log.push({ who: '她', text: plain(reply) }); play(reply)
+  }, 1400)
+})
+$('#message').addEventListener('keydown', (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); $('#composer').requestSubmit() } })
+$('#hangup').addEventListener('click', () => go('ended'))
+$('#more').addEventListener('click', () => { openSheet('#menu-sheet'); tick('menu') })
+$('#scrim').addEventListener('click', closeSheets)
+document.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', closeSheets))
+document.querySelectorAll('[data-todo]').forEach((b) => b.addEventListener('click', () => toast('原有功能，這次不改')))
+document.querySelector('[data-open="log"]').addEventListener('click', openLog)
+document.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', () => {
+  const a = b.dataset.act
+  if (a === 'redial') go('connecting')
+  else if (a === 'secret') toast('開啟原本的「App 存取密鑰」抽屜')
+  else if (a === 'close') toast('App 內：關閉聊天畫面，回到懸浮窗')
+}))
+
+function openLog() {
+  const rows = log.length ? log : [{ who: '她', text: '接通了。……主人這次想聊什麼呢？' }, { who: '你', text: '（範例）今天有什麼要做的？' }, { who: '她', text: '先喝水，再處理那封信。' }]
+  $('#log-list').innerHTML = rows.map((r) => `<div class="log-item"><b>${r.who}</b>${r.text}</div>`).join('')
+  openSheet('#log-sheet')
+}
+
+document.querySelectorAll('#states .chip').forEach((c) => c.addEventListener('click', () => {
+  const g = c.dataset.go
+  if (g === 'menu') { openSheet('#menu-sheet'); tick('menu') }
+  else if (g === 'log') openLog()
+  else go(g)
+}))
+const facesBox = $('#faces')
+Object.keys(NAMES).forEach((k) => {
+  const b = document.createElement('button'); b.className = 'chip'; b.textContent = NAMES[k]
+  b.addEventListener('click', () => { if (state === 'connecting' || state === 'error' || state === 'ended') go('live'); setFace(k) })
+  facesBox.appendChild(b)
+})
+
+setFace('neutral'); scheduleBlink(); go('connecting')
+</script>
+</body>
+</html>
