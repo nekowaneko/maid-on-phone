@@ -164,3 +164,13 @@
 - 修正輪數：0；錯誤指紋：無。
 - 驗收項失敗次數：全部 0。
 - `./verify.sh --stage 2` 全綠（backend 通過 561 個測試，含 2 個 JS 規格測試與 3 個 W-A 測試）。
+
+### T3
+- 實作原生 App 主畫面：更新 `activity_main.xml`（加入 `cardMaEntry`、`cardChatEntry`，麥克風單獨一排，移除 `cardChatQuick` 與 `tvChatStatus`）。
+- 實作 `MainActivity.kt`（元件綁定、點擊監聽、`onResume` 呼叫 `refreshMaEntry()`、依狀態碼顯示副標）。
+- 實作 `MaActivity.kt`（`MaWebViewClient.shouldOverrideUrlLoading` 攔截 `isMaExitUrl` 呼叫 `finish()`）。
+- 修正輪數：1（`MainActivity.kt` 初版呼叫 `maEntrySubtitle` 簽名不符，修正為 `MaFetch` 列舉並傳入狀態碼與摘要）。
+- 錯誤指紋：`fp-v12-mafetch-signature`。
+- 驗收項失敗次數：V12 ×1。
+- `./verify.sh --stage 3` 全綠（通過 V39、V40、V41、V42、V43、V11、V12、V26、V27、V44、V45）。
+

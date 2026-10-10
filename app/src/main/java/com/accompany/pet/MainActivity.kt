@@ -31,7 +31,16 @@ import androidx.core.view.WindowInsetsCompat
 import com.accompany.pet.core.chat.CHAT_NOT_SET_MESSAGE
 import com.accompany.pet.core.chat.ChatAction
 import com.accompany.pet.core.chat.decideChat
+import com.accompany.pet.core.drink.STATUS_NOT_SET
+import com.accompany.pet.core.drink.STATUS_UNREACHABLE
 import com.accompany.pet.core.exportCsv
+import com.accompany.pet.core.ma.CHAT_ENTRY_SUBTITLE
+import com.accompany.pet.core.ma.MA_REPORT_PATH
+import com.accompany.pet.core.ma.MaFetch
+import com.accompany.pet.core.ma.maEntryLoadingText
+import com.accompany.pet.core.ma.maEntrySubtitle
+import com.accompany.pet.core.ma.maPageUrl
+import com.accompany.pet.core.ma.parseMaReportBrief
 import com.accompany.pet.core.permission.StartAction
 import com.accompany.pet.core.permission.decideStart
 import com.google.android.material.bottomsheet.BottomSheetDialog
@@ -44,7 +53,6 @@ const val USAGE_ACCESS_HINT = "開啟後才能在玩遊戲時先不打擾"
 const val NO_FIREBASE_HINT = "尚未設定 Firebase，見 docs/FIREBASE-SETUP.md"
 const val TEST_PUSH_TEXT = "這是一則測試推播"
 const val PADDING_DP = 16
-const val CHAT_SET_TEXT = "聊天網址：已設定"
 
 // macOS 深色毛玻璃風格主畫面：1A, 2A, 3A, 4A 決策實作
 class MainActivity : AppCompatActivity() {
@@ -58,7 +66,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvCharSubStatus: TextView
     private lateinit var swCharToggle: SwitchCompat
     private lateinit var cardDrinkSettings: LinearLayout
-    private lateinit var tvChatStatus: TextView
+    private lateinit var cardMaEntry: LinearLayout
+    private lateinit var tvMaEntrySub: TextView
+    private lateinit var cardChatEntry: LinearLayout
+    private lateinit var tvChatEntrySub: TextView
 
     private var settingsDialog: BottomSheetDialog? = null
     private var lastTestId: String? = null
@@ -95,6 +106,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    // 綁定各介面元件
     private fun bindViews() {
         btnGearSettings = findViewById(R.id.btnGearSettings)
         statusDot = findViewById(R.id.statusDot)
@@ -104,9 +116,14 @@ class MainActivity : AppCompatActivity() {
         tvCharSubStatus = findViewById(R.id.tvCharSubStatus)
         swCharToggle = findViewById(R.id.swCharToggle)
         cardDrinkSettings = findViewById(R.id.cardDrinkSettings)
-        tvChatStatus = findViewById(R.id.tvChatStatus)
+        cardMaEntry = findViewById(R.id.cardMaEntry)
+        tvMaEntrySub = findViewById(R.id.tvMaEntrySub)
+        cardChatEntry = findViewById(R.id.cardChatEntry)
+        tvChatEntrySub = findViewById(R.id.tvChatEntrySub)
+        tvChatEntrySub.text = CHAT_ENTRY_SUBTITLE
     }
 
+    // 設定元件點擊監聽器
     private fun setupListeners() {
         // 4A: 齒輪按鈕彈出偏好設定 Sheet Dialog
         btnGearSettings.setOnClickListener { showSettingsSheet() }
@@ -125,15 +142,24 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(this, DrinkSettingsActivity::class.java))
         }
 
-        // 4B: 快捷小按鈕（允許麥克風 / 對話紀錄）
-        findViewById<View>(R.id.cardMicQuick)?.setOnClickListener {
-            requestRuntimePermissions()
+        // 盤前均線入口大卡片：點擊開啟明細頁
+        cardMaEntry.setOnClickListener {
+            if (maPageUrl(BuildConfig.CHAT_URL) != null) {
+                startActivity(Intent(this, MaActivity::class.java))
+            }
         }
-        findViewById<View>(R.id.cardChatQuick)?.setOnClickListener {
+
+        // 聊聊入口大卡片：未設定時在主狀態顯示提示，已設定時開啟聊天畫面
+        cardChatEntry.setOnClickListener {
             when (decideChat(BuildConfig.CHAT_URL)) {
                 ChatAction.SHOW_NOT_SET -> tvMainStatus.text = CHAT_NOT_SET_MESSAGE
                 ChatAction.OPEN -> startActivity(Intent(this, ChatActivity::class.java))
             }
+        }
+
+        // 4B: 快捷小按鈕（允許麥克風）
+        findViewById<View>(R.id.cardMicQuick)?.setOnClickListener {
+            requestRuntimePermissions()
         }
     }
 
@@ -147,6 +173,7 @@ class MainActivity : AppCompatActivity() {
         val filter = IntentFilter(ACTION_PET_STATE_CHANGED)
         ContextCompat.registerReceiver(this, petStateReceiver, filter, ContextCompat.RECEIVER_NOT_EXPORTED)
         refreshUi()
+        refreshMaEntry()
         if (intent.getBooleanExtra(EXTRA_AUTO_START, false)) {
             intent.removeExtra(EXTRA_AUTO_START)
             toggleCharacterState(true)
@@ -187,8 +214,6 @@ class MainActivity : AppCompatActivity() {
             charToggleCapsule.setBackgroundResource(R.drawable.bg_capsule_card)
             tvCharSubStatus.text = "狀態：已隱藏 ⚪"
         }
-
-        tvChatStatus.text = chatStatusText()
     }
 
     // 膠囊切換角色開關
@@ -322,8 +347,20 @@ class MainActivity : AppCompatActivity() {
         startActivity(Intent.createChooser(send, "分享耗電紀錄"))
     }
 
-    private fun chatStatusText(): String =
-        if (decideChat(BuildConfig.CHAT_URL) == ChatAction.OPEN) CHAT_SET_TEXT else CHAT_NOT_SET_MESSAGE
+    // 更新盤前均線卡片副標
+    private fun refreshMaEntry() {
+        tvMaEntrySub.text = maEntryLoadingText()
+        WorkerApi.get(MA_REPORT_PATH) { res ->
+            if (isFinishing || isDestroyed) return@get
+            val fetch = when (res.status) {
+                STATUS_NOT_SET -> MaFetch.NOT_SET
+                STATUS_UNREACHABLE -> MaFetch.UNREACHABLE
+                else -> MaFetch.RESPONDED
+            }
+            val brief = if (res.status == 200 && res.text.isNotEmpty()) parseMaReportBrief(res.text) else null
+            tvMaEntrySub.text = maEntrySubtitle(fetch, res.status, brief)
+        }
+    }
 
     private fun testModeLabel(): String =
         if (isBatteryTestMode(this)) "耗電測試模式：開（螢幕保持亮著）" else "耗電測試模式：關"
