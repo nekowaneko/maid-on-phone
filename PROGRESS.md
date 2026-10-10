@@ -152,3 +152,9 @@
 ### T0b
 - 凍結規格測試 commit：`820fdf61afe8ad8d2e85f2e6782214f45cdf31eb`（Kotlin 10 個、JS 2 個，總計 Kotlin 48 個規格測試）。
 - 修正輪數：0；錯誤指紋：無。
+
+### T1
+- 實作 `MaEntry.kt`、`MaModels.kt` 追加與輔助測試 `MaEntryHelperTest.kt`。
+- 修正輪數：0；錯誤指紋：無。
+- 驗收項失敗次數：全部 0。
+- `./verify.sh --stage 1` 全綠（Kotlin 規格測試 48/48 全部通過）。
