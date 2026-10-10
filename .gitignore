@@ -34,6 +34,7 @@ backend/node_modules/
 backend/.wrangler/
 backend/.dev.vars
 backend/assets/character/png/*.png
+backend/assets/character/frames/*.png
 backend/assets/icons/*.png
 worker.properties
 

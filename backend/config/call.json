@@ -1,0 +1,12 @@
+{
+  "_說明": "M4.2 聊天頁視訊版的契約檔（docs/M4.2-EXPENSIVE-PLAN.md §4）。exitUrl 必須與 core/chat/Chat.kt 的 CHAT_EXIT_URL、backend/core/call-state.js 的 CHAT_EXIT_URL 相同；改這裡就要三處一起改。",
+  "displayName": "手機女僕",
+  "exitUrl": "chat-exit://close",
+  "connectTimeoutMs": 10000,
+  "blink": {
+    "file": "blink.png",
+    "minIntervalMs": 3000,
+    "maxIntervalMs": 5500,
+    "closedMs": 140
+  }
+}
