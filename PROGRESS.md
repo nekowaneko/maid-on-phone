@@ -144,3 +144,11 @@
 - 等使用者處理：部署與手機實測；是否採用建議新增的 M4-S18～S22
 - 採用 M4-S18～S22（凍結 `ec20954`），只有 S21 需改 `core/ma.js`；`--full` 重跑全綠（backend 556 個測試）
 - 已部署 Worker `pet-maid-api`（版本 a3edac81）並對遠端 D1 套用 schema（三張 ma_ 表）；等使用者手機實測
+## M4.1
+
+### T0a
+- CHEAP 產出 10 個檔案全部存在且非空，契約含 exitUrl。
+
+### T0b
+- 凍結規格測試 commit：`820fdf61afe8ad8d2e85f2e6782214f45cdf31eb`（Kotlin 10 個、JS 2 個，總計 Kotlin 48 個規格測試）。
+- 修正輪數：0；錯誤指紋：無。

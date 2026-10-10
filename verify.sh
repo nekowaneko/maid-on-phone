@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="ec209546ee19b88204952a85dffafec9862d8dc9"   # 凍結規格測試的 commit（M4 凍結版）
+FROZEN_HASH="820fdf61afe8ad8d2e85f2e6782214f45cdf31eb"   # 凍結規格測試的 commit（M4.1 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"
@@ -24,17 +24,21 @@ M3R_SPEC_IDS="M3R-S16 M3R-S17"  # M3R 的 Kotlin 自動列（第一輪 M3 的規
 M4_SPEC_IDS="M4-S15C"  # M4 的 Kotlin 自動列
 M4_JS_SPEC_IDS="M4-S01 M4-S02 M4-S03 M4-S04 M4-S05 M4-S06 M4-S07 M4-S08 M4-S09 M4-S10 M4-S11 M4-S12 M4-S13 M4-S14 M4-S16 M4-S15B M4-S17 M4-S18 M4-S19 M4-S20 M4-S21 M4-S22"  # M4 的 Worker（15 列）與前端（2 列）自動列
 M3R_JS_SPEC_IDS="M3R-S01 M3R-S02 M3R-S03 M3R-S04 M3R-S05 M3R-S06 M3R-S07 M3R-S08 M3R-S09 M3R-S10 M3R-S11 M3R-S12 M3R-S13 M3R-S14 M3R-S15 M3R-S18 M3R-S19"  # M3R 的 Worker 與懸浮窗自動列
+M41_SPEC_IDS="M41-S01 M41-S02 M41-S03 M41-S04 M41-S05 M41-S06 M41-S07 M41-S08 M41-S09 M41-S14"  # M4.1 的 Kotlin 自動列
+M41_JS_SPEC_IDS="M41-S11 M41-S12"  # M4.1 的 JS 自動列
 OVERLAY_TESTS="tests/spec/m16/overlay.test.js tests/spec/m2/overlay-drink.test.js tests/spec/m3r/overlay-todoist.test.js tests/spec/m4/overlay-ma.test.js tests/overlay-*.test.js tests/ma-web-*.test.js"  # B 線（角色頁）的測試
 WORKER_API_KT="app/src/main/java/com/accompany/pet/WorkerApi.kt"  # App 唯一可以連外的檔案（M2 A12 修訂）
 M1_SPEC_IDS="M1-S01 M1-S02 M1-S03 M1-S04 M1-S05 M1-S06 M1-S07 M1-S08 M1-S09 M1-S10 M1-S11 M1-S12 M1-S14 M1-S15"  # M1 自動列（計畫書寫 13 個但列了 14 列，見 DECISIONS.md）
 
 FULL=0
 CORE_ONLY=0
+STAGE=4
 LANE=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --full) FULL=1 ;;
     --core-only) CORE_ONLY=1 ;;
+    --stage) shift; STAGE="${1:-}"; case "$STAGE" in 1|2|3|4) ;; *) echo "--stage 只能是 1、2、3、4"; exit 2 ;; esac ;;
     --lane) shift; LANE="${1:-}"; case "$LANE" in B|C|D) ;; *) echo "--lane 只能是 B、C、D"; exit 2 ;; esac ;;
     *) echo "未知參數：$1"; exit 2 ;;
   esac
@@ -76,14 +80,14 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 
 [ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個＋M4 1 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列、M4 22 列各一次；沒有略過或獨跑標記
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個＋M4 1 個＋M4.1 10 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列、M4 22 列、M4.1 2 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 38 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 38"
-for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS $M4_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 48 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 48"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS $M4_SPEC_IDS $M41_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
-for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS $M4_JS_SPEC_IDS; do
+for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS $M4_JS_SPEC_IDS $M41_JS_SPEC_IDS; do
   n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -196,6 +200,81 @@ if [ -z "$LANE" ] && [ "$FULL" -eq 1 ]; then
   [ -f backend/tests/ma-wiring.test.js ] || fail "V36 缺少 ma-wiring.test.js"
   if grep -vE '^\s*//' backend/tests/ma-wiring.test.js | grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub'; then fail "V36 ma-wiring.test.js 含 monkeypatch"; fi
   pass "V36（接線）"
+fi
+
+# ===== M4.1 主畫面入口與明細頁關閉（docs/M4.1-EXPENSIVE-PLAN.md §6.1）=====
+
+# V39：MA_EXIT_URL 三處一致（A51）
+if [ "$STAGE" -ge 2 ]; then
+  CONTRACT_EXIT=$(grep -oE '"exitUrl"\s*:\s*"[^"]+"' "$MA_CONTRACT_FILE" | sed -E 's/.*"([^"]+)"/\1/' || true)
+  [ "$CONTRACT_EXIT" = "ma-exit://close" ] || fail "V39 ma-contract.json 的 exitUrl 不是 ma-exit://close：$CONTRACT_EXIT"
+  KT_MODELS="core/src/main/kotlin/com/accompany/pet/core/ma/MaModels.kt"
+  KT_EXIT=$(grep -oE 'const\s+val\s+MA_EXIT_URL\s*=\s*"[^"]+"' "$KT_MODELS" 2>/dev/null | sed -E 's/.*"([^"]+)"/\1/' || true)
+  [ "$KT_EXIT" = "$CONTRACT_EXIT" ] || fail "V39 MaModels.kt 的 MA_EXIT_URL ($KT_EXIT) 與契約 ($CONTRACT_EXIT) 不一致"
+  RENDER_JS="backend/web/ma-render.js"
+  JS_EXIT=$(grep -oE "MA_EXIT_URL\s*=\s*['\"][^'\"]+['\"]" "$RENDER_JS" 2>/dev/null | sed -E "s/.*['\"]([^'\"]+)['\"]/\1/" || true)
+  [ "$JS_EXIT" = "$CONTRACT_EXIT" ] || fail "V39 ma-render.js 的 MA_EXIT_URL ($JS_EXIT) 與契約 ($CONTRACT_EXIT) 不一致"
+  pass "V39"
+fi
+
+# V40：主畫面接線
+if [ "$STAGE" -ge 3 ]; then
+  MAIN_XML="app/src/main/res/layout/activity_main.xml"
+  MAIN_KT="app/src/main/java/com/accompany/pet/MainActivity.kt"
+  for id in 'cardMaEntry' 'cardChatEntry' 'tvMaEntrySub' 'tvChatEntrySub' '盤前均線，點了進入明細' '聊聊，點了和女僕聊天'; do
+    grep -q "$id" "$MAIN_XML" || fail "V40 activity_main.xml 缺少 $id"
+  done
+  L_DRINK=$(grep -n 'android:id="@+id/cardDrinkSettings"' "$MAIN_XML" | cut -d: -f1 || true)
+  L_MA=$(grep -n 'android:id="@+id/cardMaEntry"' "$MAIN_XML" | cut -d: -f1 || true)
+  L_CHAT=$(grep -n 'android:id="@+id/cardChatEntry"' "$MAIN_XML" | cut -d: -f1 || true)
+  L_MIC=$(grep -n 'android:id="@+id/cardMicQuick"' "$MAIN_XML" | cut -d: -f1 || true)
+  [ -n "$L_DRINK" ] && [ -n "$L_MA" ] && [ -n "$L_CHAT" ] && [ -n "$L_MIC" ] || fail "V40 卡片 id 不完整"
+  [ "$L_DRINK" -lt "$L_MA" ] && [ "$L_MA" -lt "$L_CHAT" ] && [ "$L_CHAT" -lt "$L_MIC" ] || fail "V40 卡片順序不符合 cardDrinkSettings -> cardMaEntry -> cardChatEntry -> cardMicQuick"
+  for forbidden in 'cardChatQuick' 'tvChatStatus' '女僕對話紀錄'; do
+    if grep -n "$forbidden" "$MAIN_XML"; then fail "V40 activity_main.xml 含 $forbidden"; fi
+  done
+  grep -q 'startActivity(Intent(this, MaActivity::class.java))' "$MAIN_KT" || fail "V40 MainActivity.kt 缺少 startActivity(Intent(this, MaActivity::class.java))"
+  grep -q 'maPageUrl(BuildConfig.CHAT_URL)' "$MAIN_KT" || fail "V40 MainActivity.kt 缺少 maPageUrl(BuildConfig.CHAT_URL)"
+  grep -A25 'override fun onResume()' "$MAIN_KT" | grep -q 'refreshMaEntry()' || fail "V40 MainActivity.kt onResume 缺少 refreshMaEntry()"
+  MA_LAUNCH_BLOCK=$(grep -B2 -A5 'startActivity(Intent(this, MaActivity::class.java))' "$MAIN_KT" || true)
+  if echo "$MA_LAUNCH_BLOCK" | grep -q 'FLAG_ACTIVITY_NEW_TASK'; then fail "V40 開 MaActivity 含 FLAG_ACTIVITY_NEW_TASK"; fi
+  if echo "$MA_LAUNCH_BLOCK" | grep -q 'finish()'; then fail "V40 開 MaActivity 含 finish()"; fi
+  pass "V40"
+fi
+
+# V41：關閉機制接線（A50）
+if [ "$STAGE" -ge 3 ]; then
+  MA_ACT="app/src/main/java/com/accompany/pet/MaActivity.kt"
+  MA_JS="backend/web/ma.js"
+  grep -A15 'shouldOverrideUrlLoading' "$MA_ACT" | grep -q 'isMaExitUrl(' || fail "V41 MaActivity.kt shouldOverrideUrlLoading 缺少 isMaExitUrl("
+  grep -A15 'shouldOverrideUrlLoading' "$MA_ACT" | grep -q 'finish()' || fail "V41 MaActivity.kt shouldOverrideUrlLoading 缺少 finish()"
+  grep -q 'decideBack(' "$MA_JS" || fail "V41 ma.js 缺少 decideBack("
+  grep -q 'MA_EXIT_URL' "$MA_JS" || fail "V41 ma.js 缺少 MA_EXIT_URL"
+  if grep -n 'history\.back' "$MA_JS"; then fail "V41 ma.js 含 history.back"; fi
+  pass "V41"
+fi
+
+# V42：A48 主畫面卡片只用 WorkerApi.get("/api/ma/report") 取摘要
+if [ "$STAGE" -ge 3 ]; then
+  MA_PATH_HITS=$(grep -rn '/api/ma/' app/src/main || true)
+  [ -z "$MA_PATH_HITS" ] || { echo "$MA_PATH_HITS"; fail "V42 app/src/main 出現寫死的 /api/ma/ 路徑"; }
+  if grep -rnE '/api/ma/refresh|/api/ma/watchlist|/api/ma/history' app/src/main; then fail "V42 app/src/main 含禁用的 ma 路徑"; fi
+  if grep -rnE 'WorkerApi\.post\(.*ma' app/src/main; then fail "V42 app/src/main 呼叫了 WorkerApi.post 搭配 ma 路徑"; fi
+  pass "V42"
+fi
+
+# V43：無靜默降級與無寫死副標（A49、A53、條款 12）
+if [ "$STAGE" -ge 3 ]; then
+  MAIN_KT="app/src/main/java/com/accompany/pet/MainActivity.kt"
+  for s in '正在取得今天的資料…' '今天的資料沒拿到，點了可重試' '還沒有追蹤標的，點了去加入' '還沒有報告，明天 08:30 會送來' '尚未設定連線' '女僕：今天也辛苦了，要不要聊聊？'; do
+    if grep -Fq "$s" "$MAIN_KT"; then fail "V43 MainActivity.kt 寫死了副標句子：$s"; fi
+  done
+  if grep -nE '多頭\s*[0-9]' "$MAIN_KT"; then fail "V43 MainActivity.kt 寫死了多頭檔數範例"; fi
+  CHECK_FILES=$(ls core/src/main/kotlin/com/accompany/pet/core/ma/MaEntry.kt app/src/main/java/com/accompany/pet/MainActivity.kt app/src/main/java/com/accompany/pet/MaActivity.kt backend/web/ma.js backend/web/ma-render.js 2>/dev/null || true)
+  if [ -n "$CHECK_FILES" ]; then
+    if grep -nE 'catch\s*(\([^)]*\))?\s*\{\s*return\s+["'"'"']' $CHECK_FILES; then fail "V43 catch 內回傳空白或固定字串副標"; fi
+  fi
+  pass "V43"
 fi
 
 # V28：角色頁只載入本機相對路徑的一般 script，不用 module、不讀檔、不連外（M1.6 A24）
@@ -315,15 +394,15 @@ if runs C; then
   pass "V12"
 fi
 
-if runs D; then
-  # V26：backend 全部測試通過（包含 M3R 規格＋輔助）；D 線不跑角色頁的測試（屬 B 線）
+if runs D && [ "$STAGE" -ge 2 ]; then
+  # V26：backend 全部測試通過（包含 M3R、M4、M4.1 規格＋輔助）；D 線不跑角色頁的測試（屬 B 線）
   if [ "$LANE" = "D" ]; then
     NODE_FILES=$(cd backend && find tests -name '*.test.js' ! -path 'tests/spec/m16/overlay.test.js' ! -path 'tests/spec/m2/overlay-drink.test.js' ! -path 'tests/spec/m3r/overlay-todoist.test.js' ! -path 'tests/spec/m4/overlay-ma.test.js' ! -name 'overlay-*.test.js' ! -name 'ma-web-*.test.js' ! -name 'ma-wiring.test.js' | sort | tr '
 ' ' ')
     NODE_MIN=450   # M3R 起跑前（不含第一輪的 todoist-core、todoist-api 輔助測試）＋M3R Worker 規格 15 列＋M4 Worker 規格 15 列
   else
     NODE_FILES="tests/**/*.test.js"
-    NODE_MIN=493   # 上一行＋角色頁測試（不含第一輪的 overlay-todoist 輔助測試）＋M3R 懸浮窗規格 2 列＋M4 前端規格 2 列
+    NODE_MIN=498   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助
   fi
   NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
   NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')
@@ -338,6 +417,28 @@ if runs B; then
   node tools/sync-overlay-vendor.mjs --check || fail "V27 角色頁的 vendor 檔與 backend/core 不一致，請重跑 node tools/sync-overlay-vendor.mjs"
   OVERLAY_OUT=$(cd backend && node --test $OVERLAY_TESTS 2>&1) || { echo "$OVERLAY_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V27 角色頁測試未通過"; }
   pass "V27"
+fi
+
+# V44：M4.1 規格測試通過（10 個 Kotlin、2 個 JS）
+if [ "$STAGE" -ge 1 ]; then
+  ./gradlew :core:test --tests "com.accompany.pet.spec.m41.*" -q || fail "V44 Kotlin 規格測試未通過"
+fi
+if [ "$STAGE" -ge 2 ]; then
+  (cd backend && node --test tests/spec/m41/ma-back.test.js) >/dev/null 2>&1 || fail "V44 JS 規格測試未通過"
+fi
+if [ "$STAGE" -ge 2 ]; then
+  pass "V44"
+elif [ "$STAGE" -ge 1 ]; then
+  pass "V44（Kotlin）"
+fi
+
+# V45：W-A 契約測試存在且通過；不含 mock.method、monkeypatch、jest.mock、sinon.stub【條款 11】
+if [ "$STAGE" -ge 2 ]; then
+  WA_TEST="backend/tests/ma-entry-contract.test.js"
+  [ -f "$WA_TEST" ] || fail "V45 缺少 $WA_TEST"
+  if grep -vE '^\s*//' "$WA_TEST" | grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub'; then fail "V45 $WA_TEST 含 monkeypatch"; fi
+  (cd backend && node --test tests/ma-entry-contract.test.js) >/dev/null 2>&1 || fail "V45 $WA_TEST 測試未通過"
+  pass "V45"
 fi
 
 if [ "$FULL" -eq 0 ]; then
@@ -380,6 +481,21 @@ for name in exportCsv FilePositionStore PetBridge BatteryLogger FileReminderQueu
   grep -q "$name" RISK-REVIEW.md || fail "V16 RISK-REVIEW.md 缺少 $name"
 done
 pass "V16"
+
+# V46：M4.1 風險審查與突變報告涵蓋項目
+grep -q 'MaActivity' RISK-REVIEW.md || fail "V46 RISK-REVIEW.md 缺少 MaActivity"
+grep -q 'MainActivity' RISK-REVIEW.md || fail "V46 RISK-REVIEW.md 缺少 MainActivity"
+grep -q 'ma.js' RISK-REVIEW.md || fail "V46 RISK-REVIEW.md 缺少 ma.js"
+grep -q '## M4.1' MUTATION-REPORT.md || fail "V46 MUTATION-REPORT.md 缺少 ## M4.1"
+if grep -q '狀態：待補' MUTATION-REPORT.md; then
+  for field in 未執行原因 預定範圍 程式版本 原工具補跑方式 替代品候選 搜尋紀錄; do
+    grep -q "$field" MUTATION-REPORT.md || fail "V46 MUTATION-REPORT.md 待補報告缺少欄位：$field"
+  done
+else
+  grep -q 'com/accompany/pet/core/ma/MaEntry.kt' MUTATION-REPORT.md || fail "V46 MUTATION-REPORT.md 缺少 MaEntry.kt"
+  grep -q 'com/accompany/pet/core/ma/MaModels.kt' MUTATION-REPORT.md || fail "V46 MUTATION-REPORT.md 缺少 MaModels.kt"
+fi
+pass "V46"
 
 # V17：報告檔存在
 [ -f SECURITY-REPORT.md ] || fail "V17 缺少 SECURITY-REPORT.md"
