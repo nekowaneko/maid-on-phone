@@ -30,9 +30,9 @@ export const roundTo = (value, digits = 2) => {
  */
 export const averageLast = (closes, n) => {
   if (!Array.isArray(closes) || closes.length < n || n <= 0) return null
-  const slice = closes.slice(closes.length - n)
-  const sum = slice.reduce((acc, val) => acc + Number(val), 0)
-  return sum / n
+  const slice = closes.slice(closes.length - n).map((val) => Number(val))
+  if (slice.some((val) => !Number.isFinite(val))) return null // 含非數字的收盤價不算平均
+  return slice.reduce((acc, val) => acc + val, 0) / n
 }
 
 /**
@@ -83,6 +83,7 @@ export const computeStock = (closes, contract) => {
   const a5 = averageLast(closes, 5)
   const a20 = averageLast(closes, 20)
   const a60 = averageLast(closes, 60)
+  if (a5 === null || a20 === null || a60 === null) return { kind: insufficientKind, ma: null } // 收盤價不合格當資料不足
 
   const m5 = roundTo(a5, roundDigits)
   const m20 = roundTo(a20, roundDigits)
