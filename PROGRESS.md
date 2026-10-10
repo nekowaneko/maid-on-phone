@@ -174,3 +174,12 @@
 - 驗收項失敗次數：V12 ×1。
 - `./verify.sh --stage 3` 全綠（通過 V39、V40、V41、V42、V43、V11、V12、V26、V27、V44、V45）。
 
+### T4
+- `./verify.sh` 全項檢查（L1 結構與安全 33 項 + L2 單元測試與編譯 7 項）一次全綠。
+- 確認接線三要件：
+  1. `onResume` 在 `refreshUi()` 之後呼叫 `refreshMaEntry()`，回到主畫面自動更新副標。
+  2. 點擊 `cardMaEntry` 正確開 `MaActivity`，且無 `FLAG_ACTIVITY_NEW_TASK` 與 `finish()`。
+  3. 明細頁返回 `exitUrl`（`ma-exit://close`）在契約、`MaModels.kt`、`ma-render.js`、`ma.js` 與 `MaActivity.kt` 攔截完全一致。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+
