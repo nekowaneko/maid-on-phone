@@ -13,13 +13,13 @@ const PET_SCRIPTS = [
   'emotion-map.js',
   'vendor/stream-parser.js',
   'performance.js',
+  'ma-labels.js',
+  'ma-view.js',
   'drink-labels.js',
   'drink-view.js',
   'todoist-labels.js',
-  'todoist-view.js',
-  'ma-labels.js',
-  'ma-view.js'
-] // 與 index.html 的載入順序相同
+  'todoist-view.js'
+] // 與 index.html 的載入順序相同（M3R-S19 凍結要求最後三支是 drink-view、todoist-labels、todoist-view）
 const readConfig = (name) => readFileSync(new URL(`../../../config/${name}`, import.meta.url), 'utf8')
 const CONTRACT = JSON.parse(readConfig('ma-contract.json'))
 const GLOSSARY = JSON.parse(readConfig('ma-glossary.json'))
@@ -84,8 +84,8 @@ test('M4-S15B 報告泡泡：正常有摘要與「看明細」「晚點再看」
   // index.html：載入順序、第 5 顆按鈕、與原生的橋接
   const html = readFileSync(new URL('index.html', PET_DIR), 'utf8')
   const pos = (name) => html.indexOf(`src="${name}"`)
-  assert.ok(pos('todoist-view.js') >= 0 && pos('ma-labels.js') > pos('todoist-view.js'))
-  assert.ok(pos('ma-view.js') > pos('ma-labels.js'))
+  assert.ok(pos('performance.js') >= 0 && pos('ma-labels.js') > pos('performance.js'))
+  assert.ok(pos('ma-view.js') > pos('ma-labels.js') && pos('ma-view.js') < pos('drink-view.js'))
   assert.ok(html.includes('id="ma"'))
   assert.ok(html.includes('onMaPressed'))
   assert.ok(html.includes('showMa'))
