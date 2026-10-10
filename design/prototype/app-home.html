@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pet Maid - macOS 風格 UI 原型 (Prototype)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* CSS 變數定義 (macOS 主題系統) */
+    :root {
+      --mac-bg-dark: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2560&auto=format&fit=crop');
+      --mac-bg-light: url('https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2560&auto=format&fit=crop');
+      --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Inter", "Noto Sans TC", sans-serif;
+      
+      /* Option A: Dark Glass */
+      --glass-bg: rgba(30, 30, 35, 0.65);
+      --glass-border: rgba(255, 255, 255, 0.15);
+      --glass-blur: blur(25px) saturate(190%);
+      --text-color: #F5F5F7;
+      --text-secondary: rgba(235, 235, 245, 0.65);
+      --accent-color: #0A84FF;
+      --accent-hover: #409CFF;
+      --card-bg: rgba(255, 255, 255, 0.08);
+      --card-hover: rgba(255, 255, 255, 0.14);
+      --danger-color: #FF453A;
+      --success-color: #30D158;
+      --warning-color: #FF9F0A;
+      --modal-bg: rgba(40, 40, 45, 0.85);
+    }
+
+    .light-theme {
+      --glass-bg: rgba(255, 255, 255, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.6);
+      --glass-blur: blur(30px) saturate(200%);
+      --text-color: #1D1D1F;
+      --text-secondary: rgba(60, 60, 67, 0.7);
+      --accent-color: #0066CC;
+      --accent-hover: #0055B3;
+      --card-bg: rgba(255, 255, 255, 0.55);
+      --card-hover: rgba(255, 255, 255, 0.85);
+      --modal-bg: rgba(245, 245, 247, 0.9);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      font-family: var(--font-main);
+      background-image: var(--mac-bg-dark);
+      background-size: cover;
+      background-position: center;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      overflow-x: hidden;
+      overflow-y: auto;
+      color: var(--text-color);
+      transition: background 0.4s ease, color 0.3s ease;
+    }
+
+    /* macOS Top Menu Bar */
+    .top-menu-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 30px;
+      background: rgba(15, 15, 20, 0.4);
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      font-size: 13px;
+      font-weight: 500;
+      z-index: 100;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .light-theme .top-menu-bar {
+      background: rgba(255, 255, 255, 0.4);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .menu-left, .menu-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .menu-item {
+      cursor: pointer;
+      opacity: 0.9;
+      transition: opacity 0.2s;
+    }
+
+    .menu-item:hover {
+      opacity: 1.0;
+    }
+
+    /* 二選一 控制中心浮動面板 (Force Choice Controller) */
+    .choice-control-bar {
+      position: relative;
+      margin-top: 42px;
+      background: rgba(20, 20, 25, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      backdrop-filter: blur(20px);
+      padding: 8px 14px;
+      border-radius: 30px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      z-index: 90;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      align-items: center;
+      justify-content: center;
+      max-width: 95vw;
+    }
+
+    .choice-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+    }
+
+    .choice-title {
+      font-weight: 600;
+      color: var(--accent-color);
+    }
+
+    .choice-btn {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #FFF;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .choice-btn.active {
+      background: var(--accent-color);
+      border-color: var(--accent-color);
+      font-weight: 600;
+      box-shadow: 0 2px 8px rgba(10, 132, 255, 0.4);
+    }
+
+    /* macOS 模擬 App 視窗 */
+    .mac-window {
+      width: 440px;
+      max-width: 92vw;
+      min-height: 580px;
+      background: var(--glass-bg);
+      backdrop-filter: var(--glass-blur);
+      -webkit-backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5),
+                  0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      margin-top: 16px;
+      margin-bottom: 20px;
+      transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      position: relative;
+    }
+
+    /* macOS Window Header Bar */
+    .window-header {
+      height: 52px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      position: relative;
+    }
+
+    .traffic-lights {
+      display: flex;
+      gap: 8px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      cursor: pointer;
+    }
+
+    .dot-close { background: #FF5F56; border: 0.5px solid #E0443E; }
+    .dot-minimize { background: #FFBD2E; border: 0.5px solid #DEA123; }
+    .dot-expand { background: #27C93F; border: 0.5px solid #1AAB29; }
+
+    .window-title {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: -0.2px;
+      color: var(--text-color);
+    }
+
+    .gear-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      border: none;
+      background: var(--card-bg);
+      color: var(--text-color);
+      display: flex;
+      align-items: center;
+      justify-content: justify-content;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .gear-btn:hover {
+      background: var(--card-hover);
+      transform: rotate(30deg);
+    }
+
+    .gear-btn svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+    }
+
+    /* 視窗主內容區塊 */
+    .window-body {
+      padding: 24px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      overflow-y: auto;
+    }
+
+    /* 狀態提示 Banner */
+    .status-banner {
+      background: rgba(10, 132, 255, 0.12);
+      border: 1px solid rgba(10, 132, 255, 0.3);
+      padding: 12px 16px;
+      border-radius: 14px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--text-color);
+    }
+
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success-color);
+      box-shadow: 0 0 10px var(--success-color);
+    }
+
+    /* ==========================================
+       二選一 2: 角色顯示狀態按鈕 (Option A vs B)
+       ========================================== */
+    
+    /* Option A: macOS Control Center 膠囊按鈕 */
+    .char-toggle-capsule {
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 16px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .char-toggle-capsule:hover {
+      background: var(--card-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    }
+
+    .char-toggle-capsule.active {
+      background: linear-gradient(135deg, rgba(10, 132, 255, 0.25), rgba(48, 209, 88, 0.15));
+      border-color: rgba(48, 209, 88, 0.4);
+    }
+
+    .char-info {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .char-avatar {
+      width: 46px;
+      height: 46px;
+      border-radius: 14px;
+      background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .char-text h3 {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .char-text p {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .switch-pill {
+      width: 52px;
+      height: 30px;
+      background: rgba(120, 120, 128, 0.32);
+      border-radius: 15px;
+      padding: 2px;
+      transition: background 0.3s ease;
+      position: relative;
+    }
+
+    .switch-pill.on {
+      background: var(--success-color);
+    }
+
+    .switch-handle {
+      width: 26px;
+      height: 26px;
+      background: #FFF;
+      border-radius: 50%;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .switch-pill.on .switch-handle {
+      transform: translateX(22px);
+    }
+
+    /* Option B: Interactive Hero Card 角色互動大卡片 */
+    .char-hero-card {
+      background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.03));
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-avatar-large {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 12px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 40px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+
+    .hero-status-btn {
+      margin-top: 14px;
+      width: 100%;
+      padding: 12px;
+      border-radius: 12px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      background: var(--accent-color);
+      color: #FFF;
+      box-shadow: 0 4px 14px rgba(10, 132, 255, 0.4);
+    }
+
+    .hero-status-btn.inactive {
+      background: rgba(255, 255, 255, 0.15);
+      color: var(--text-secondary);
+      box-shadow: none;
+    }
+
+    /* ==========================================
+       二選一 3: 戒飲設定入口按鈕 (Option A vs B)
+       ========================================== */
+
+    /* Option A: 儀表板快選卡片 (Stat Dashboard Ring Card) */
+    .sober-dash-card {
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      padding: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: all 0.25s ease;
+    }
+
+    .sober-dash-card:hover {
+      background: var(--card-hover);
+      transform: translateY(-2px);
+    }
+
+    .sober-ring-wrap {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .ring-icon {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: rgba(255, 159, 10, 0.18);
+      color: var(--warning-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .sober-title {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .sober-sub {
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }
+
+    .arrow-badge {
+      background: rgba(255, 255, 255, 0.1);
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+    }
+
+    /* Option B: macOS Dock 獨立捷徑按鈕 */
+    .sober-dock-btn {
+      background: linear-gradient(135deg, rgba(255, 159, 10, 0.8), rgba(255, 69, 58, 0.8));
+      color: #FFF;
+      border: none;
+      border-radius: 16px;
+      padding: 16px 20px;
+      font-size: 15px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      cursor: pointer;
+      box-shadow: 0 8px 20px rgba(255, 159, 10, 0.3);
+      transition: all 0.25s ease;
+    }
+
+    .sober-dock-btn:hover {
+      transform: translateY(-2px) scale(1.01);
+      box-shadow: 0 12px 25px rgba(255, 159, 10, 0.45);
+    }
+
+    /* 快捷功能區 (允許麥克風 / 快速對話) */
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .action-btn-small {
+      background: var(--card-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      color: var(--text-color);
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .action-btn-small:hover {
+      background: var(--card-hover);
+    }
+
+    .action-icon {
+      font-size: 18px;
+    }
+
+    /* ==========================================
+       二選一 4: 齒輪設定視窗 (Option A Sheet vs Option B Popover)
+       ========================================== */
+
+    /* Modal Backdrop */
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(8px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 80;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .modal-overlay.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* Option A: macOS Sidebar Sheet Settings Modal */
+    .settings-sheet {
+      width: 90%;
+      max-height: 85%;
+      background: var(--modal-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 18px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sheet-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-weight: 600;
+      font-size: 15px;
+    }
+
+    .close-sheet-btn {
+      background: rgba(255,255,255,0.1);
+      border: none;
+      color: var(--text-color);
+      padding: 4px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    .sheet-body {
+      padding: 16px 20px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .setting-group-title {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .setting-item {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+    }
+
+    .setting-btn-link {
+      background: var(--accent-color);
+      color: #FFF;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    /* 氣泡式選單 (Option B) */
+    .popover-menu {
+      position: absolute;
+      top: 55px;
+      right: 16px;
+      width: 280px;
+      background: var(--modal-bg);
+      backdrop-filter: var(--glass-blur);
+      border: 1px solid var(--glass-border);
+      border-radius: 14px;
+      padding: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      display: none;
+      z-index: 85;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .popover-menu.active {
+      display: flex;
+    }
+
+    .popover-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      font-size: 13px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .popover-item:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    /* 二選一 說明圖卡 (Bottom Note) */
+    .choice-summary-panel {
+      margin-top: 15px;
+      margin-bottom: 30px;
+      width: 440px;
+      max-width: 92vw;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+      padding: 16px 20px;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .summary-title {
+      font-weight: 600;
+      color: #30D158;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .choice-badge {
+      display: inline-block;
+      background: var(--accent-color);
+      color: #FFF;
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    /* ==========================================
+       主畫面功能入口卡片（盤前均線、聊聊）與子頁面
+       ========================================== */
+    .entry-stack { display: flex; flex-direction: column; gap: 12px; }
+    .entry-card { text-align: left; font: inherit; color: var(--text-color); width: 100%; }
+    .entry-card .sober-sub { overflow-wrap: anywhere; }
+    .entry-card:focus-visible, .back-btn:focus-visible, .mic-row:focus-visible, .sub-action:focus-visible { outline: 2px solid var(--accent-color); outline-offset: 2px; }
+    .ring-icon.ma { background: rgba(201, 176, 255, 0.2); }
+    .ring-icon.chat { background: rgba(143, 184, 255, 0.2); }
+    .mic-row { width: 100%; font: inherit; text-align: left; }
+    .page { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .page[hidden] { display: none; }
+    .sub-header { height: 52px; padding: 0 12px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .back-btn { width: 36px; height: 36px; border-radius: 10px; border: none; background: var(--card-bg); color: var(--text-color); font-size: 22px; line-height: 1; cursor: pointer; }
+    .back-btn:hover { background: var(--card-hover); }
+    .sub-title { font-size: 15px; font-weight: 600; flex: 1; }
+    .sub-action { border: 1px solid var(--glass-border); background: transparent; color: var(--text-color); border-radius: 10px; min-height: 32px; padding: 0 10px; font-size: 12px; cursor: pointer; }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip { font-size: 12px; padding: 2px 10px; border-radius: 10px; background: var(--card-bg); border: 1px solid var(--glass-border); }
+    .ma-card { background: var(--card-bg); border: 1px solid var(--glass-border); border-radius: 18px; padding: 12px 14px; display: grid; gap: 8px; }
+    .ma-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .ma-top .nm { font-weight: 600; font-size: 15px; }
+    .ma-top .cd { font-size: 12px; color: var(--text-secondary); margin-right: 6px; font-variant-numeric: tabular-nums; }
+    .tag { font-size: 12px; font-weight: 600; padding: 2px 10px; border-radius: 10px; white-space: nowrap; color: #14161c; }
+    .tag.u { background: #ff6b6b; } .tag.d { background: #4cd08a; } .tag.m { background: #c8ccd8; }
+    .ma-desc { font-size: 13px; }
+    .ma-line { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; font-size: 12px; }
+    .ma-line .pill { padding: 1px 8px; border-radius: 8px; color: #14161c; font-variant-numeric: tabular-nums; }
+    .ma-line .gt { color: var(--text-secondary); }
+    .ma-disc { font-size: 12px; color: var(--text-secondary); text-align: center; padding: 4px 0; }
+    .ma-note { border: 1px dashed var(--glass-border); border-radius: 14px; padding: 14px; font-size: 13px; display: grid; gap: 10px; justify-items: start; }
+    .ma-btn { border: 0; background: var(--accent-color); color: #fff; border-radius: 12px; min-height: 38px; padding: 0 16px; font-size: 14px; cursor: pointer; }
+    .ma-skel { height: 92px; border-radius: 18px; background: linear-gradient(90deg, rgba(255,255,255,0.06), rgba(255,255,255,0.16), rgba(255,255,255,0.06)); background-size: 200% 100%; animation: maSh 1.2s linear infinite; }
+    @keyframes maSh { to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .ma-skel { animation: none; } }
+    .chat-log { display: flex; flex-direction: column; gap: 10px; }
+    .msg { max-width: 82%; padding: 9px 13px; border-radius: 16px; font-size: 14px; line-height: 1.5; user-select: text; -webkit-user-select: text; }
+    .msg.maid { align-self: flex-start; background: var(--card-bg); border: 1px solid var(--glass-border); }
+    .msg.me { align-self: flex-end; background: var(--accent-color); color: #fff; }
+    .chat-input { display: flex; gap: 8px; padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+    .chat-input input { flex: 1; min-width: 0; font: inherit; font-size: 14px; padding: 9px 12px; border-radius: 12px; border: 1px solid var(--glass-border); background: var(--card-bg); color: var(--text-color); user-select: text; -webkit-user-select: text; }
+  </style>
+</head>
+<body>
+
+  <!-- macOS Top Navigation Bar -->
+  <div class="top-menu-bar">
+    <div class="menu-left">
+      <span class="menu-item" style="font-weight: 700;"> Pet Maid</span>
+      <span class="menu-item">檔案</span>
+      <span class="menu-item">角色</span>
+      <span class="menu-item">戒飲紀錄</span>
+      <span class="menu-item">說明</span>
+    </div>
+    <div class="menu-right">
+      <span class="menu-item" id="battery-status">⚡ 100%</span>
+      <span class="menu-item" id="clock">20:30</span>
+    </div>
+  </div>
+
+  <!-- Force Choice 控制選擇面板 -->
+  <div class="choice-control-bar">
+    <div class="choice-group">
+      <span class="choice-title">1. 主題風格:</span>
+      <button class="choice-btn active" onclick="setChoice('theme', 'dark')">A. 深色玻璃</button>
+      <button class="choice-btn" onclick="setChoice('theme', 'light')">B. Studio 銀白</button>
+    </div>
+    <div class="choice-group">
+      <span class="choice-title">2. 角色按鈕:</span>
+      <button class="choice-btn active" onclick="setChoice('charBtn', 'capsule')">A. 膠囊開關</button>
+      <button class="choice-btn" onclick="setChoice('charBtn', 'hero')">B. 互動大卡片</button>
+    </div>
+    <div class="choice-group">
+      <span class="choice-title">3. 戒飲設定:</span>
+      <button class="choice-btn active" onclick="setChoice('soberBtn', 'dash')">A. 儀表板卡片</button>
+      <button class="choice-btn" onclick="setChoice('soberBtn', 'dock')">B. Dock 捷徑</button>
+    </div>
+    <div class="choice-group">
+      <span class="choice-title">4. 齒輪選單:</span>
+      <button class="choice-btn active" onclick="setChoice('gearMode', 'sheet')">A. 視窗 Sheet</button>
+      <button class="choice-btn" onclick="setChoice('gearMode', 'popover')">B. 氣泡選單</button>
+    </div>
+    <div class="choice-group" id="maStateGroup">
+      <span class="choice-title">5. 均線資料:</span>
+      <button class="choice-btn active" data-ma="ok" onclick="setMaState('ok')">正常</button>
+      <button class="choice-btn" data-ma="loading" onclick="setMaState('loading')">載入中</button>
+      <button class="choice-btn" data-ma="error" onclick="setMaState('error')">取得失敗</button>
+      <button class="choice-btn" data-ma="empty" onclick="setMaState('empty')">清單空</button>
+    </div>
+  </div>
+
+  <!-- macOS 模擬 App 視窗 -->
+  <div class="mac-window" id="macWindow">
+
+    <!-- 主畫面（MainActivity） -->
+    <div class="page" id="pageHome">
+
+    <!-- 視窗標題欄 -->
+    <div class="window-header">
+      <div class="traffic-lights">
+        <div class="dot dot-close" title="關閉"></div>
+        <div class="dot dot-minimize" title="最小化"></div>
+        <div class="dot dot-expand" title="全螢幕"></div>
+      </div>
+      <div class="window-title">Pet Maid 桌面女僕</div>
+      
+      <!-- 齒輪設定按鈕 -->
+      <button class="gear-btn" onclick="toggleGearMenu()" title="開啟非功能類設定">
+        <svg viewBox="0 0 24 24">
+          <path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+        </svg>
+      </button>
+
+      <!-- 氣泡式選單 (Option B) -->
+      <div class="popover-menu" id="popoverMenu">
+        <div class="popover-item" onclick="alert('打開懸浮窗系統權限頁面')">
+          <span>懸浮窗上層權限</span>
+          <span style="color:var(--success-color)">已開啟</span>
+        </div>
+        <div class="popover-item" onclick="alert('打開使用情形存取權頁面')">
+          <span>使用情形存取權</span>
+          <span style="color:var(--warning-color)">前往設定</span>
+        </div>
+        <div class="popover-item" onclick="alert('已複製推播代碼')">
+          <span>複製推播代碼</span>
+          <span>📋</span>
+        </div>
+        <div class="popover-item" onclick="alert('匯出耗電紀錄 CSV')">
+          <span>匯出耗電紀錄</span>
+          <span>📊</span>
+        </div>
+        <div class="popover-item" onclick="toggleTestMode()">
+          <span>耗電測試模式</span>
+          <span id="popover-test-mode">關閉</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 視窗主要內容 -->
+    <div class="window-body">
+
+      <!-- 狀態提示 -->
+      <div class="status-banner">
+        <div class="status-indicator" id="statusDot"></div>
+        <span id="statusText">角色目前在桌面上運行中</span>
+      </div>
+
+      <!-- 設計二選一 2: 角色顯示狀態按鈕區塊 -->
+      <div id="charBtnArea">
+        <!-- Option A: 膠囊切換鈕 -->
+        <div class="char-toggle-capsule active" id="capsuleBtn" onclick="toggleCharacter()">
+          <div class="char-info">
+            <div class="char-avatar">🧹</div>
+            <div class="char-text">
+              <h3>陪伴角色桌寵</h3>
+              <p id="capsuleStatusSub">狀態：顯示中 🟢</p>
+            </div>
+          </div>
+          <div class="switch-pill on" id="capsuleSwitch">
+            <div class="switch-handle"></div>
+          </div>
+        </div>
+
+        <!-- Option B: 互動大卡片 (預設隱藏，由 Choice 控制) -->
+        <div class="char-hero-card" id="heroCard" style="display:none;">
+          <div class="hero-avatar-large">🎀</div>
+          <h3 style="font-size: 16px; font-weight: 600;">女僕小助理</h3>
+          <p style="font-size: 12px; color: var(--text-secondary); margin-top: 4px;" id="heroSub">角色狀態：桌面上陪你中</p>
+          <button class="hero-status-btn" id="heroBtn" onclick="toggleCharacter()">
+            收起角色
+          </button>
+        </div>
+      </div>
+
+      <!-- 設計二選一 3: 戒飲設定按鈕區塊 -->
+      <div id="soberBtnArea">
+        <!-- Option A: 儀表板快選卡片 -->
+        <div class="sober-dash-card" id="dashSober" onclick="openSoberSettings()">
+          <div class="sober-ring-wrap">
+            <div class="ring-icon">🍷</div>
+            <div>
+              <div class="sober-title">戒飲設定與追蹤</div>
+              <div class="sober-sub">已堅持 12 天・點擊進入設定與目標</div>
+            </div>
+          </div>
+          <div class="arrow-badge">➔</div>
+        </div>
+
+        <!-- Option B: macOS Dock 獨立捷徑按鈕 (預設隱藏) -->
+        <button class="sober-dock-btn" id="dockSober" style="display:none;" onclick="openSoberSettings()">
+          <span>🍷</span>
+          <span>進入戒飲目標與提醒設定</span>
+        </button>
+      </div>
+
+      <!-- 功能入口：盤前均線、聊聊（摘要大卡片，整張可點） -->
+      <div class="entry-stack">
+        <button type="button" class="sober-dash-card entry-card" id="maEntry" onclick="showPage('ma')" aria-label="盤前均線，點了進入明細">
+          <div class="sober-ring-wrap">
+            <div class="ring-icon ma" aria-hidden="true">📈</div>
+            <div>
+              <div class="sober-title">盤前均線</div>
+              <div class="sober-sub" id="maEntrySub">10/12（一）・多頭 1、空頭 1、其他 3</div>
+            </div>
+          </div>
+          <div class="arrow-badge" aria-hidden="true">➔</div>
+        </button>
+        <button type="button" class="sober-dash-card entry-card" id="chatEntry" onclick="showPage('chat')" aria-label="聊聊，點了和女僕聊天">
+          <div class="sober-ring-wrap">
+            <div class="ring-icon chat" aria-hidden="true">💬</div>
+            <div>
+              <div class="sober-title">聊聊</div>
+              <div class="sober-sub">女僕：今天也辛苦了，要不要聊聊？</div>
+            </div>
+          </div>
+          <div class="arrow-badge" aria-hidden="true">➔</div>
+        </button>
+      </div>
+
+      <!-- 權限快捷 -->
+      <button type="button" class="action-btn-small mic-row" onclick="alert('語音輸入權限設定')">
+        <span class="action-icon">🎙️</span>
+        <span>允許麥克風 (語音)</span>
+      </button>
+
+    </div>
+    </div><!-- /pageHome -->
+
+    <!-- 盤前均線明細（MaActivity，今天分頁） -->
+    <div class="page" id="pageMa" hidden>
+      <div class="sub-header">
+        <button type="button" class="back-btn" onclick="showPage('home')" aria-label="返回主畫面">‹</button>
+        <div class="sub-title">盤前均線</div>
+        <button type="button" class="sub-action" onclick="alert('追蹤清單：同 F3 定稿 S6（design/prototype/prototype.html）')">追蹤清單</button>
+      </div>
+      <div class="window-body" id="maBody"></div>
+    </div>
+
+    <!-- 聊聊（ChatActivity） -->
+    <div class="page" id="pageChat" hidden>
+      <div class="sub-header">
+        <button type="button" class="back-btn" onclick="showPage('home')" aria-label="返回主畫面">‹</button>
+        <div class="sub-title">聊聊</div>
+      </div>
+      <div class="window-body">
+        <div class="chat-log" id="chatLog">
+          <div class="msg maid">主人早安～今天的均線我整理好了。</div>
+          <div class="msg me">謝謝，晚點看。</div>
+          <div class="msg maid">今天也辛苦了，要不要聊聊？</div>
+        </div>
+      </div>
+      <form class="chat-input" onsubmit="sendChat(event)">
+        <input type="text" id="chatText" placeholder="跟女僕說點什麼" aria-label="訊息">
+        <button type="submit" class="ma-btn">送出</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 齒輪設定 Sheet Modal (Option A) -->
+  <div class="modal-overlay" id="sheetModal">
+    <div class="settings-sheet">
+      <div class="sheet-header">
+        <span>⚙️ 系統與偏好設定</span>
+        <button class="close-sheet-btn" onclick="toggleSheetModal(false)">完成</button>
+      </div>
+      <div class="sheet-body">
+        
+        <div>
+          <div class="setting-group-title">系統權限</div>
+          <div class="setting-item">
+            <div>
+              <div style="font-weight:600">懸浮窗顯示權限</div>
+              <div style="font-size:11px; color:var(--text-secondary)">授權角色在其他 App 上層呈現</div>
+            </div>
+            <button class="setting-btn-link" onclick="alert('前往權限設定')">已授權</button>
+          </div>
+          <div class="setting-item" style="margin-top:8px">
+            <div>
+              <div style="font-weight:600">使用情形存取權</div>
+              <div style="font-size:11px; color:var(--text-secondary)">玩遊戲時自動暫停打擾</div>
+            </div>
+            <button class="setting-btn-link" style="background:var(--warning-color)" onclick="alert('前往開啟權限')">前往開啟</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="setting-group-title">遊戲與推播設定</div>
+          <div class="setting-item">
+            <div>
+              <div style="font-weight:600">自訂遊戲避開清單</div>
+              <div style="font-size:11px; color:var(--text-secondary)">輸入避開提醒的 Package Name</div>
+            </div>
+            <button class="setting-btn-link" onclick="alert('開啟遊戲清單編輯視窗')">編輯</button>
+          </div>
+          <div class="setting-item" style="margin-top:8px">
+            <div>
+              <div style="font-weight:600">Firebase 推播代碼</div>
+              <div style="font-size:11px; color:var(--text-secondary)" id="sheetPushCode">Token: fcm_82a9...3x</div>
+            </div>
+            <button class="setting-btn-link" onclick="alert('代碼已複製')">複製</button>
+          </div>
+        </div>
+
+        <div>
+          <div class="setting-group-title">高級與開發者工具</div>
+          <div class="setting-item">
+            <div>
+              <div style="font-weight:600">匯出耗電分析紀錄</div>
+              <div style="font-size:11px; color:var(--text-secondary)">匯出 CSV 分享至電腦或備份</div>
+            </div>
+            <button class="setting-btn-link" onclick="alert('匯出 CSV 成功')">匯出 CSV</button>
+          </div>
+          <div class="setting-item" style="margin-top:8px">
+            <div>
+              <div style="font-weight:600">耗電測試模式</div>
+              <div style="font-size:11px; color:var(--text-secondary)">測試期間保持螢幕亮著</div>
+            </div>
+            <button class="setting-btn-link" id="sheetTestModeBtn" onclick="toggleTestMode()" style="background:rgba(255,255,255,0.2)">已關閉</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- 底部 Force Choice 摘要說明面板 -->
+  <div class="choice-summary-panel">
+    <div class="summary-title">
+      <span>💡 當前 Force Choice 設計二選一方案：</span>
+    </div>
+    <div id="choiceSummary">
+      <div>1. <span class="choice-badge">主題風格</span> <b>A. 深色毛玻璃 (Dark Glass)</b> - 高質感的經典 macOS Monterey 視窗風格</div>
+      <div>2. <span class="choice-badge">角色按鈕</span> <b>A. 膠囊顯示狀態開關</b> - 一鍵動態開關，即時顯示 🟢/⚪ 狀態</div>
+      <div>3. <span class="choice-badge">戒飲設定</span> <b>A. 儀表板快選卡片</b> - 圓角高質感卡片入口 + 進度摘要</div>
+      <div>4. <span class="choice-badge">齒輪設定</span> <b>A. 視窗 Sheet 彈窗</b> - 齒輪按鈕彈出高質感全功能偏好設定面板</div>
+    </div>
+  </div>
+
+  <script>
+    // 全域狀態管理
+    let state = {
+      theme: 'dark',       // dark vs light
+      charBtn: 'capsule',  // capsule vs hero
+      soberBtn: 'dash',    // dash vs dock
+      gearMode: 'sheet',   // sheet vs popover
+      isCharRunning: true,
+      isTestMode: false
+    };
+
+    function setChoice(category, value) {
+      state[category] = value;
+
+      // 更新選擇按鈕 active 狀態
+      const groupIndexMap = { theme: 0, charBtn: 1, soberBtn: 2, gearMode: 3 };
+      const groupIndex = groupIndexMap[category];
+      const buttons = document.querySelectorAll(`.choice-group:nth-child(${groupIndex + 1}) .choice-btn`);
+      buttons.forEach(btn => btn.classList.remove('active'));
+      
+      const targetBtn = Array.from(buttons).find(b => 
+        (value === 'dark' && b.innerText.includes('A.')) ||
+        (value === 'light' && b.innerText.includes('B.')) ||
+        (value === 'capsule' && b.innerText.includes('A.')) ||
+        (value === 'hero' && b.innerText.includes('B.')) ||
+        (value === 'dash' && b.innerText.includes('A.')) ||
+        (value === 'dock' && b.innerText.includes('B.')) ||
+        (value === 'sheet' && b.innerText.includes('A.')) ||
+        (value === 'popover' && b.innerText.includes('B.'))
+      );
+      if (targetBtn) targetBtn.classList.add('active');
+
+      // 渲染視窗變化
+      renderUI();
+    }
+
+    function renderUI() {
+      // 1. 主題切換
+      if (state.theme === 'light') {
+        document.body.classList.add('light-theme');
+        document.body.style.backgroundImage = 'var(--mac-bg-light)';
+      } else {
+        document.body.classList.remove('light-theme');
+        document.body.style.backgroundImage = 'var(--mac-bg-dark)';
+      }
+
+      // 2. 角色按鈕
+      const capsuleBtn = document.getElementById('capsuleBtn');
+      const heroCard = document.getElementById('heroCard');
+      if (state.charBtn === 'capsule') {
+        capsuleBtn.style.display = 'flex';
+        heroCard.style.display = 'none';
+      } else {
+        capsuleBtn.style.display = 'none';
+        heroCard.style.display = 'block';
+      }
+
+      // 3. 戒飲按鈕
+      const dashSober = document.getElementById('dashSober');
+      const dockSober = document.getElementById('dockSober');
+      if (state.soberBtn === 'dash') {
+        dashSober.style.display = 'flex';
+        dockSober.style.display = 'none';
+      } else {
+        dashSober.style.display = 'none';
+        dockSober.style.display = 'flex';
+      }
+
+      // 摘要說明更新
+      updateSummaryText();
+    }
+
+    function toggleCharacter() {
+      state.isCharRunning = !state.isCharRunning;
+      
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      const capsuleBtn = document.getElementById('capsuleBtn');
+      const capsuleSwitch = document.getElementById('capsuleSwitch');
+      const capsuleStatusSub = document.getElementById('capsuleStatusSub');
+      const heroSub = document.getElementById('heroSub');
+      const heroBtn = document.getElementById('heroBtn');
+
+      if (state.isCharRunning) {
+        statusDot.style.background = 'var(--success-color)';
+        statusDot.style.boxShadow = '0 0 10px var(--success-color)';
+        statusText.innerText = '角色目前在桌面上運行中';
+
+        capsuleBtn.classList.add('active');
+        capsuleSwitch.classList.add('on');
+        capsuleStatusSub.innerText = '狀態：顯示中 🟢';
+
+        heroSub.innerText = '角色狀態：桌面上陪你中';
+        heroBtn.innerText = '收起角色';
+        heroBtn.classList.remove('inactive');
+      } else {
+        statusDot.style.background = 'var(--text-secondary)';
+        statusDot.style.boxShadow = 'none';
+        statusText.innerText = '角色已收起 (暫停顯示)';
+
+        capsuleBtn.classList.remove('active');
+        capsuleSwitch.classList.remove('on');
+        capsuleStatusSub.innerText = '狀態：已隱藏 ⚪';
+
+        heroSub.innerText = '角色狀態：已休息收起';
+        heroBtn.innerText = '叫出角色';
+        heroBtn.classList.add('inactive');
+      }
+    }
+
+    function toggleGearMenu() {
+      if (state.gearMode === 'sheet') {
+        toggleSheetModal(true);
+      } else {
+        const popover = document.getElementById('popoverMenu');
+        popover.classList.toggle('active');
+      }
+    }
+
+    function toggleSheetModal(show) {
+      const modal = document.getElementById('sheetModal');
+      if (show) {
+        modal.classList.add('active');
+      } else {
+        modal.classList.remove('active');
+      }
+    }
+
+    function openSoberSettings() {
+      alert('🍷 進入戒飲設定頁面 (DrinkSettingsActivity)');
+    }
+
+    function toggleTestMode() {
+      state.isTestMode = !state.isTestMode;
+      const popText = document.getElementById('popover-test-mode');
+      const sheetBtn = document.getElementById('sheetTestModeBtn');
+      
+      const txt = state.isTestMode ? '已開啟' : '已關閉';
+      popText.innerText = txt;
+      sheetBtn.innerText = txt;
+      sheetBtn.style.background = state.isTestMode ? 'var(--warning-color)' : 'rgba(255,255,255,0.2)';
+    }
+
+    function updateSummaryText() {
+      const themeName = state.theme === 'dark' ? 'A. 深色毛玻璃 (Dark Glass)' : 'B. Studio 銀白 (Light Studio)';
+      const charName = state.charBtn === 'capsule' ? 'A. 膠囊顯示狀態開關 (Capsule Switch)' : 'B. 互動大卡片 (Hero Interactive Card)';
+      const soberName = state.soberBtn === 'dash' ? 'A. 儀表板快選卡片 (Stat Dashboard Card)' : 'B. Dock 捷徑按鈕 (Mac Dock Shortcut Button)';
+      const gearName = state.gearMode === 'sheet' ? 'A. 視窗 Sheet 彈窗 (Preferences Sheet Modal)' : 'B. 氣泡選單 (Dropdown Popover Menu)';
+
+      document.getElementById('choiceSummary').innerHTML = `
+        <div>1. <span class="choice-badge">主題風格</span> <b>${themeName}</b></div>
+        <div>2. <span class="choice-badge">角色按鈕</span> <b>${charName}</b></div>
+        <div>3. <span class="choice-badge">戒飲設定</span> <b>${soberName}</b></div>
+        <div>4. <span class="choice-badge">齒輪設定</span> <b>${gearName}</b></div>
+      `;
+    }
+
+    // ===== 子頁面導覽（返回一律回主畫面）=====
+    function showPage(name) {
+      ['home', 'ma', 'chat'].forEach(function (n) {
+        document.getElementById('page' + n.charAt(0).toUpperCase() + n.slice(1)).hidden = (n !== name);
+      });
+      if (name === 'ma') renderMa();
+      window.scrollTo(0, 0);
+    }
+
+    // ===== 盤前均線（範例資料，與 F3 定稿 BASE 相同；不是真實行情）=====
+    var maState = 'ok';
+    var MA_TAGS = { U: ['多頭排列', 'u', ''], D: ['空頭排列', 'd', ''], S: ['轉強 ↗', 'm', ''], W: ['轉弱 ↘', 'm', ''], B: ['初步轉強 ↗', 'm', ''] };
+    var MA_STOCKS = [
+      { code: '2330', name: '台積電', ma: [1085, 1060, 1020], kind: 'U', desc: '5 > 20 > 60，三條線依序往上排。' },
+      { code: '2317', name: '鴻海', ma: [212, 218, 225], kind: 'D', desc: '60 > 20 > 5，三條線依序往下排。' },
+      { code: '0050', name: '元大台灣50', ma: [188.2, 186.5, 187.4], kind: 'S', desc: '5 日線站上 20 日線與 60 日線，20 日線仍在最下，短線轉強。' },
+      { code: '2454', name: '聯發科', ma: [1320, 1335, 1280], kind: 'W', desc: '5 日線跌破 20 日線，短線轉弱。' },
+      { code: '2603', name: '長榮', ma: [190, 185, 200], kind: 'B', desc: '5 日線站上 20 日線，仍在 60 日線下方，築底回升。' }
+    ];
+    function maCardHtml(s) {
+      var t = MA_TAGS[s.kind];
+      var arr = [{ k: '5日', v: s.ma[0], c: '#ffd166' }, { k: '20日', v: s.ma[1], c: '#8fb8ff' }, { k: '60日', v: s.ma[2], c: '#c9b0ff' }].sort(function (a, b) { return b.v - a.v; });
+      var label = '由高到低：' + arr.map(function (a) { return a.k + ' ' + a.v; }).join('、');
+      var line = arr.map(function (a) { return '<span class="pill" style="background:' + a.c + '">' + a.k + ' ' + a.v + '</span>'; }).join('<span class="gt" aria-hidden="true">›</span>');
+      return '<article class="ma-card"><div class="ma-top"><div><span class="cd">' + s.code + '</span><span class="nm">' + s.name + '</span></div><span class="tag ' + t[1] + '">' + t[0] + '</span></div>' +
+        '<p class="ma-desc">' + s.desc + '</p><div class="ma-line" role="img" aria-label="' + label + '">' + line + '</div></article>';
+    }
+    function renderMa() {
+      var body = document.getElementById('maBody');
+      if (maState === 'loading') {
+        body.innerHTML = '<div class="ma-skel"></div><div class="ma-skel"></div><div class="ma-skel"></div>';
+      } else if (maState === 'error') {
+        body.innerHTML = '<div class="ma-note"><p>證交所的資料沒有拿到，所以今天的排列算不出來。</p><button type="button" class="ma-btn" onclick="setMaState(\'ok\')">重試</button></div>';
+      } else if (maState === 'empty') {
+        body.innerHTML = '<div class="ma-note"><p>追蹤清單是空的。</p><button type="button" class="ma-btn" onclick="alert(\'加入第一檔：同 F3 定稿 S6\')">加入第一檔</button></div>';
+      } else {
+        body.innerHTML = '<div class="chips"><span class="chip">多頭 1</span><span class="chip">空頭 1</span><span class="chip">其他 3</span></div>' +
+          MA_STOCKS.map(maCardHtml).join('') + '<p class="ma-disc">僅供參考，非投資建議。</p>';
+      }
+    }
+    function setMaState(v) {
+      maState = v;
+      Array.prototype.forEach.call(document.querySelectorAll('#maStateGroup .choice-btn'), function (b) { b.classList.toggle('active', b.getAttribute('data-ma') === v); });
+      var sub = { ok: '10/12（一）・多頭 1、空頭 1、其他 3', loading: '正在取得今天的資料…', error: '今天的資料沒拿到，點了可重試', empty: '還沒有追蹤標的，點了去加入' };
+      document.getElementById('maEntrySub').innerText = sub[v];
+      if (!document.getElementById('pageMa').hidden) renderMa();
+    }
+
+    // ===== 聊聊 =====
+    function sendChat(e) {
+      e.preventDefault();
+      var input = document.getElementById('chatText');
+      var t = input.value.trim();
+      if (!t) return;
+      var log = document.getElementById('chatLog');
+      var me = document.createElement('div'); me.className = 'msg me'; me.textContent = t; log.appendChild(me);
+      var maid = document.createElement('div'); maid.className = 'msg maid'; maid.textContent = '好的，我聽到了～'; log.appendChild(maid);
+      input.value = '';
+    }
+
+    // 更新時鐘
+    function updateClock() {
+      const now = new Date();
+      const hrs = String(now.getHours()).padStart(2, '0');
+      const mins = String(now.getMinutes()).padStart(2, '0');
+      document.getElementById('clock').innerText = `${hrs}:${mins}`;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+  </script>
+</body>
+</html>
