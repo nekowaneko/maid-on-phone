@@ -48,3 +48,11 @@
 - 資料存在 D1 的 `drink_logs` 表（欄位照戒飲存備份格式），設定值存在 `settings` 表（`drink.` 開頭）；`GET /api/drink/export` 匯出成戒飲存的備份檔。
 - Worker 每小時跑一次排程，依台北時間在設定的整點送「今天有喝飲料嗎？」推播，推播資料多一個 `actions`（`resist,speak`），App 依此顯示「沒喝／有喝，用說的」按鈕。
 - App 只有 `WorkerApi.kt` 可以連外，網址由 `worker.properties` 的 `chatUrl` 取出網域、密鑰為 `apiSecret`；網頁呼叫原生的介面多一個 `onDrinkAction(json)`（共 4 個）。
+
+
+## M4 盤前均線
+
+- 資料流：08:30 Cron → 證交所（每檔當月日資料）→ D1（`ma_close`、`ma_result`）→ 規則算排列 → 語言模型只說開場一句 → FCM `ma` 欄位 → 角色泡泡 → `onMaPressed` → `MaActivity` → `ma.html` → `/api/ma/*`。
+- 三張 D1 表、`/api/ma/*` 四條路由、設定檔五份（`ma-contract.json`、`ma-defaults.json`、`ma-lines.json`、`ma-glossary.json`、`ma-script-prompt.md`）。
+- 載體決定：明細頁是 Worker B 網頁，不新增給遠端網頁用的 JS 介面；原生只多一個 `onMaPressed()`（第 6 個 `@JavascriptInterface`）。
+- 說明文字與免責聲明不經語言模型。

@@ -31,3 +31,6 @@
 1. 在 cost_down 資料夾查看差異：`git diff 9fc08b2 <新的 commit> -- netlify_deploy/data netlify_deploy/core tests/calorie.test.js tests/ledger.test.js`
 2. 重抄有改動的檔案，照上面的規則加註解、改路徑；`starbucks.json` 的編號重複問題若原專案已修正，改用原專案的編號
 3. 把上面的「來源 commit」改成新的 commit
+
+
+M4 新增的 `ma-*` 設定檔與 `ma.html` 為 pet-maid 自有，不來自 accompany_bot。

@@ -91,3 +91,12 @@ curl -H "x-app-secret: $SECRET" https://pet-maid-api.xxx.workers.dev/api/drink/s
 curl -H "x-app-secret: $SECRET" -o boba-ai-backup.json https://pet-maid-api.xxx.workers.dev/api/drink/export
 ```
 **注意：戒飲存匯入會整份取代原本的資料**，匯入前先在戒飲存按「匯出」備份。
+
+
+## 9. 盤前均線（M4 貴批次完成後才有這個功能）
+1. 不需要新的金鑰；證交所資料是公開資料，不需要權杖。
+2. `wrangler.toml` 的 crons 不用改：`30 0 * * *`（UTC 00:30＝台北 08:30）已經存在，M4 的盤前報告掛在同一個時間點。
+3. 重新套用 D1 建表（新增 `ma_watch`、`ma_close`、`ma_result` 三張表，語句全部冪等）：在 Git Bash 執行 `cd backend && npx wrangler d1 execute pet-maid-db --remote --file worker/schema.sql`。
+4. 重新部署：`npx wrangler deploy`。
+5. 確認網頁：用手機瀏覽器開 `<Worker 網址>/web/ma.html`，第一次需要先在聊天網頁輸入存取密鑰（同網域共用）。
+6. 第一次加入標的時，Worker 會向證交所補抓近 4 個月的收盤價；證交所有流量限制，請一檔一檔加，不要一次連按。
