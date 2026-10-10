@@ -157,7 +157,7 @@ viewFor(data, labels) → { script, summary: { u, d, m } | null, buttons: [{ lab
 ```
 按鈕文字一律取自 `ma-labels.js`（`labels.buttons.*`）。
 
-`index.html`：依序載入 `ma-labels.js`、`ma-view.js`（在 `todoist-view.js` 之後）；常駐按鈕列在 `#history` 之後新增 `<button id="ma">`，文字為 `PetMaLabels.mainButton`，按下 → `callBridge('onMaPressed')`；泡泡內新增摘要 `#maSummary`（三個籤，文字用 `labels.summary` 與數字，`textContent`）與按鈕組 `#maActions`（位置同 `#todoistActions`）；`window.pet.showMa(jsonText)`：解析失敗忽略；`script` 交給 `say`；摘要與按鈕放上；「看明細」→ `callBridge('onMaPressed')` 並清掉這組按鈕；「晚點再看」「知道了」→ 清掉這組按鈕並呼叫 `window.pet.showBubble(false)`。新一組 Ma 按鈕出現時清掉戒飲與 Todoist 的按鈕組，反之亦然。所有動態文字用 `textContent`。
+`index.html`：依序載入 `ma-labels.js`、`ma-view.js`（放在 `performance.js` 之後、`drink-view.js` 之前：M3R-S19 凍結要求最後三支依序是 `drink-view.js`、`todoist-labels.js`、`todoist-view.js`）；常駐按鈕列在 `#history` 之後新增 `<button id="ma">`，文字為 `PetMaLabels.mainButton`，按下 → `callBridge('onMaPressed')`；泡泡內新增摘要 `#maSummary`（三個籤，文字用 `labels.summary` 與數字，`textContent`）與按鈕組 `#maActions`（位置同 `#todoistActions`）；`window.pet.showMa(jsonText)`：解析失敗忽略；`script` 交給 `say`；摘要與按鈕放上；「看明細」→ `callBridge('onMaPressed')` 並清掉這組按鈕；「晚點再看」「知道了」→ 清掉這組按鈕並呼叫 `window.pet.showBubble(false)`。新一組 Ma 按鈕出現時清掉戒飲與 Todoist 的按鈕組，反之亦然。所有動態文字用 `textContent`。
 
 ### 4B.3 B：明細網頁（`backend/web/ma.html`、`ma.js`、`ma-render.js`、`ma.css`）
 
