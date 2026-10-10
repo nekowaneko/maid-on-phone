@@ -96,3 +96,21 @@
 | 59 | `OverlayService.showTodoist` / `onTodoistAction` / `presentTodoist` | `app/.../OverlayService.kt` | 懸浮窗與 Worker API 介面串接 | JSON 安全跳脫傳給 WebView 演出，背景非同步轉發動作至 Worker |
 | 60 | `PetTodoistView.viewFor` / `applyChoice` / `showTodoist` | `app/src/main/assets/pet/todoist-view.js` | 懸浮窗 Todoist 卡片與按鈕演出 | 純函式處理卡片與按鈕；不使用 `innerHTML`；點擊後即刻清理按鈕避免重複發送 |
 
+
+## M4（盤前均線 F3）
+
+M4 計畫書 §2.1 列的五個高風險模組都在此清單中（`backend/worker/handlers.js`、`backend/worker/store.js`、`backend/worker/twse-client.js`、`backend/web/ma.js`、`app/src/main/java/com/accompany/pet/MaActivity.kt`）。各線紀錄檔 `lanes/M4-D.md`、`lanes/M4-C.md`、`lanes/M4-B.md` 的「高風險函式」段落是原始清單。
+
+| # | 函式 | 檔案 | 白話說明 | 可能出錯的方式 |
+|---|---|---|---|---|
+| 55 | `runMaReport` | `backend/worker/handlers.js` | 08:30 算排列、寫 D1、送 FCM 推播；`ma.sentOn` 防重複 | 休市判斷錯誤會在假日誤發；推播失敗時不寫 `sentOn`；放在 Todoist 判斷之後會永遠不執行（V34 檢查） |
+| 56 | `/api/ma/*` 路由與 `handleMaWatchlistPost` | `backend/worker/handlers.js` | 報告、歷史、清單讀寫、重算；寫入追蹤清單並補抓收盤價 | 授權標頭漏檢會讓別人改清單；`add` 對證交所連線過多會被限流；`untrack` 只標記不刪除（V35 檢查） |
+| 57 | `upsertCloses`、`upsertResults`、`setWatchActive`、`addWatch` | `backend/worker/store.js` | 對 D1 的新三張表寫入 | 覆寫同日資料時用 `INSERT OR REPLACE`，若日期或代號錯會蓋掉別檔的結果；不得出現 `DELETE` |
+| 58 | `createTwseClient`（`listAll`、`getMonth`、`listClosedDates`） | `backend/worker/twse-client.js` | 唯一連證交所的檔案，民國日期轉西元、收盤價去逗號 | 證交所格式改版會讓整份報告取得失敗；休市日曆誤判；回應內容不得寫進 log |
+| 59 | `computeStock`、`classify`、`validateWatchInput`、`isTradingDay`、`prevTradingDay` | `backend/core/ma.js` | 均線、八種排列、輸入驗證、交易日判斷 | 四捨五入與等號判斷錯誤會把糾結算成多頭；交易日往前找超過上限會丟錯（突變測試範圍） |
+| 60 | `ma.js`（`readSecret`、`setHtml`、`handleUntrack`、`handleUndo`） | `backend/web/ma.js` | 明細網頁：讀存取密鑰、送請求、渲染、停止追蹤與 6 秒復原 | 密鑰只能放標頭、不得進網址或畫面；`innerHTML` 只能用於 `setHtml`；復原遇到上限會 400（V33 檢查） |
+| 61 | `showMa`、`PetMaView.viewFor` | `app/src/main/assets/pet/index.html`、`ma-view.js` | 泡泡收到推播資料，畫摘要與按鈕 | 資料格式被竄改要靠型態檢查，不得崩潰 |
+| 62 | `MaActivity` | `app/src/main/java/com/accompany/pet/MaActivity.kt` | 全螢幕 WebView 載入遠端明細網頁，網頁內有存取密鑰 | 同源檢查被繞過會載入外部內容；不得掛 JS 介面；`exported` 必須是 false（V33 檢查） |
+| 63 | `PetBridge.onMaPressed`、`OverlayService.onMaPressed` | `PetBridge.kt`、`OverlayService.kt` | 第 6 個 JS 介面，通知原生開明細頁 | 背景執行緒呼叫要轉回主執行緒；聊天網址沒設定時要擋下 |
+| 64 | `parseReminder`（ma 欄位）、`pickMaPayload`、`maPageUrl` | `core/.../Reminder.kt`、`MaModels.kt` | 解析推播的 ma 欄位、算明細網頁網址 | 超長或格式錯誤要丟掉；非 https 網址要回 null |
+| 65 | `ReminderNotifications.showReminderNotification` | `ReminderNotifications.kt` | 角色模式關時發通知，點擊開明細頁 | `PendingIntent` 必須是 immutable |

@@ -133,3 +133,12 @@
 - `wrangler deploy --dry-run` 打包成功
 - `./verify.sh --full` 第一次就全綠（backend 454 個測試）；寫 ACCEPTANCE-M2、RISK-REVIEW（第 38～54 項）、MUTATION-REPORT 的 M2 段落
 - 等使用者處理：S15 規格爭議；建議新增的 M2-S17～S19；部署與手機實測
+
+## M4（盤前均線 F3，2026-10-10）
+
+- 規格範例表 S01～S17 使用者確認；介面做 C 版（報告＋追蹤清單＋近 7 日歷史＋看懂排列）；明細頁用 Worker B 網頁
+- 三條線被提早啟動（未凍結規格測試、未開 worktree）；整合時先凍結規格測試（`14dad69`，修訂後 `0e1e3fe`），再把凍結版本合併進三條分支補驗
+- 補驗發現並修正：D 的 M4-S11（重複訊息缺名稱）、M4 規格的 script 載入順序與 M3R-S19 衝突、V06／V36／V07 的誤判
+- 依 D → C → B 合併，零衝突；新增 `ma-wiring.test.js`；`./verify.sh --full` 全綠（backend 551 個測試）
+- 寫 ACCEPTANCE-M4、RISK-REVIEW（第 55～65 項）、MUTATION-REPORT 的 M4 段落
+- 等使用者處理：部署與手機實測；是否採用建議新增的 M4-S18～S22
