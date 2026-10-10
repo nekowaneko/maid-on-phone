@@ -189,12 +189,12 @@ fi
 # V36：產線入口驗證存在且不用 monkeypatch（條款 11）；ma-wiring 只在整合時檢查
 if runs D; then
   [ -f backend/tests/ma-pipeline.test.js ] || fail "V36 缺少 ma-pipeline.test.js"
-  if grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub' backend/tests/ma-pipeline.test.js; then fail "V36 ma-pipeline.test.js 含 monkeypatch"; fi
+  if grep -vE '^\s*//' backend/tests/ma-pipeline.test.js | grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub'; then fail "V36 ma-pipeline.test.js 含 monkeypatch"; fi
   pass "V36"
 fi
 if [ -z "$LANE" ] && [ "$FULL" -eq 1 ]; then
   [ -f backend/tests/ma-wiring.test.js ] || fail "V36 缺少 ma-wiring.test.js"
-  if grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub' backend/tests/ma-wiring.test.js; then fail "V36 ma-wiring.test.js 含 monkeypatch"; fi
+  if grep -vE '^\s*//' backend/tests/ma-wiring.test.js | grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub'; then fail "V36 ma-wiring.test.js 含 monkeypatch"; fi
   pass "V36（接線）"
 fi
 
