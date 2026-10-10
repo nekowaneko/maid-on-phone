@@ -197,12 +197,12 @@ export const validateWatchInput = (raw, rows, active = [], limit, contract) => {
   }
 
   if (Array.isArray(active) && active.includes(found.code)) {
-    return { ok: false, error: 'duplicate' }
+    return { ok: false, error: 'duplicate', code: found.code, name: found.name }
   }
 
   const maxLimit = limit ?? contract?.limit ?? 10
   if (Array.isArray(active) && active.length >= maxLimit) {
-    return { ok: false, error: 'limit' }
+    return { ok: false, error: 'limit', code: found.code, name: found.name }
   }
 
   return { ok: true, code: found.code, name: found.name }

@@ -1428,8 +1428,8 @@ const handleMaWatchlistPost = async (deps, request) => {
       const template = deps.maLines?.errors?.[validation.error] ?? ''
       const message = template
         .replace('{input}', trimmedCode)
-        .replace('{code}', trimmedCode)
-        .replace('{name}', '')
+        .replace('{code}', validation.code ?? trimmedCode)
+        .replace('{name}', validation.name ?? '')
         .replace('{limit}', String(limit))
       return jsonResponse({ error: validation.error, message }, 400)
     }
