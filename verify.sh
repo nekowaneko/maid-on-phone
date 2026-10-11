@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="2e9288bd419455f4cecf102b910e4b054f6e9336"   # 凍結規格測試的 commit（M4.3 凍結版）
+FROZEN_HASH="03d6504eeeb21639f9d878c489ab4bd690d935fb"   # 凍結規格測試的 commit（M4.4 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"
@@ -27,6 +27,9 @@ M42_SPEC_IDS="M42-S09"  # M4.2 的 Kotlin 自動列
 M42_JS_SPEC_IDS="M42-S01 M42-S02 M42-S03 M42-S04 M42-S05 M42-S07 M42-S08 M42-S09 M42-S10 M42-S11 M42-S12 M42-S13 M42-S15"  # M4.2 的 JS 自動列（13 列；S06、S14 為手機實測）
 M43_SPEC_IDS="M43-S10"  # M4.3 的 Kotlin 自動列
 M43_JS_SPEC_IDS="M43-S01 M43-S02 M43-S03 M43-S04 M43-S05 M43-S06 M43-S07 M43-S08 M43-S09 M43-S11 M43-S12 M43-S13 M43-S14 M43-S15"  # M4.3 的 JS 自動列（14 列；S10 為 Kotlin）
+M44_SPEC_IDS="M44-S01 M44-S02 M44-S03 M44-S04 M44-S05 M44-S06 M44-S07 M44-S08 M44-S09"  # M4.4 的 Kotlin 自動列
+M44_JS_SPEC_IDS="M44-S10 M44-S11"  # M4.4 的 JS 自動列（S12 由 V77 驗證）
+M44_BASE="5cb2eeb3d4a4e327d0793df1253d89961417ffdc"  # T0a 記錄的基準 commit（V73、V77 比對用）
 M43_BASE="5d9771a4e7a08007687d9cda2de14fa8f6a10f49"  # T0a 記錄的基準 commit（V60、V64 比對用）
 M3R_JS_SPEC_IDS="M3R-S01 M3R-S02 M3R-S03 M3R-S04 M3R-S05 M3R-S06 M3R-S07 M3R-S08 M3R-S09 M3R-S10 M3R-S11 M3R-S12 M3R-S13 M3R-S14 M3R-S15 M3R-S18 M3R-S19"  # M3R 的 Worker 與懸浮窗自動列
 M41_SPEC_IDS="M41-S01 M41-S02 M41-S03 M41-S04 M41-S05 M41-S06 M41-S07 M41-S08 M41-S09 M41-S14"  # M4.1 的 Kotlin 自動列
@@ -85,14 +88,14 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 
 [ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個＋M4 1 個＋M4.1 10 個＋M4.2 1 個＋M4.3 1 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列、M4 22 列、M4.1 2 列、M4.2 13 列、M4.3 14 列各一次；沒有略過或獨跑標記
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個＋M4 1 個＋M4.1 10 個＋M4.2 1 個＋M4.3 1 個＋M4.4 9 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列、M4 22 列、M4.1 2 列、M4.2 13 列、M4.3 14 列、M4.4 2 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 50 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 50"
-for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS $M4_SPEC_IDS $M41_SPEC_IDS $M42_SPEC_IDS $M43_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 59 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 59"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS $M4_SPEC_IDS $M41_SPEC_IDS $M42_SPEC_IDS $M43_SPEC_IDS $M44_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
-for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS $M4_JS_SPEC_IDS $M41_JS_SPEC_IDS $M42_JS_SPEC_IDS $M43_JS_SPEC_IDS; do
+for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS $M4_JS_SPEC_IDS $M41_JS_SPEC_IDS $M42_JS_SPEC_IDS $M43_JS_SPEC_IDS $M44_JS_SPEC_IDS; do
   n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -640,6 +643,62 @@ pass "V66"
 node tools/check-m43.mjs v67 "$M43_BASE" || fail "V67 發現把例外吞成開啟的寫法"
 pass "V67"
 
+# M4.4 戒飲設定頁重做的 L1 檢查（docs/M4.4-EXPENSIVE-PLAN.md §6.1）
+M44_SETTINGS_KT="app/src/main/java/com/accompany/pet/DrinkSettingsActivity.kt"
+M44_ERROR_KT="core/src/main/kotlin/com/accompany/pet/core/drink/SettingsError.kt"
+
+# V71：A75、A71 設定錯誤對應只在 core
+[ -f "$M44_ERROR_KT" ] || fail "V71 缺少 SettingsError.kt"
+grep -q 'enum class SettingsField' "$M44_ERROR_KT" || fail "V71 缺少 enum class SettingsField"
+for label in 訂閱名稱 月費 忍住一杯的入帳金額 每月額度 每天詢問時間; do
+  grep -q "\"$label\"" "$M44_ERROR_KT" || fail "V71 缺少 label $label"
+done
+grep -q 'const val SETTINGS_ERROR_PREFIX' "$M44_ERROR_KT" || fail "V71 缺少 SETTINGS_ERROR_PREFIX"
+grep -q 'fun settingsFieldOf' "$M44_ERROR_KT" || fail "V71 缺少 fun settingsFieldOf"
+if grep -nE 'import android|Date|currentTimeMillis|Random' "$M44_ERROR_KT"; then fail "V71 SettingsError.kt 含不純的用法"; fi
+pass "V71"
+
+# V72：A71、A72 Activity 不自己解析訊息、不顯示逐欄錯誤文字
+grep -q 'settingsFieldOf(' "$M44_SETTINGS_KT" || fail "V72 Activity 沒有呼叫 settingsFieldOf("
+if grep -nE 'startsWith\(|removePrefix\(|split\(|SETTINGS_ERROR_PREFIX|\.error =|setError\(|TextInputLayout' "$M44_SETTINGS_KT"; then fail "V72 Activity 含自行解析訊息或逐欄錯誤文字的寫法"; fi
+for member in NAME FEE RESIST QUOTA ASK; do
+  n=$(grep -c "SettingsField\.$member\b" "$M44_SETTINGS_KT" || true)
+  [ "$n" -eq 1 ] || fail "V72 SettingsField.$member 在 Activity 出現 $n 次，應只在 viewOf 一處"
+done
+pass "V72"
+
+# V73：A73 儲存流程不變
+for name in loadSettings loadEnabled fillFields numberValue saveSettings saveEnabled saveResultMessage errorField; do
+  grep -q "fun $name(" "$M44_SETTINGS_KT" || fail "V73 缺少函式 $name"
+done
+for const in SETTINGS_SAVED_MESSAGE SETTINGS_LOADING_MESSAGE SETTINGS_LOADED_MESSAGE SETTINGS_SAVING_MESSAGE SETTINGS_INVALID_FALLBACK FIELD_NAME FIELD_FEE FIELD_RESIST FIELD_QUOTA FIELD_ASK; do
+  now=$(grep -E "^const val $const " "$M44_SETTINGS_KT" | sed -E 's/^[^=]*=[[:space:]]*("[^"]*").*/\1/')
+  before=$(git show "$M44_BASE:$M44_SETTINGS_KT" | grep -E "^const val $const " | sed -E 's/^[^=]*=[[:space:]]*("[^"]*").*/\1/')
+  [ -n "$now" ] && [ "$now" = "$before" ] || fail "V73 常數 $const 的值與基準不同"
+done
+git diff --quiet "$M44_BASE" -- backend ':(exclude)backend/tests' core/src/main/kotlin/com/accompany/pet/core/drink/Drink.kt || fail "V73 backend 或 Drink.kt 與基準 commit 不同"
+pass "V73"
+
+# V74：A74 色碼集中在資源檔
+if grep -nE '#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?\b|Color\.parseColor\(|0x[fF][fF]' "$M44_SETTINGS_KT" "$M44_ERROR_KT"; then fail "V74 程式碼含寫死的色碼"; fi
+RES_COLOR_HITS=$(grep -rlE '#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?\b' app/src/main/res --include=*.xml | grep -vE 'res/(values/colors\.xml|drawable/|color/)' || true)
+if [ -n "$RES_COLOR_HITS" ]; then echo "$RES_COLOR_HITS"; fail "V74 色碼出現在 colors.xml、drawable、color 以外的資源檔"; fi
+pass "V74"
+
+# V75：A79 資源接線（存在、合法、被引用）
+node tools/check-m44.mjs || fail "V75 資源檔缺漏、不合法或沒接上"
+pass "V75"
+
+# V77：A77 主畫面不動
+git diff --quiet "$M44_BASE" -- app/src/main/res/layout/activity_main.xml app/src/main/java/com/accompany/pet/MainActivity.kt || fail "V77 主畫面與基準 commit 不同"
+grep -q 'cardDrinkSettings' app/src/main/res/layout/activity_main.xml || fail "V77 主畫面缺少 cardDrinkSettings"
+pass "V77"
+
+# V78：W-B 靜默降級掃描
+if grep -nE -A4 'catch' "$M44_SETTINGS_KT" "$M44_ERROR_KT" | grep -E 'isChecked = true|saveButton\.isEnabled = true|setText\('; then fail "V78 catch 區塊內把例外吞成可儲存或預設值"; fi
+if grep -nE '\?: *SettingsField\.|catch *\(_: *Exception\) *\{ *\}' "$M44_SETTINGS_KT" "$M44_ERROR_KT"; then fail "V78 找不到就猜欄位，或吞掉例外"; fi
+pass "V78"
+
 echo "===== L2 單元測試與編譯 ====="
 
 if runs C; then
@@ -670,6 +729,11 @@ if runs D && [ "$STAGE" -ge 2 ]; then
   [ "$NODE_PASS" -ge "$NODE_MIN" ] || fail "V26 backend 測試通過數 $NODE_PASS，應至少 $NODE_MIN"
   pass "V26（通過 $NODE_PASS 個）"
 fi
+
+# V76：M4.4 規格測試與 W-A 契約測試（Kotlin 的 M44 規格已包含在 V11 的 :core:test）
+(cd backend && node --test tests/spec/m44/drink-settings-ui.test.js tests/drink-settings-ui-wiring.test.js) >/dev/null 2>&1 || fail "V76 M4.4 的 JS 規格或 W-A 契約測試未通過"
+if grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub' backend/tests/drink-settings-ui-wiring.test.js; then fail "V76 W-A 契約測試含 mock／monkeypatch"; fi
+pass "V76"
 
 if runs B; then
   # V27：角色頁的解析程式與 backend 同一份（M1.6 A25），角色頁測試全部通過
@@ -807,6 +871,21 @@ else
   done
 fi
 pass "V70"
+
+# V79：M4.4 風險審查、突變報告與驗收報告【條款 9、10】
+for name in DrinkSettingsActivity SettingsError; do
+  sed -n '/## M4.4/,$p' RISK-REVIEW.md 2>/dev/null | grep -q "$name" || fail "V79 RISK-REVIEW.md 的 M4.4 段落缺少 $name"
+done
+grep -q '## M4.4' MUTATION-REPORT.md || fail "V79 MUTATION-REPORT.md 缺少 ## M4.4"
+if sed -n '/## M4.4/,$p' MUTATION-REPORT.md | grep -q '狀態：待補'; then
+  for field in 未執行原因 預定範圍 程式版本 原工具補跑方式 替代品候選 搜尋紀錄; do
+    sed -n '/## M4.4/,$p' MUTATION-REPORT.md | grep -q "$field" || fail "V79 MUTATION-REPORT.md 的 M4.4 待補報告缺少欄位：$field"
+  done
+else
+  sed -n '/## M4.4/,$p' MUTATION-REPORT.md | grep -q 'settingsFieldOf' || fail "V79 MUTATION-REPORT.md 的 M4.4 段落缺少 settingsFieldOf"
+fi
+[ -f ACCEPTANCE-M4.4.md ] || fail "V79 缺少 ACCEPTANCE-M4.4.md"
+pass "V79"
 
 # V17：報告檔存在
 [ -f SECURITY-REPORT.md ] || fail "V17 缺少 SECURITY-REPORT.md"

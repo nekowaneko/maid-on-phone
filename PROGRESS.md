@@ -279,3 +279,11 @@
 - RISK-REVIEW.md #75～#79、SECURITY-REPORT.md、DECISIONS.md、CHECKLIST.md 已追加；`npm audit` 無網路，列入 CHECKLIST.md。
 - 修正輪數：0；錯誤指紋：無（V70 失敗屬預期的報告缺漏，補齊報告後重跑）。
 - 補齊報告後重跑 `./verify.sh --full`：L1＋L2＋L3 全部通過（V01～V70，V26 backend 614 個）。
+
+## M4.4 T0a
+- CHEAP 產出檔案全部存在且非空。基準 commit（`M44_BASE`）：`5cb2eeb3d4a4e327d0793df1253d89961417ffdc`。
+- 基準：`node --test` 614 個通過；`./verify.sh`（L1＋L2）全綠；Kotlin 規格測試 50 個；JAVA_HOME 由 verify.sh 自動指向 Android Studio 內附的 JDK。
+
+## M4.4 T0b
+- 凍結規格測試 commit：`03d6504eeeb21639f9d878c489ab4bd690d935fb`（Kotlin 9、JS 2），已填入 `verify.sh` 的 `FROZEN_HASH`；V05 總數 50→59；V71～V79 已寫入。
+- 修正輪數：0；錯誤指紋：無（第一次用 shell heredoc 寫含反斜線的檔案失敗，改用 Write 工具，非程式錯誤）。

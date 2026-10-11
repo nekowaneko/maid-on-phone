@@ -167,3 +167,22 @@ M0-S15 修訂版取代 `SpecTest.kt` 內的 S15，函式名稱開頭仍為 `S15`
 
 > 註：T0b 凍結時 `drink.js` 尚無 `parseDrinkEnabled`／`isDrinkEnabled`、`handlers.js` 尚無 `/api/drink/enabled` 路由與守門、`drink-view.js` 尚無 `controlsVisibility`、`Drink.kt` 尚無 `drinkUiEnabled`。因此 JS 規格測試 S01～S11、S13～S15 目前失敗（路由 404、函式不存在），Kotlin 規格測試編譯失敗，屬正常狀態；僅 S12（讀主畫面檔案）目前即通過；T1、T2 起逐步轉綠。
 > S11 轉寫說明：盤前均線與 Todoist 的相依（證交所、Todoist stub、追蹤清單與收盤價）複製自 `spec/m4/ma.test.js`；已另行確認「不關閉開關」時此測試本身是綠的，確保關閉後的失敗只會來自開關。
+
+## M4.4
+
+| 編號 | 驗證 | 測試檔與函式名稱 |
+|---|---|---|
+| M44-S01 | 自動＋手機 | M44SpecTest.kt：`M44-S01 頁首顯示這一句；月費欄標紅；其他欄位不標紅`；手機見 DEVICE-CHECKLIST-M4.4.md D03 |
+| M44-S02 | 自動＋手機 | M44SpecTest.kt：`M44-S02 頁首顯示該句；訂閱名稱欄標紅`；手機見 D06 |
+| M44-S03 | 自動 | M44SpecTest.kt：`M44-S03 頁首顯示該句；每月額度欄標紅` |
+| M44-S04 | 自動 | M44SpecTest.kt：`M44-S04 頁首顯示該句；入帳金額欄標紅` |
+| M44-S05 | 自動 | M44SpecTest.kt：`M44-S05 頁首顯示該句；每天詢問時間欄標紅` |
+| M44-S06 | 自動 | M44SpecTest.kt：`M44-S06 頁首顯示該句；沒有任何欄位標紅` |
+| M44-S07 | 自動 | M44SpecTest.kt：`M44-S07 頁首顯示「設定值不正確」；沒有任何欄位標紅`（`SETTINGS_INVALID_FALLBACK` 在 app 模組，以字面字串驗證） |
+| M44-S08 | 自動 | M44SpecTest.kt：`M44-S08 頁首顯示該句；沒有文字欄位標紅；已存的五個欄位不回滾`；不回滾由 M4.3 的 W-A 驗證 |
+| M44-S09 | 自動＋手機 | M44SpecTest.kt：`M44-S09 所有紅框清除；頁首顯示「已儲存」`；清除動作見 W-A ②與手機 D04 |
+| M44-S10 | 自動 | drink-settings-ui.test.js：`M44-S10 不送開關那一步` |
+| M44-S11 | 自動＋手機 | drink-settings-ui.test.js：`M44-S11 開關、訂閱名稱、月費、每月額度、入帳金額、每天詢問時間`；手機見 D01 |
+| M44-S12 | V77 | 不寫成測試，verify.sh 的 V77 以 git diff 比對基準 commit |
+
+> 註：T0b 凍結時 `SettingsError.kt` 尚不存在，Kotlin 規格測試編譯失敗、JS 規格測試 S10／S11 因 Activity 尚未重做而 S11 失敗（缺 `addSwitchCard(`），屬正常狀態；T1、T3 起轉綠。
