@@ -88,3 +88,13 @@
 - □ 看 MUTATION-REPORT.md 的 M4.2 範圍結果（或待補狀態）（已執行，約 92%，建議新增規格 M42-S16～S19 待你確認）
 - □ 預覽框位置（D08）：背景圖裁切預覽依 `#dialog`、`#composer`、角色圖畫框，視訊版版面下角色圖放大成 118% 寬，預覽的框位置可能與實際略有出入；`background.js` 依規定不改，請在手機上確認預覽仍可用
 - □ 開場話：視訊版接通時目前沒有自動的開場話（現有聊天頁本來就沒有，見 DECISIONS.md 70），需要的話另立功能
+
+## M4.3
+
+□ 實測 DEVICE-CHECKLIST-M4.3.md 的 D01～D08（需要手機）
+□ 重新部署 Worker B：`cd backend && npx wrangler deploy -c wrangler.local.toml`；D1 資料表沒有變動
+□ 重新安裝 App
+□ 讀 RISK-REVIEW.md 的 M4.3 段落
+□ 看 MUTATION-REPORT.md 的 M4.3 段落（或「待補」的處理方式）
+□ 看 SECURITY-REPORT.md 與 `npm audit` 結果（需要網路）
+□ 確認 `docs/AGENT-SETUP.md` 與 README 提到的「啟用戒飲記錄」說明和實際畫面一致
