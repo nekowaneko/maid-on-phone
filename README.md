@@ -138,7 +138,23 @@ App 只有 `WorkerApi.kt` 可以連外；網頁呼叫原生的介面（`@Javascr
 - 只有 Android 版。
 - 懸浮窗啟動麥克風受 Android 14 以上的背景限制，部分機型需先打開 App 再說話。
 
-## 給開發者
+## 專案文件導覽
+
+根目錄與 `docs/` 有很多文件。一般使用者只需要看前兩列，其餘是開發過程紀錄。
+
+| 類別 | 檔案 | 給誰看 |
+|---|---|---|
+| 使用與授權 | `README.md`、`LICENSE`、`ART-LICENSE.md` | 所有人 |
+| 安裝設定 | `docs/AGENT-SETUP.md`（給 AI 代理人）、`docs/FIREBASE-SETUP.md`、`docs/WORKER-SETUP.md` | 要自己建置的人 |
+| 架構與規格 | `docs/ARCHITECTURE.md`、`docs/wish28-pet-spec.md`、`docs/DEVELOPMENT.md` | 開發者 |
+| 開發過程紀錄 | `ACCEPTANCE-*.md`（各里程碑的驗收結果）、`DEVICE-CHECKLIST-*.md`（手機實測清單）、`PROGRESS.md`、`DECISIONS.md`、`BLOCKERS.md`、`CHECKLIST.md` | 想了解測試與決策過程的人 |
+| 品質報告 | `SPEC-MAP.md`、`RISK-REVIEW.md`、`MUTATION-REPORT.md`、`SECURITY-REPORT.md` | 想了解測試覆蓋與風險的人 |
+| 計畫書 | `docs/M*-CHEAP-PLAN.md`、`docs/M*-EXPENSIVE-PLAN.md`、`docs/M*-T*.md`、`lanes/` | 想看 AI 代理人怎麼分階段開發的人 |
+| 設計原型 | `design/prototype/` | 想看畫面設計的人 |
+
+- 檔名裡的 `M0`、`M1.5`、`M4.4` 是開發里程碑編號，不是版本號。
+- 開發過程紀錄與品質報告是這個專案「由 AI 代理人開發、以自動驗收把關」的證據。`verify.sh` 的部分檢查會讀取它們，所以不要單獨刪除。
+- 這些紀錄可能含作者的本機路徑與手機型號，不含任何金鑰。
 
 測試、驗收腳本與開發流程見 [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)；完整架構見 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)；產品規格見 [docs/wish28-pet-spec.md](docs/wish28-pet-spec.md)。
 
