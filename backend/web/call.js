@@ -22,6 +22,7 @@ const THINKING_DOTS = '……' // 她在想時對話框裡的動畫文字
 const EMPTY_TEXT = ''
 const TRUE_TEXT = 'true'
 const FALSE_TEXT = 'false'
+const EXIT_HINT_DELAY_MS = 800 // 按下關閉後這麼久頁面還在，就代表關不掉，改顯示提示
 const OPEN_CLASS = 'is-open'
 const SHOWN_CLASS = 'is-shown'
 const THINKING_CLASS = 'is-thinking'
@@ -94,6 +95,7 @@ export const setupCall = ({ renderer, config, callConfig, fetchUsage, readSecret
     document.getElementById('call-secret').textContent = CALL_TEXT.errorSecret
     document.getElementById('call-redial-ended').textContent = CALL_TEXT.endedRedial
     document.getElementById('call-close').textContent = CALL_TEXT.endedClose
+  document.getElementById('ended-hint').textContent = CALL_TEXT.endedExitHint
   }
 
   // 依 callView 的結果更新畫面；樣式切換只靠 #app 的 data- 屬性與 class，不寫行內樣式
@@ -107,6 +109,7 @@ export const setupCall = ({ renderer, config, callConfig, fetchUsage, readSecret
     appElement.dataset.callInput = String(view.composerEnabled)
     Object.entries(overlays).forEach(([name, element]) => element.classList.toggle(SHOWN_CLASS, view.overlay === name))
     if (view.overlay === CALL_STATES.ENDED) endedTimeElement.textContent = endedTimeText(elapsedMs())
+    else document.getElementById('ended-hint').hidden = true
     if (!view.dialogVisible) {
       lineElement.textContent = EMPTY_TEXT
       lineElement.classList.remove(THINKING_CLASS)
@@ -229,6 +232,10 @@ export const setupCall = ({ renderer, config, callConfig, fetchUsage, readSecret
   document.getElementById('call-secret').addEventListener('click', () => emit(OPEN_SECRET_EVENT_NAME))
   document.getElementById('call-close').addEventListener('click', () => {
     window.location.href = CHAT_EXIT_URL
+    // 在 App 內會直接關掉畫面；一般瀏覽器或關不掉時，頁面還活著，就提示用返回鍵
+    window.setTimeout(() => {
+      document.getElementById('ended-hint').hidden = false
+    }, EXIT_HINT_DELAY_MS)
   })
   document.getElementById('more-open').addEventListener('click', openMore)
   document.getElementById('more-close').addEventListener('click', closeMore)

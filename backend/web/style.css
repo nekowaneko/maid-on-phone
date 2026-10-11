@@ -34,6 +34,7 @@
   /* 視訊版：角色整張圖的寬度是視訊區寬度的 118%，高度由長寬比（300×349）算出，
      對話框的位置就是用這三個值算出來的，改角色大小只動這裡。 */
   --face-width: 118cqw;
+  --call-bar-h: 66px; /* 頂列（名字＋狀態）佔的高度 */
   --face-aspect-h: 349;
   --face-aspect-w: 300;
   --danger: #c0392b; /* 掛斷鈕與連線失敗 */
@@ -79,7 +80,10 @@ body {
   flex: 1 1 auto;
   min-height: 0;
   margin-top: var(--gap);
-  container-type: inline-size;
+  container-type: size;
+  /* 視訊區矮的手機上，角色圖不能高到讓對話框頂進頂列：圖高最多是「視訊區高 − 頂列 − 對話框高 + 尖角重疊」 */
+  --face-width: min(118cqw, calc((100cqh - var(--call-bar-h) - var(--dialog-h) + 14px) * var(--face-aspect-w) / var(--face-aspect-h)));
+  --dialog-h: calc(var(--bubble-lines) * var(--line-leading) * var(--line-size) + 2 * var(--gap) + 2 * var(--bubble-border));
   border: var(--bubble-border) solid var(--ink);
   border-radius: var(--bubble-radius);
   background: linear-gradient(180deg, var(--stage-from) 0%, var(--stage-to) 100%);
@@ -99,9 +103,7 @@ body.has-background #stage {
   right: var(--gap);
   bottom: calc(var(--face-width) * var(--face-aspect-h) / var(--face-aspect-w) - 14px);
   z-index: 5;
-  height: calc(
-    var(--bubble-lines) * var(--line-leading) * var(--line-size) + 2 * var(--gap) + 2 * var(--bubble-border)
-  );
+  height: var(--dialog-h);
   padding: var(--gap);
   border: var(--bubble-border) solid var(--ink);
   border-radius: var(--bubble-radius);

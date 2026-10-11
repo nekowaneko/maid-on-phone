@@ -30,7 +30,8 @@ export const CALL_TEXT = {
   errorSecret: '開啟密鑰設定',
   endedTitle: '通話結束',
   endedRedial: '再撥一次',
-  endedClose: '關閉聊天'
+  endedClose: '關閉聊天',
+  endedExitHint: '沒有反應的話，請按手機的返回鍵離開聊天。'
 }
 const TONES = { PLAIN: 'plain', LIVE: 'live', BAD: 'bad' }
 const MS_PER_SECOND = 1000

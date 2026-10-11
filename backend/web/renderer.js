@@ -18,6 +18,7 @@ const TRANSPARENT = '0'
 const EMPTY_TEXT = ''
 const ASYNC_DECODING = 'async' // 預載只是要進快取，不必卡住主執行緒解碼
 const DECODE_TIMEOUT_MS = 400 // 解碼等太久就先放行，畫面不能因為這個卡住
+const FIRST_PAINT_WAIT_MS = 20000 // 還沒畫出任何臉時，第一張臉最多等這麼久（整張圖版沒臉就是一片空白）
 // 載入結果分三種：逾時只是「還沒好」，跟素材真的壞掉不是同一件事。
 // 兩者混為一談的話，慢一點的網路會讓還在載的臉被當成壞掉而藏起來。
 const LOAD_OK = 'ok'
@@ -160,7 +161,13 @@ export const createRenderer = (container, config) => {
     // 排隊等待期間又被要求換成別的表情，這一次就整個跳過
     if (wantedEmotion !== emotion) return
     const nextSlot = pickFaceSlot({ activeSlot, slotCount: faceSlots.length, hasPainted })
-    const loaded = (await loadSource(faceSlots[nextSlot], emotionToAssetPath(emotion, config))) === LOAD_OK
+    let result = await loadSource(faceSlots[nextSlot], emotionToAssetPath(emotion, config))
+    // 第一張臉冷啟動慢時不能放棄：整張圖版沒有底圖，放棄就整個沒有角色，要退出再進才有
+    for (let waited = 0; result === LOAD_PENDING && !hasPainted && wantedEmotion === emotion && waited < FIRST_PAINT_WAIT_MS; waited += DECODE_TIMEOUT_MS) {
+      result = await waitForImage(faceSlots[nextSlot])
+      if (result === LOAD_OK) faceSlots[nextSlot].style.visibility = VISIBLE
+    }
+    const loaded = result === LOAD_OK
     // 沒載成功就什麼都不動：舊臉留在畫面上，比兩張臉都熄掉變成一個洞好
     const plan = planFaceSwap({ activeSlot, nextSlot, hasPainted, loaded })
     if (plan.show !== null) faceSlots[plan.show].style.opacity = OPAQUE
