@@ -47,8 +47,10 @@ import com.accompany.pet.core.drink.ACTION_PREVIEW
 import com.accompany.pet.core.drink.ACTION_RESIST
 import com.accompany.pet.core.drink.ACTION_SPEAK
 import com.accompany.pet.core.drink.ACTION_UNDO
+import com.accompany.pet.core.drink.ENABLED_PATH
 import com.accompany.pet.core.drink.PARSE_PATH
 import com.accompany.pet.core.drink.drinkEndpointFor
+import com.accompany.pet.core.drink.drinkUiEnabled
 import com.accompany.pet.core.drink.workerErrorMessage
 import org.json.JSONException
 import org.json.JSONObject
@@ -459,6 +461,18 @@ class OverlayService : Service() {
         bubbleShown = !bubbleShown
         callJs("window.pet.showBubble($bubbleShown)")
         applyWindowLayout()
+        if (bubbleShown) refreshDrinkEnabled()  // 每次展開泡泡都重讀開關
+    }
+
+    // 向 Worker 讀戒飲記錄開關，依結果顯示或隱藏三顆戒飲按鈕；不存任何本機副本（A66），降級只由 drinkUiEnabled 決定（A67）
+    private fun refreshDrinkEnabled() {
+        if (state.service != com.accompany.pet.core.ServiceState.RUNNING) return  // 角色未顯示時不讀
+        WorkerApi.get(ENABLED_PATH) { result ->
+            if (state.service != com.accompany.pet.core.ServiceState.RUNNING) return@get  // 角色已收起
+            val enabled = parseEnabled(result)
+            val flag = drinkUiEnabled(result.status, enabled)
+            callJs("window.pet.setDrinkEnabled&&window.pet.setDrinkEnabled($flag)")  // 只傳布林值（A68）
+        }
     }
 
     // 依角色位置與泡泡狀態，更新視窗大小與位置
@@ -747,6 +761,7 @@ class OverlayService : Service() {
             if (view != webView) return
             pageReady = true
             flushPending()
+            refreshDrinkEnabled()
         }
 
         // 攔截頁面跳轉
@@ -758,5 +773,15 @@ class OverlayService : Service() {
             if (isAllowedUrl(request.url.toString())) return null  // 本機資產照常載入
             return WebResourceResponse("text/plain", "utf-8", 403, "Forbidden", emptyMap(), ByteArrayInputStream(ByteArray(0)))
         }
+    }
+}
+
+// 取出開關回應的 enabled：2xx 且欄位是布林值才有值，否則 null
+fun parseEnabled(result: WorkerResult): Boolean? {
+    if (result.status !in 200..299) return null
+    return try {
+        JSONObject(result.text).opt("enabled") as? Boolean
+    } catch (e: JSONException) {
+        null
     }
 }
