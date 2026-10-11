@@ -71,3 +71,13 @@
 3. 接通判斷：載入設定與表情圖、並以存取密鑰呼叫 `/api/usage` 回 200；沒有密鑰、401、網路錯誤或逾時（`connectTimeoutMs`）都是連線失敗。
 4. 「關閉聊天」：網頁導向 `chat-exit://close`（`config/call.json` 的 `exitUrl`），`ChatActivity` 在 `shouldOverrideUrlLoading` 用 `isChatExitUrl` 辨識後 `finish()`；仍不提供任何 JS 介面（A5）。
 5. 設計上的取捨：沿用聊天頁現況風格；角色圖放大到視訊區寬度的 118%，畫質偏軟，見 design/prototype/later.md。
+
+## M4.3 戒飲記錄開關
+
+1. 開關存在 D1 的 `settings` 表，鍵為 `drink.enabled`，值為 `true` 或 `false`；沒存過、或存的值不是 `false`，一律視為開啟。它**不屬於**戒飲設定的五個欄位，`/api/drink/settings` 的回應與驗證不變（M2-S12 的凍結測試逐欄比對那五個欄位）。
+2. 新增 `GET/PUT /api/drink/enabled`，內容為 `{"enabled": true|false}`；PUT 只接受布林值，其他一律回 400「設定值不正確：啟用戒飲記錄」。
+3. 關閉時，寫入類路由（`parse`、`preview`、`confirm`、`resist`、`undo`）回 403「戒飲記錄已關閉」，不呼叫語言模型、不寫入任何紀錄。讀取類路由（`history`、`stats`、`settings`、`export`、`enabled`）不受影響，所以關閉期間仍能查看統計、匯出，也能重新打開。過去的紀錄一筆都不刪。
+4. 排程：每日詢問在關閉時直接略過；盤前均線與 Todoist 的排程不讀這個開關。
+5. App：`DrinkSettingsActivity` 加「啟用戒飲記錄」開關，按「儲存」時先存五個欄位、成功後再存開關。`OverlayService` 在角色頁載入完成與每次展開泡泡時讀 `/api/drink/enabled`，用 `callJs` 呼叫網頁的 `window.pet.setDrinkEnabled(布林值)`，網頁據此隱藏「說話」「沒喝」「戒飲歷史」三顆按鈕。`@JavascriptInterface` 仍是 6 個。
+6. 讀不到設定（沒網路、尚未設定伺服器、格式不對）時，三顆按鈕維持顯示，這是唯一允許的降級，只由 core 的 `drinkUiEnabled` 一處決定。
+7. 主畫面（`activity_main.xml`、`MainActivity.kt`）不動，「戒飲設定」卡片不論開關都留在原位。
