@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="820fdf61afe8ad8d2e85f2e6782214f45cdf31eb"   # 凍結規格測試的 commit（M4.1 凍結版）
+FROZEN_HASH="19f82711d6609342ec45a72a23ee7571b94d9985"   # 凍結規格測試的 commit（M4.2 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"
@@ -23,6 +23,8 @@ M2_JS_B_SPEC_IDS="M2-S02-B M2-S04-B M2-S11-B M2-S16-B"  # M2 的懸浮窗網頁�
 M3R_SPEC_IDS="M3R-S16 M3R-S17"  # M3R 的 Kotlin 自動列（第一輪 M3 的規格測試已刪除）
 M4_SPEC_IDS="M4-S15C"  # M4 的 Kotlin 自動列
 M4_JS_SPEC_IDS="M4-S01 M4-S02 M4-S03 M4-S04 M4-S05 M4-S06 M4-S07 M4-S08 M4-S09 M4-S10 M4-S11 M4-S12 M4-S13 M4-S14 M4-S16 M4-S15B M4-S17 M4-S18 M4-S19 M4-S20 M4-S21 M4-S22"  # M4 的 Worker（15 列）與前端（2 列）自動列
+M42_SPEC_IDS="M42-S09"  # M4.2 的 Kotlin 自動列
+M42_JS_SPEC_IDS="M42-S01 M42-S02 M42-S03 M42-S04 M42-S05 M42-S07 M42-S08 M42-S09 M42-S10 M42-S11 M42-S12 M42-S13 M42-S15"  # M4.2 的 JS 自動列（13 列；S06、S14 為手機實測）
 M3R_JS_SPEC_IDS="M3R-S01 M3R-S02 M3R-S03 M3R-S04 M3R-S05 M3R-S06 M3R-S07 M3R-S08 M3R-S09 M3R-S10 M3R-S11 M3R-S12 M3R-S13 M3R-S14 M3R-S15 M3R-S18 M3R-S19"  # M3R 的 Worker 與懸浮窗自動列
 M41_SPEC_IDS="M41-S01 M41-S02 M41-S03 M41-S04 M41-S05 M41-S06 M41-S07 M41-S08 M41-S09 M41-S14"  # M4.1 的 Kotlin 自動列
 M41_JS_SPEC_IDS="M41-S11 M41-S12"  # M4.1 的 JS 自動列
@@ -80,14 +82,14 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 
 [ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個＋M4 1 個＋M4.1 10 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列、M4 22 列、M4.1 2 列各一次；沒有略過或獨跑標記
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個＋M4 1 個＋M4.1 10 個＋M4.2 1 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列、M4 22 列、M4.1 2 列、M4.2 13 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 48 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 48"
-for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS $M4_SPEC_IDS $M41_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 49 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 49"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS $M4_SPEC_IDS $M41_SPEC_IDS $M42_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
-for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS $M4_JS_SPEC_IDS $M41_JS_SPEC_IDS; do
+for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS $M4_JS_SPEC_IDS $M41_JS_SPEC_IDS $M42_JS_SPEC_IDS; do
   n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -277,6 +279,188 @@ if [ "$STAGE" -ge 3 ]; then
   pass "V43"
 fi
 
+# ===== M4.2 聊天頁視訊版（docs/M4.2-EXPENSIVE-PLAN.md §6.1）=====
+CHAT_KT="app/src/main/java/com/accompany/pet/ChatActivity.kt"
+CALL_JSON="backend/config/call.json"
+CHAT_KT_MODEL="core/src/main/kotlin/com/accompany/pet/core/chat/Chat.kt"
+CALL_STATE_JS="backend/core/call-state.js"
+BLINK_JS="backend/core/blink.js"
+CALL_JS="backend/web/call.js"
+APP_JS="backend/web/app.js"
+RENDERER_JS="backend/web/renderer.js"
+INDEX_HTML="backend/web/index.html"
+STYLE_CSS="backend/web/style.css"
+EMOTION_MAP_JSON="backend/config/emotion-map.json"
+MANIFEST_WEB="backend/web/manifest.webmanifest"
+V55_BASELINE=2   # style.css 在 :root 區塊以外的十六進位色碼數量（T0a 記錄於 PROGRESS.md）
+DISPLAY_NAME="手機女僕"
+
+# V47：A54 CHAT_EXIT_URL 三處一致（call.json、Chat.kt、call-state.js）
+V47_JSON=$(grep -oE '"exitUrl"\s*:\s*"[^"]+"' "$CALL_JSON" | sed -E 's/.*"([^"]+)"/\1/' || true)
+V47_KT=$(grep -oE 'const\s+val\s+CHAT_EXIT_URL\s*=\s*"[^"]+"' "$CHAT_KT_MODEL" 2>/dev/null | sed -E 's/.*"([^"]+)"/\1/' || true)
+V47_JS=$(grep -oE "export\s+const\s+CHAT_EXIT_URL\s*=\s*'[^']+'" "$CALL_STATE_JS" 2>/dev/null | sed -E "s/.*'([^']+)'/\1/" || true)
+[ "$V47_JSON" = "chat-exit://close" ] || fail "V47 call.json 的 exitUrl 不是 chat-exit://close：$V47_JSON"
+[ "$V47_KT" = "$V47_JSON" ] || fail "V47 Chat.kt 的 CHAT_EXIT_URL ($V47_KT) 與 call.json ($V47_JSON) 不一致"
+[ "$V47_JS" = "$V47_JSON" ] || fail "V47 call-state.js 的 CHAT_EXIT_URL ($V47_JS) 與 call.json ($V47_JSON) 不一致"
+pass "V47"
+
+# V48：換裝已移除
+for f in backend/web/outfit.js backend/web/tryon.html backend/web/tryon.js; do
+  [ ! -e "$f" ] || fail "V48 換裝檔案還在：$f"
+done
+if grep -niE 'outfit|tryon|tools-toggle|更換服裝' "$INDEX_HTML" "$APP_JS" "$STYLE_CSS"; then fail "V48 網頁還含換裝相關字串"; fi
+if grep -nE 'outfits|outfitNames|defaultOutfit' "$EMOTION_MAP_JSON"; then fail "V48 emotion-map.json 還含換裝設定"; fi
+pass "V48"
+
+# V49：名稱是「手機女僕」，且不再出現「陪伴角色」
+grep -qF "<title>$DISPLAY_NAME</title>" "$INDEX_HTML" || fail "V49 index.html 的 <title> 不是 $DISPLAY_NAME"
+grep -qE "name=\"apple-mobile-web-app-title\"\s+content=\"$DISPLAY_NAME\"" "$INDEX_HTML" || fail "V49 index.html 的 apple-mobile-web-app-title 不是 $DISPLAY_NAME"
+grep -qE "\"name\"\s*:\s*\"$DISPLAY_NAME\"" "$MANIFEST_WEB" || fail "V49 manifest 的 name 不是 $DISPLAY_NAME"
+grep -qE "\"short_name\"\s*:\s*\"$DISPLAY_NAME\"" "$MANIFEST_WEB" || fail "V49 manifest 的 short_name 不是 $DISPLAY_NAME"
+grep -qE "\"displayName\"\s*:\s*\"$DISPLAY_NAME\"" "$CALL_JSON" || fail "V49 call.json 的 displayName 不是 $DISPLAY_NAME"
+grep -qE "id=\"call-name\"[^>]*>\s*$DISPLAY_NAME\s*<" "$INDEX_HTML" || fail "V49 index.html 的 #call-name 文字不是 $DISPLAY_NAME"
+if grep -rn '陪伴角色' backend/web "$CALL_JSON"; then fail "V49 還有「陪伴角色」"; fi
+pass "V49"
+
+# V50：A55 與素材設定（眨眼不進 emotionMap）
+if grep -n 'blink' "$EMOTION_MAP_JSON"; then fail "V50 emotion-map.json 含 blink（A55）"; fi
+node - "$EMOTION_MAP_JSON" <<'NODE' || fail "V50 emotion-map.json 設定不符（zOrder、assetRoot、emotionMap 鍵或 displayNames）"
+const c = JSON.parse(require('fs').readFileSync(process.argv[2], 'utf8'))
+const keys = Object.keys(c.emotionMap ?? {}).join(' ')
+const ok = JSON.stringify(c.zOrder) === JSON.stringify(['face'])
+  && c.assetRoot === 'assets/character/frames'
+  && keys === 'neutral thinking smile laugh troubled pout shy'
+  && typeof c.displayNames?.pout === 'string' && typeof c.displayNames?.shy === 'string'
+process.exit(ok ? 0 : 1)
+NODE
+pass "V50"
+
+# V51：版面接線（id 齊全、對話框巢狀在視訊區內、選單舊 id 在面板內、樣式與事件名稱）
+node - "$INDEX_HTML" "$STYLE_CSS" "$APP_JS" "$CALL_JS" <<'NODE' || fail "V51 版面接線不符（見上方訊息）"
+const fs = require('fs')
+const [html, css, app, call] = process.argv.slice(2).map((p) => { try { return fs.readFileSync(p, 'utf8') } catch { return '' } })
+const problems = []
+const hasId = (id) => new RegExp(`id="${id}"`).test(html)
+// 取出某個 id 元素的內層字串（以同名標籤的開合計數找結尾）
+const innerOf = (id) => {
+  const open = html.match(new RegExp(`<([a-zA-Z0-9]+)\\b[^>]*id="${id}"[^>]*>`))
+  if (!open) return null
+  const tag = open[1]
+  const tokens = new RegExp(`<${tag}\\b[^>]*>|</${tag}>`, 'g')
+  tokens.lastIndex = open.index + open[0].length
+  let depth = 1
+  for (let t = tokens.exec(html); t; t = tokens.exec(html)) {
+    depth += t[0].startsWith('</') ? -1 : 1
+    if (depth === 0) return html.slice(open.index + open[0].length, t.index)
+  }
+  return null
+}
+const IDS = ['hangup', 'call-bar', 'call-name', 'call-status', 'more-open', 'more', 'scrim', 'ov-connecting', 'ov-error', 'ov-ended', 'call-redial', 'call-secret', 'call-redial-ended', 'call-close', 'stage', 'dialog', 'line', 'character', 'echo', 'composer']
+for (const id of IDS) if (!hasId(id)) problems.push(`index.html 缺少 #${id}`)
+const stage = innerOf('stage')
+if (stage === null || !/id="dialog"/.test(stage)) problems.push('#dialog 沒有巢狀在 #stage 內')
+const more = innerOf('more')
+for (const id of ['log-open', 'persona-open', 'usage-open', 'bg-new-open', 'bg-list-open', 'replies-open']) {
+  if (more === null || !new RegExp(`id="${id}"`).test(more)) problems.push(`#${id} 不在 #more 內`)
+}
+if (!css.includes('--face-width: 118cqw')) problems.push('style.css 缺少 --face-width: 118cqw')
+if (!/#dialog\s*\{[^}]*bottom:\s*calc\([^;]*--face-width/.test(css)) problems.push('#dialog 的 bottom 算式沒有引用 --face-width')
+if (!/#line\s*\{[^}]*overflow-y:\s*auto/.test(css)) problems.push('#line 沒有 overflow-y: auto')
+for (const ev of ['companion:send', 'companion:reply-start', 'companion:reply-failed']) {
+  if (!app.includes(ev)) problems.push(`app.js 缺少事件 ${ev}`)
+  if (!call.includes(ev)) problems.push(`call.js 沒有監聽事件 ${ev}`)
+}
+if (problems.length > 0) { console.error(problems.join('\n')); process.exit(1) }
+NODE
+pass "V51"
+
+# V52：A56、A57、A58、條款 12：無寫死狀態文字、無靜默降級、core 純度
+node - "$CALL_STATE_JS" "$BLINK_JS" "$CALL_JS" "$APP_JS" "$RENDERER_JS" <<'NODE' || fail "V52 純度、寫死文字或靜默降級檢查不符（見上方訊息）"
+const fs = require('fs')
+const [stateP, blinkP, callP, appP, rendererP] = process.argv.slice(2)
+const problems = []
+const read = (p) => { try { return fs.readFileSync(p, 'utf8') } catch { problems.push(`${p} 讀不到`); return '' } }
+// 去掉註解：整行註解、行尾註解（前面要有空白，避免誤砍網址）、區塊註解
+const strip = (s) => s.replace(/\/\*[\s\S]*?\*\//g, '').split('\n').map((l) => l.replace(/^\s*\/\/.*$/, '').replace(/\s\/\/.*$/, '')).join('\n')
+// 取出所有 catch 區塊的內文（以大括號配對）
+const catchBodies = (s) => {
+  const out = []
+  const re = /catch\s*(\([^)]*\))?\s*\{/g
+  for (let m = re.exec(s); m; m = re.exec(s)) {
+    let depth = 1
+    let i = re.lastIndex
+    for (; i < s.length && depth > 0; i += 1) depth += s[i] === '{' ? 1 : s[i] === '}' ? -1 : 0
+    out.push(s.slice(re.lastIndex, i - 1))
+  }
+  return out
+}
+const state = strip(read(stateP))
+const blink = strip(read(blinkP))
+const call = strip(read(callP))
+const app = strip(read(appP))
+const renderer = strip(read(rendererP))
+
+// A57：core 兩支檔案的純度
+for (const [name, src] of [['call-state.js', state], ['blink.js', blink]]) {
+  for (const word of ['document', 'window', 'fetch', 'localStorage', 'Math.random']) {
+    if (src.includes(word)) problems.push(`${name} 含 ${word}`)
+  }
+  if (/import[^\n]*from\s*['"][^./]/.test(src)) problems.push(`${name} import 了外部套件`)
+}
+
+// A56：call.js、app.js 不得寫死 CALL_TEXT 的句子與狀態字
+const sentences = []
+try {
+  const text = (fs.readFileSync(stateP, 'utf8').match(/CALL_TEXT\s*=\s*\{[\s\S]*?\n\}/) ?? [''])[0]
+  for (const m of text.matchAll(/'([^']+)'/g)) sentences.push(m[1])
+} catch { /* 讀不到的問題上面已經記過 */ }
+for (const word of ['通話中', '她在想', '連線失敗', '已結束', ...sentences]) {
+  if (call.includes(word)) problems.push(`call.js 寫死了「${word}」`)
+  if (app.includes(word)) problems.push(`app.js 寫死了「${word}」`)
+}
+
+// 條款 12：靜默降級
+const callRaw = (() => { try { return fs.readFileSync(callP, 'utf8') } catch { return '' } })()
+const bodies = catchBodies(call)
+for (const body of bodies) {
+  if (/LIVE|'live'|CONNECTED\b/.test(body)) problems.push('call.js 的 catch 內把狀態設成 live 或 connected')
+  if (/return\s+(true|\{|\[|'|"|`)/.test(body)) problems.push('call.js 的 catch 內回傳成功值')
+}
+if (callRaw.length > 0) {
+  if (!/connectEvent\(/.test(call)) problems.push('call.js 沒有用 connectEvent 轉換連線探測結果')
+  const hasNullPath = bodies.some((b) => /null/.test(b)) || /\.catch\([^)]*null/.test(call)
+  if (!hasNullPath) problems.push('call.js 的連線探測例外沒有轉成 status: null')
+  if (/removeItem[^\n]*companion:history|companion:history[^\n]*removeItem/.test(call) || call.includes('localStorage.clear')) problems.push('call.js 會清除對話紀錄（M42-S08）')
+}
+for (const [name, src] of [['call.js', call], ['app.js', app], ['renderer.js', renderer], ['call-state.js', state], ['blink.js', blink]]) {
+  if (/hasattr|0x89|Buffer\.from|new Uint8Array\(\[/.test(src)) problems.push(`${name} 含假圖或固定位元組的樣式`)
+}
+if (problems.length > 0) { console.error(problems.join('\n')); process.exit(1) }
+NODE
+pass "V52"
+
+# V53：A59 關閉網址的攔截；不新增 JS 介面
+grep -A15 'shouldOverrideUrlLoading' "$CHAT_KT" 2>/dev/null | grep -q 'isChatExitUrl(' || fail "V53 ChatActivity.kt shouldOverrideUrlLoading 缺少 isChatExitUrl("
+grep -A15 'shouldOverrideUrlLoading' "$CHAT_KT" 2>/dev/null | grep -q 'finish()' || fail "V53 ChatActivity.kt shouldOverrideUrlLoading 缺少 finish()"
+grep -q 'CHAT_EXIT_URL' "$CALL_JS" 2>/dev/null || fail "V53 call.js 沒有導向 CHAT_EXIT_URL"
+if grep -n 'addJavascriptInterface' "$CHAT_KT" app/src/main/java/com/accompany/pet/MaActivity.kt; then fail "V53 含 addJavascriptInterface"; fi
+[ "$(grep -rho '@JavascriptInterface' app/src | wc -l)" -eq 6 ] || fail "V53 @JavascriptInterface 不是 6 次"
+pass "V53"
+
+# V54：A60 逐字節奏不得改動
+grep -qE 'TYPEWRITER_INTERVAL_MS\s*=\s*30\b' "$APP_JS" || fail "V54 app.js 的 TYPEWRITER_INTERVAL_MS 不是 30"
+grep -qE 'HOLD_MS\s*=\s*3000\b' "$APP_JS" || fail "V54 app.js 的 HOLD_MS 不是 3000"
+pass "V54"
+
+# V55：A61 style.css 在 :root 區塊以外不得新增十六進位色碼
+V55_COUNT=$(node - "$STYLE_CSS" <<'NODE'
+const css = require('fs').readFileSync(process.argv[2], 'utf8').replace(/:root\s*\{[^}]*\}/, '')
+console.log((css.match(/#[0-9a-fA-F]{3,8}(?![0-9a-zA-Z_-])/g) ?? []).length)
+NODE
+)
+[ "$V55_COUNT" -le "$V55_BASELINE" ] || fail "V55 style.css 在 :root 以外有 $V55_COUNT 個十六進位色碼，基準為 $V55_BASELINE"
+pass "V55"
+
 # V28：角色頁只載入本機相對路徑的一般 script，不用 module、不讀檔、不連外（M1.6 A24）
 PET_ASSETS=app/src/main/assets/pet
 if grep -rnE 'type="module"|fetch\(|XMLHttpRequest|import\(|https?://' "$PET_ASSETS" --include='*.html' --include='*.js'; then fail "V28 角色頁含 module、讀檔或外部網址"; fi
@@ -402,7 +586,7 @@ if runs D && [ "$STAGE" -ge 2 ]; then
     NODE_MIN=450   # M3R 起跑前（不含第一輪的 todoist-core、todoist-api 輔助測試）＋M3R Worker 規格 15 列＋M4 Worker 規格 15 列
   else
     NODE_FILES="tests/**/*.test.js"
-    NODE_MIN=498   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助
+    NODE_MIN=511   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助（498）＋M4.2 規格 13 列；T1 起隨輔助測試新增再調高
   fi
   NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
   NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')
@@ -440,6 +624,18 @@ if [ "$STAGE" -ge 2 ]; then
   (cd backend && node --test tests/ma-entry-contract.test.js) >/dev/null 2>&1 || fail "V45 $WA_TEST 測試未通過"
   pass "V45"
 fi
+
+# V56：M4.2 規格測試通過（13 個 JS、1 個 Kotlin）
+(cd backend && node --test tests/spec/m42/call.test.js) >/dev/null 2>&1 || fail "V56 M4.2 JS 規格測試未通過"
+./gradlew :core:test --tests "com.accompany.pet.spec.m42.*" -q || fail "V56 M4.2 Kotlin 規格測試未通過"
+pass "V56"
+
+# V57：W-A 契約測試存在且通過；不含 mock.method、monkeypatch、jest.mock、sinon.stub【條款 11】
+WA_CALL_TEST="backend/tests/call-wiring.test.js"
+[ -f "$WA_CALL_TEST" ] || fail "V57 缺少 $WA_CALL_TEST"
+if grep -vE '^\s*//' "$WA_CALL_TEST" | grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub'; then fail "V57 $WA_CALL_TEST 含 monkeypatch"; fi
+(cd backend && node --test tests/call-wiring.test.js) >/dev/null 2>&1 || fail "V57 $WA_CALL_TEST 測試未通過"
+pass "V57"
 
 if [ "$FULL" -eq 0 ]; then
   [ -z "$LANE" ] || { echo "🎉 L1＋L2（$LANE 線）全部通過"; exit 0; }
@@ -496,6 +692,18 @@ else
   grep -q 'com/accompany/pet/core/ma/MaModels.kt' MUTATION-REPORT.md || fail "V46 MUTATION-REPORT.md 缺少 MaModels.kt"
 fi
 pass "V46"
+
+# V58：M4.2 風險審查與突變報告涵蓋項目【條款 9、10】
+for name in ChatActivity call.js app.js; do
+  grep -A200 '## M4.2' RISK-REVIEW.md 2>/dev/null | grep -q "$name" || fail "V58 RISK-REVIEW.md 的 M4.2 段落缺少 $name"
+done
+grep -q '## M4.2' MUTATION-REPORT.md || fail "V58 MUTATION-REPORT.md 缺少 ## M4.2"
+if ! sed -n '/## M4.2/,$p' MUTATION-REPORT.md | grep -q '狀態：待補'; then
+  for scope in backend/core/call-state.js backend/core/blink.js isChatExitUrl; do
+    sed -n '/## M4.2/,$p' MUTATION-REPORT.md | grep -q "$scope" || fail "V58 MUTATION-REPORT.md 的 M4.2 段落缺少 $scope"
+  done
+fi
+pass "V58"
 
 # V17：報告檔存在
 [ -f SECURITY-REPORT.md ] || fail "V17 缺少 SECURITY-REPORT.md"

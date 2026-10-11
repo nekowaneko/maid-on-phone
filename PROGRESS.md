@@ -183,3 +183,17 @@
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
 
 
+
+## M4.2
+
+### T0a
+- 便宜批次產出全部存在且非空：`call.json`（含 exitUrl 與 displayName）、7 張表情圖、`DEVICE-CHECKLIST-M4.2.md`、CHECKLIST.md 的 `## M4.2`、ARCHITECTURE.md 的 M4.2 段落、`design/prototype/` 五個檔案；wish28-pet-spec.md 末尾有「M4.2：聊天頁視訊版」驗收段落（字面沒有「M4.2 驗收」四字，見 DECISIONS.md 65）。
+- V55 基準：`style.css` 在 `:root` 區塊以外的十六進位色碼數量為 **2**（兩個 `#ffffff`）。
+
+### T0b
+- 凍結 hash：`19f82711d6609342ec45a72a23ee7571b94d9985`（commit「凍結 M4.2 規格測試」），已填入 `verify.sh` 的 `FROZEN_HASH`。
+- 規格測試 14 個：JS 13（`backend/tests/spec/m42/call.test.js`）、Kotlin 1（`M42SpecTest.kt`）；S06、S14 標手機實測（SPEC-MAP.md）。
+- `verify.sh`：V04 改新 hash；V05 改 49 個 Kotlin 規格測試並加 M42 列；V26 下限 511；新增 V47～V58（V59 留到 T4）。
+- 起跑狀態：`./verify.sh` 的 L1 停在 V47（`Chat.kt`、`call-state.js` 還沒有 `CHAT_EXIT_URL`）；V48～V53 對真實專案逐條跑，失敗原因都是模組或網頁尚未實作；V54、V55 已通過。JS 規格測試因 `call-state.js`、`blink.js` 不存在而匯入失敗、Kotlin 因 `isChatExitUrl` 不存在而編譯失敗，屬正常。
+- 新檢查用觸發輸入驗證：好樣本全過，35 種壞輸入（改值、缺 id、巢狀錯、寫死文字、catch 內設 live、清除紀錄、假位元組、色碼超量等）全部被抓到。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
