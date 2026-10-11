@@ -223,3 +223,9 @@
 - 接線缺口：無。`check-dom-ids` 零缺漏；`companion:send`、`companion:reply-start`、`companion:reply-failed` 兩端相同（`app.js` 發出、`call.js` 監聽）；`call.js` 在 LIVE 時呼叫 `renderer.blink`；`zOrder` 為 `["face"]` 時 `createRenderer` 可建立（實跑確認有 `blink`、`setEmotion`）；`chat-exit://close` 在 `call.json`、`Chat.kt`、`call-state.js` 相同，`call.js` 導向 `CHAT_EXIT_URL`、`ChatActivity` 以 `isChatExitUrl` 攔截。未修改任何網頁檔。
 - `./verify.sh`（L1＋L2）全綠，V47、V51、V53、V59 通過。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+### T5
+- `./verify.sh --full` 全綠（V01～V59）；backend 590 個測試通過，V26 下限填為 590。
+- 突變測試：`stryker.config.json` 加入 `call-state.js`、`blink.js` 與三個測試檔（逐一列出）；`call-state.js` 114/124、`blink.js` 27/29、`isChatExitUrl` 2/2；存活突變寫成建議規格 M42-S16～S19，未改任何測試或實作。
+- `npm audit`（暫存資料夾產生鎖定檔）0 個漏洞；SECURITY-REPORT.md、RISK-REVIEW.md（#70～#74）、MUTATION-REPORT.md、ACCEPTANCE-M4.2.md 已追加。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。

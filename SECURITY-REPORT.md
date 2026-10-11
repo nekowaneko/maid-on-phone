@@ -106,3 +106,16 @@ gitleaks 未安裝，改用計畫指定的 grep 樣式掃描所有追蹤檔：�
   - A50 / A51：明細頁關閉攔截使用專用 scheme `ma-exit://close`，`MaActivity` 攔截 `isMaExitUrl` 執行 `finish()`，不開放任何 `@JavascriptInterface`，WebView 維持無原生 JS 介面。
   - A52：主畫面「聊聊」大卡片點擊時若未設定聊天網址，只在主狀態顯示提示，不開啟畫面。
 
+
+## M4.2（聊天頁視訊版）
+
+- 高嚴重度發現：**無**。
+- 架構約束檢查：
+  - A59：`ChatActivity.kt`、`MaActivity.kt` 不含 `addJavascriptInterface`；`@JavascriptInterface` 仍恰好 6 個（V08、V53）。`shouldOverrideUrlLoading` 只多放行與 `chat-exit://close` 逐字相同的網址，非同源導覽與子資源仍被擋（M15-S04）。
+  - A54：關閉網址在 `call.json`、`Chat.kt`、`call-state.js` 三處相同（V47）。
+  - A57：`call-state.js`、`blink.js` 不含 `document`、`window`、`fetch`、`localStorage`、`Math.random`、外部 import（V52）。
+- 網頁程式掃描（grep 常見樣式）：`call.js`、`call-state.js`、`blink.js` 無 `innerHTML`、`outerHTML`、`insertAdjacentHTML`、`eval`、`new Function`、`document.write`、`console.*`、`localStorage`；蓋層文字以 `textContent` 填入。`app.js` 的 `console.warn` 都是固定中文句子，不含存取密鑰或回應內容。
+- 存取密鑰：連線探測只把密鑰放在請求標頭，不寫進網址、日誌或畫面；回應內容不讀、不顯示、不記錄；探測不走 `callApi`（它遇到 401 會清掉密鑰）。
+- 表情圖：會被部署成公開靜態檔案（與原本圖層同樣處境），已列入 CHECKLIST.md。
+- 依賴套件稽核：`backend/package.json` 沒有任何依賴；`package-lock.json` 依規定不進 git，因此在暫存資料夾用同一份 `package.json` 產生鎖定檔後執行 `npm audit`，結果 **0 vulnerabilities**。本批次沒有新增任何 npm 或 Gradle 依賴。
+- 憑證掃描（V06）：通過，沒有新增含憑證的檔案。

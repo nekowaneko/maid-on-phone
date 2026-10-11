@@ -198,3 +198,48 @@ T4 前曾有 3 個非等價存活（`sep <= 0` 邊界、`colon < 0` 決定主機
   - `MaEntry.kt` 第 82 行（`maDateLabel`）：`month` 超過 12 時 `daysInMonth` 回 0，之後的日期檢查同樣回 null，結果一樣。
   - `MaEntry.kt` 第 102 行（`maEntrySubtitle`）：字串 `when` 編譯出的雜湊分支，所有狀態字串都有測試。
 - 沒涵蓋的部分：`ma-wiring.test.js`、`spec/m4/overlay-ma.test.js` 要讀 backend 以外的 App 檔案，在 Stryker 沙箱裡跑不起來，所以沒有納入；`web/ma.js` 的返回點擊是 DOM 接線，沒有突變測試。
+
+## M4.2（聊天頁視訊版）
+
+- 狀態：已執行（2026-10-11）
+- 工具：Stryker 10.0.0（JavaScript）、Pitest（Kotlin）
+- 執行範圍：
+  - `backend/core/call-state.js`
+  - `backend/core/blink.js`
+  - `core/src/main/kotlin/com/accompany/pet/core/chat/Chat.kt` 內的 `isChatExitUrl`（Pitest 的 `targetClasses` 本來就含 `core.chat.*`，未擴大；只看 `isChatExitUrl` 這個函式的突變）
+- 設定調整：`backend/stryker.config.json` 的 `mutate` 加入 `core/call-state.js`、`core/blink.js`，測試指令逐一列出 `tests/spec/m42/call.test.js`、`tests/call-state.test.js`、`tests/call-blink.test.js`（沒有用萬用字元）。
+- 程式版本：HEAD `1cbaf06`（T4 完成後）；規格測試凍結 commit `19f8271`。
+- 原始報告：`backend/reports/mutation/`、`core/build/reports/pitest/`（建置產物，不進 git）。
+- **沒有為了提高分數修改任何測試或實作。**
+
+| 範圍 | 產生突變 | 被殺死 | 存活 | 分數 |
+|---|---|---|---|---|
+| `backend/core/call-state.js` | 124 | 114 | 10 | 約 91.9% |
+| `backend/core/blink.js` | 29 | 27 | 2 | 約 93.1% |
+| `isChatExitUrl`（Chat.kt 第 68 行） | 2 | 2 | 0 | 100% |
+| 合計 | 155 | 143 | 12 | 約 92.3% |
+
+（Pitest 對整個 `core.chat.*` 是 358 個突變、329 個被殺；存活的 `parseOrigin` 與 `Origin` 屬 M1.5 既有範圍，不在本批次。）
+
+### 存活突變（12 個）
+
+等價（2 個）：
+- `blink.js` 第 5 行 `RANDOM_MAX_EXCLUSIVE = 1 - Number.EPSILON` 改成 `1 + Number.EPSILON`：多出來的量乘上區間長度後四捨五入，等待毫秒數與原本相同。
+- `call-state.js` 第 76 行 `elapsedMs < 0` 改成 `<= 0`：0 在原本的格式化流程也得到 `00:00`，結果一樣。
+
+沒有被測試涵蓋（10 個），寫成建議新增的規格範例列：
+1. `MORE_MENU_ITEMS` 六個項目的 `id`（第 17～22 行，6 個突變）：測試只比 `label`，id 變成空字串沒人發現。
+2. `CALL_TEXT.connectingTitle`、`connectingBody`（第 25、26 行，2 個）：S10 只逐字比對錯誤與結束的句子，呼叫中的兩句沒有被斷言。
+3. `formatCallTime` 對非數字（NaN、字串、無限大）的防護（第 76 行，1 個）。
+4. `nextBlinkDelay` 對非數字亂數（NaN、字串）的防護（`blink.js` 第 12 行，1 個）。
+
+### 建議新增的規格範例列
+
+以下 4 列**未納入凍結**，要先給使用者確認才能加入下一版規格。
+
+| 建議編號 | 情境 | 預期結果 | 對應存活突變 |
+|---|---|---|---|
+| M42-S16 | 讀 `MORE_MENU_ITEMS` 的 `id` | 依序為 `log`、`persona`、`usage`、`bg-new`、`bg-list`、`replies`，與 `index.html` 中六顆按鈕對應 | `call-state.js` 第 17～22 行 |
+| M42-S17 | 讀 `CALL_TEXT` 的呼叫中兩句 | `connectingTitle` 為「呼叫中…」、`connectingBody` 為「正在連上她」 | `call-state.js` 第 25、26 行 |
+| M42-S18 | `formatCallTime(NaN)`、`("abc")`、`(Infinity)`、`(-1)` | 一律回 `00:00` | `call-state.js` 第 76 行 |
+| M42-S19 | `nextBlinkDelay(NaN, cfg)`、`("0.5", cfg)` | 回區間下界（`minIntervalMs`），不回 NaN | `blink.js` 第 12 行 |

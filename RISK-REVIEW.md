@@ -123,3 +123,13 @@ M4 計畫書 §2.1 列的五個高風險模組都在此清單中（`backend/work
 | 67 | `MaActivity.MaWebViewClient.shouldOverrideUrlLoading` | `app/.../MaActivity.kt` | 攔截 `isMaExitUrl(request.url.toString())` 並呼叫 `finish()` 回傳 true | 關閉導向網址若未精確比對會被外部網址混淆；維持不新增 `@JavascriptInterface`（A44） |
 | 68 | `backend/web/ma-render.js`（`decideBack`）與 `backend/web/ma.js`（返回點擊） | `backend/web/ma-render.js`、`ma.js` | 明細頁「‹」按鈕點擊透過 `decideBack` 導向 `MA_EXIT_URL = "ma-exit://close"` | 移除 `history.back`；維持 `innerHTML` 恰好 1 次限制（V33、V41、A50、A51） |
 | 69 | `core/.../MaEntry.kt`（`maEntrySubtitle`、`parseMaReportBrief`） | `core/.../ma/MaEntry.kt` | 純函式解析 JSON 與格式化日期副標 | 處理各類異常、缺漏欄位、負數檔數，確保不丟例外且無靜默降級（A49、A53） |
+
+## M4.2（聊天頁視訊版）
+
+| # | 函式 | 檔案 | 白話說明 | 可能出錯的方式 |
+|---|---|---|---|---|
+| 70 | `ChatActivity.ChatWebViewClient.shouldOverrideUrlLoading` | `app/.../ChatActivity.kt` | 先判斷網址是不是 `isChatExitUrl(...)`，是就 `finish()` 關掉聊天畫面，否則維持原本的同源判斷 | 若比對放寬（前綴、大小寫、結尾斜線），遠端頁面就能用別的網址讓 App 做事；目前只放行與 `chat-exit://close` 逐字相同者，且沒有新增 `@JavascriptInterface`（A59、V53） |
+| 71 | `isChatExitUrl` | `core/.../chat/Chat.kt` | 決定哪個網址能關閉聊天畫面的純函式 | 與 `call.json`、`call-state.js` 的值不一致就會按「關閉聊天」沒反應（A54、V47）；Pitest 2 個突變全被殺 |
+| 72 | `call.js` 的連線探測（`setupCall`） | `backend/web/call.js` | 呼叫中時帶存取密鑰打 `/api/usage`，只看 HTTP 狀態碼，不讀、不記錄回應內容；結果交給 `connectEvent` | 例外若被吞掉並當成成功，會在連不上時顯示「通話中」；逾時沒中止會卡在呼叫中。目前任何例外都轉成 `status: null` 走 `connect-failed`（V52） |
+| 73 | `call.js` 的事件接線與按鈕 | `backend/web/call.js` | 監聽 app.js 發出的三個事件、掛斷、重撥、關閉聊天；狀態文字與按鈕可用性一律來自 `callView` | 事件名稱兩端對不上，畫面就停在錯的狀態；重撥若清掉 `companion:history` 會弄丟對話紀錄（M42-S08、V52、V59） |
+| 74 | `app.js` 的 `syncComposer` 與三個事件 | `backend/web/app.js` | 輸入框可用＝`call.js` 允許且 `app.js` 沒在處理中；送出、開始說話、回覆失敗時對 `document` 發出事件；掛斷時作廢進行中的這一輪 | 兩邊各自改 `disabled` 會互相蓋掉（回到通話中時被強制放開）；掛斷後晚到的串流片段若沒被丟掉，會在已結束畫面又冒出字；讀寫存取密鑰的既有邏輯未動（A60：逐字節奏常數未改） |
