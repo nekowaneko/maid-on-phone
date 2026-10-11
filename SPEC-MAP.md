@@ -141,3 +141,29 @@ M0-S15 修訂版取代 `SpecTest.kt` 內的 S15，函式名稱開頭仍為 `S15`
 
 > 註：T0b 凍結時尚未建立 `call-state.js`、`blink.js`、`Chat.kt` 的 `isChatExitUrl`，JS 規格測試（匯入失敗）與 Kotlin 規格測試（編譯失敗）都還不能通過，屬正常狀態；T1 起逐步轉綠。
 > S03 轉寫說明：計畫書寫「用 `core/emotion.js` 的解析函式」，但 `emotion.js` 只解析開頭一個標籤；整句「[pout]哼。[shy]……謝謝。」依序換臉由 `core/stream-parser.js` 的 `feedAll` 的 cues 判斷（`extractLeadingTag` 另驗第一個為 `pout`），見 DECISIONS.md。
+## M4.3
+
+規格範例表 docs/M4.3-EXPENSIVE-PLAN.md §4.6 → 測試位置（T0b 後凍結）。
+- Kotlin：`core/src/test/kotlin/com/accompany/pet/spec/m43/M43SpecTest.kt`（類別 `M43SpecTest`）
+- JS：`backend/tests/spec/m43/drink-enabled.test.js`
+
+| 編號 | 驗證 | 測試檔與函式名稱 |
+|---|---|---|
+| M43-S01 | 自動 | drink-enabled.test.js：`M43-S01 戒飲記錄預設為「開啟」，所有功能和現在完全一樣。`；M2 既有規格全綠由 V05、V26 保證 |
+| M43-S02 | 自動＋手機 | drink-enabled.test.js：`M43-S02 開關仍然是關閉。`；手機見 DEVICE-CHECKLIST-M4.3.md D01 |
+| M43-S03 | 自動＋手機 | drink-enabled.test.js：`M43-S03 不會推播「今天有喝飲料嗎？」。`；手機見 D04 |
+| M43-S04 | 自動＋手機 | drink-enabled.test.js：`M43-S04 照常推播詢問。`；手機見 D03、D04 |
+| M43-S05 | 自動＋手機 | drink-enabled.test.js：`M43-S05 回覆「戒飲記錄已關閉」，不解析、不寫入任何紀錄。`；手機見 D05 |
+| M43-S06 | 自動＋手機 | drink-enabled.test.js：`M43-S06 同樣被拒絕並回覆「戒飲記錄已關閉」，不新增也不改動任何紀錄。`；手機見 D05 |
+| M43-S07 | 自動＋手機 | drink-enabled.test.js：`M43-S07 一筆都不刪除；關閉期間仍可查看統計與匯出；重新打開後歷史、統計和關閉前一模一樣。`；手機見 D03 |
+| M43-S08 | 自動＋手機 | drink-enabled.test.js：`M43-S08 「🎤 說話」「沒喝」「📊 戒飲歷史」三顆不顯示；「💬 聊聊」「📈 盤前均線」照常顯示。`；接線見 V65；手機見 D02 |
+| M43-S09 | 自動＋手機 | drink-enabled.test.js：`M43-S09 五顆按鈕都顯示，和現在一樣。`；手機見 D03 |
+| M43-S10 | 自動＋手機 | M43SpecTest.kt：`M43-S10 三顆戒飲按鈕維持顯示（和現在一樣），不跳出錯誤。這是唯一允許的降級。`；接線見 V67；手機見 D06 |
+| M43-S11 | 自動＋手機 | drink-enabled.test.js：`M43-S11 完全不受影響，照常運作。`；手機見 D08 |
+| M43-S12 | 自動＋手機 | drink-enabled.test.js：`M43-S12 不論開或關都留在原位、都能點開。`；接線見 V64；手機見 D07 |
+| M43-S13 | 自動 | drink-enabled.test.js：`M43-S13 拒絕儲存並回報「設定值不正確」，所有設定都維持原樣。` |
+| M43-S14 | 自動 | drink-enabled.test.js：`M43-S14 可以儲存，而且不會改變開關。` |
+| M43-S15 | 自動 | drink-enabled.test.js：`M43-S15 開關維持原狀，不會被改成開或關。` |
+
+> 註：T0b 凍結時 `drink.js` 尚無 `parseDrinkEnabled`／`isDrinkEnabled`、`handlers.js` 尚無 `/api/drink/enabled` 路由與守門、`drink-view.js` 尚無 `controlsVisibility`、`Drink.kt` 尚無 `drinkUiEnabled`。因此 JS 規格測試 S01～S11、S13～S15 目前失敗（路由 404、函式不存在），Kotlin 規格測試編譯失敗，屬正常狀態；僅 S12（讀主畫面檔案）目前即通過；T1、T2 起逐步轉綠。
+> S11 轉寫說明：盤前均線與 Todoist 的相依（證交所、Todoist stub、追蹤清單與收盤價）複製自 `spec/m4/ma.test.js`；已另行確認「不關閉開關」時此測試本身是綠的，確保關閉後的失敗只會來自開關。
