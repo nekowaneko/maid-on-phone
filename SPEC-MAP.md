@@ -115,3 +115,29 @@ M0-S15 修訂版取代 `SpecTest.kt` 內的 S15，函式名稱開頭仍為 `S15`
 | M41-S15 | 手機 | 見 DEVICE-CHECKLIST-M4.1.md D10；接線見 V40 |
 
 > 註：T0b 凍結時尚未建立 MaEntry.kt，Kotlin 規格測試尚未編譯通過、JS 規格測試尚未通過，屬正常狀態。
+## M4.2
+
+規格範例表 docs/M4.2-EXPENSIVE-PLAN.md §4.5 → 測試位置（T0b 後凍結）。
+- Kotlin：`core/src/test/kotlin/com/accompany/pet/spec/m42/M42SpecTest.kt`（類別 `M42SpecTest`）
+- JS：`backend/tests/spec/m42/call.test.js`
+
+| 編號 | 驗證 | 測試檔與函式名稱 |
+|---|---|---|
+| M42-S01 | 自動＋手機 | call.test.js：`M42-S01 先看到「呼叫中…」…`；手機見 DEVICE-CHECKLIST-M4.2.md D01 |
+| M42-S02 | 自動＋手機 | call.test.js：`M42-S02 輸入框與送出暫時停用…`；手機見 D02 |
+| M42-S03 | 自動＋手機 | call.test.js：`M42-S03 說到「哼。」時換成微傲臉…`；另有 V54（30 與 3000）；手機見 D03 |
+| M42-S04 | 自動 | call.test.js：`M42-S04 顯示平常的臉，台詞照常顯示…` |
+| M42-S05 | 自動＋手機 | call.test.js：`M42-S05 3 秒後回到平常的臉…`；另有 V54；手機見 D05 |
+| M42-S06 | 手機 | 見 DEVICE-CHECKLIST-M4.2.md D04；接線見 V51 |
+| M42-S07 | 自動＋手機 | call.test.js：`M42-S07 進入「通話結束」…`；手機見 D09 |
+| M42-S08 | 自動＋手機 | call.test.js：`M42-S08 回到「呼叫中…」並重新接通…`；另有 V52（call.js 不清除 companion:history）；手機見 D10 |
+| M42-S09 | 自動＋手機 | call.test.js：`M42-S09 在 App 內：聊天畫面關閉…`；M42SpecTest.kt：`M42-S09 在 App 內：聊天畫面關閉…`；接線見 V47、V53；手機見 D11 |
+| M42-S10 | 自動＋手機 | call.test.js：`M42-S10 進入「連線失敗」…`；手機見 D12 |
+| M42-S11 | 自動＋手機 | call.test.js：`M42-S11 沿用現有的制式回覆…`；手機見 D13 |
+| M42-S12 | 自動＋手機 | call.test.js：`M42-S12 從下方滑出面板，恰好六項…`；另有 V48；手機見 D14 |
+| M42-S13 | 自動＋手機 | call.test.js：`M42-S13 名稱顯示「手機女僕」…`；另有 V49；手機見 D15 |
+| M42-S14 | 手機 | 見 DEVICE-CHECKLIST-M4.2.md D06；接線見 V51 |
+| M42-S15 | 自動 | call.test.js：`M42-S15 那個表情不換臉…`；`renderer.blink` 載入失敗為空操作由輔助測試負責 |
+
+> 註：T0b 凍結時尚未建立 `call-state.js`、`blink.js`、`Chat.kt` 的 `isChatExitUrl`，JS 規格測試（匯入失敗）與 Kotlin 規格測試（編譯失敗）都還不能通過，屬正常狀態；T1 起逐步轉綠。
+> S03 轉寫說明：計畫書寫「用 `core/emotion.js` 的解析函式」，但 `emotion.js` 只解析開頭一個標籤；整句「[pout]哼。[shy]……謝謝。」依序換臉由 `core/stream-parser.js` 的 `feedAll` 的 cues 判斷（`extractLeadingTag` 另驗第一個為 `pout`），見 DECISIONS.md。
