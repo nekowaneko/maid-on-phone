@@ -4,7 +4,7 @@
 
 這個專案是對 [AI 願望池 wish-28「可愛細心的虛擬總管女僕助理」](https://yazelin.github.io/wish-pool/#wish-28) 的實作，目前是**第一版、單人使用**的狀態。
 
-> 角色立繪不在授權範圍內，也不在這個 repo 裡。repo 內附簡單的佔位圖，換成你自己的角色圖即可（見下方「放入自己的角色圖」）。
+> 內附作者的貓娘女僕角色圖，**僅供瀏覽，不在 MIT 授權範圍內**，詳見 [ART-LICENSE.md](ART-LICENSE.md)。想換成自己的角色，見下方「自訂角色」。
 
 ## 功能與完成度
 
@@ -106,7 +106,10 @@ App 只有 `WorkerApi.kt` 可以連外；網頁呼叫原生的介面（`@Javascr
 
 - **語氣與人設**：聊天畫面選單的「✎ 小檔案」可以直接改稱呼、語氣與禁止事項，存檔後立刻生效，隨時可還原預設。
 - **聊天背景**：同一個選單的「上傳背景圖」、「更換背景圖」。
-- **角色圖**：把自己的圖放進 `app/src/main/assets/pet/frames/local/`（`idle.png`、`blink.png`），重新建置即可。專案內附簡單的佔位圖。聊天畫面用的整張表情圖放在 `backend/assets/character/frames/`，格式見 `backend/config/emotion-map.json`。這兩個資料夾的內容不會進入 git。
+- **角色圖**：專案內附作者的角色圖。要換成自己的，同檔名覆蓋即可：
+  - 懸浮窗：`app/src/main/assets/pet/frames/local/`（`idle.png`、`blink.png`，另有 `smile`、`pout`、`shy`、`thinking`、`troubled`），重新建置 App。
+  - 聊天畫面：`backend/assets/character/frames/`（同樣七張，300×349），重新部署後端。格式見 `backend/config/emotion-map.json`。
+  - 換圖後請勿把我的角色圖與你的混用發布，也請遵守 ART-LICENSE.md。
 
 ## 常見問題
 
@@ -120,8 +123,8 @@ App 只有 `WorkerApi.kt` 可以連外；網頁呼叫原生的介面（`@Javascr
 **聊天一直連線失敗？**
 通常是 App 與伺服器的存取密鑰不一致，或 Gemini 金鑰有問題。可以請代理人依 `docs/AGENT-SETUP.md` 的「疑難排解」逐項檢查。
 
-**角色是空白或只有簡單圖形？**
-正常現象：專案不附角色立繪，請放入自己的圖。
+**角色圖顯示不出來？**
+確認 `app/src/main/assets/pet/frames/local/` 與 `backend/assets/character/frames/` 的檔名沒有改，且 App 與後端都已重新建置、部署。
 
 ## 隱私與權限
 
@@ -141,4 +144,4 @@ App 只有 `WorkerApi.kt` 可以連外；網頁呼叫原生的介面（`@Javascr
 
 ## 授權
 
-程式碼採 [MIT 授權](LICENSE)。角色立繪與由它產生的圖示、表情圖**不在授權範圍內**。
+程式碼採 [MIT 授權](LICENSE)。角色圖片與由它產生的 App 圖示、表情圖**不在 MIT 授權範圍內**，條款見 [ART-LICENSE.md](ART-LICENSE.md)。

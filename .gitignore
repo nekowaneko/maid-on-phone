@@ -14,10 +14,6 @@
 .cxx
 local.properties
 
-# 個人角色圖不進公開 repo
-app/src/main/assets/pet/frames/local/*
-!app/src/main/assets/pet/frames/local/.gitkeep
-
 # 簽章與本機設定
 *.jks
 *.keystore
@@ -29,21 +25,16 @@ firebase.properties
 google-services.json
 *firebase-adminsdk*.json
 
-# M1.5：Worker B（accompany_bot 副本）的本機檔案與角色立繪不進 git
+# M1.5：Worker B（accompany_bot 副本）的本機檔案；舊版分層立繪（png/，程式已不使用）不進 git
 backend/node_modules/
 backend/.wrangler/
 backend/.dev.vars
 backend/assets/character/png/*.png
-backend/assets/character/frames/*.png
-backend/assets/icons/*.png
 worker.properties
 
 # M1.5：Stryker 突變測試的產物
 backend/reports/mutation/
 backend/.stryker-tmp/
-
-# M1.6：App 圖示用角色立繪產生（tools/make_app_icon.py），只放在 debug 來源集，不進公開 repo
-app/src/debug/res/
 
 # 本機工具與暫存檔
 /.idea/

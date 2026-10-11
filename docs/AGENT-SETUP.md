@@ -38,7 +38,7 @@ adb version           # 來自 Android SDK platform-tools
 | 是否已有 Cloudflare 帳號 | 免費帳號即可 | 是 |
 | Gemini API 金鑰 | 到 https://aistudio.google.com/apikey 申請 | 是 |
 | 要不要啟用 Todoist | 需要個人 API 權杖 | 否 |
-| 要不要自訂角色圖 | 沒有就用內附佔位圖 | 否 |
+| 要不要自訂角色圖 | 沒有就用內附的作者角色圖（僅供體驗，見 ART-LICENSE.md） | 否 |
 
 ## 3. Firebase（推播）
 
@@ -124,7 +124,7 @@ npx wrangler deploy
    ./gradlew assembleDebug
    adb install -r app/build/outputs/apk/debug/app-debug.apk
    ```
-3. 若使用者要用自己的角色圖：把 `idle.png`、`blink.png` 放進 `app/src/main/assets/pet/frames/local/` 後重新建置。沒有的話，會顯示內附的佔位圖。
+3. 若使用者要用自己的角色圖：把 `idle.png`、`blink.png` 放進 `app/src/main/assets/pet/frames/local/` 後重新建置。沒有的話，會顯示內附的作者角色圖。若要換掉聊天畫面的圖，改 `backend/assets/character/frames/` 同名檔案後重新部署。
 
 ## 6. 取得推播代碼並完成連線
 
