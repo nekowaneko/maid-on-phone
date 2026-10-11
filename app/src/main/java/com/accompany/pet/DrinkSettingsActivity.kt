@@ -11,9 +11,12 @@ import android.widget.Spinner
 import android.widget.TextView
 import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.SwitchCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.accompany.pet.core.drink.ENABLED_PATH
 import com.accompany.pet.core.drink.SETTINGS_PATH
+import com.accompany.pet.core.drink.UNREACHABLE_MESSAGE
 import com.accompany.pet.core.drink.askTimeOptions
 import com.accompany.pet.core.drink.workerErrorMessage
 import org.json.JSONException
@@ -36,6 +39,7 @@ const val FIELD_ASK = "askTime"                                // 每天詢問�
 class DrinkSettingsActivity : AppCompatActivity() {
 
     private lateinit var status: TextView        // 狀態說明
+    private lateinit var enabledSwitch: SwitchCompat  // 啟用戒飲記錄
     private lateinit var nameInput: EditText     // 訂閱名稱
     private lateinit var feeInput: EditText      // 月費
     private lateinit var resistInput: EditText   // 忍住一杯的入帳金額
@@ -66,6 +70,10 @@ class DrinkSettingsActivity : AppCompatActivity() {
     private fun buildLayout(): ScrollView {
         val root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         status = TextView(this).apply { textSize = 16f }
+        enabledSwitch = SwitchCompat(this).apply {
+            text = "啟用戒飲記錄"
+            isChecked = true
+        }
         nameInput = EditText(this).apply { inputType = InputType.TYPE_CLASS_TEXT }
         feeInput = numberInput()
         resistInput = numberInput()
@@ -79,6 +87,7 @@ class DrinkSettingsActivity : AppCompatActivity() {
             setOnClickListener { saveSettings() }
         }
         root.addView(status)
+        root.addView(enabledSwitch)
         addField(root, "訂閱名稱", nameInput)
         addField(root, "月費（元）", feeInput)
         addField(root, "忍住一杯的入帳金額（元）", resistInput)
@@ -119,11 +128,25 @@ class DrinkSettingsActivity : AppCompatActivity() {
                 return@get
             }
             if (fillFields(result.text)) {
-                status.text = SETTINGS_LOADED_MESSAGE
-                saveButton.isEnabled = true
+                loadEnabled()
             } else {
-                status.text = com.accompany.pet.core.drink.UNREACHABLE_MESSAGE  // 回應格式不對，當成連不上
+                status.text = UNREACHABLE_MESSAGE  // 回應格式不對，當成連不上
             }
+        }
+    }
+
+    // 設定讀完後讀開關；讀不到就不讓存（這裡不是降級情境，不套用 drinkUiEnabled）
+    private fun loadEnabled() {
+        WorkerApi.get(ENABLED_PATH) { result ->
+            if (isFinishing || isDestroyed) return@get
+            val enabled = parseEnabled(result)
+            if (enabled == null) {
+                status.text = workerErrorMessage(result.status) ?: UNREACHABLE_MESSAGE  // 格式不對也當成連不上
+                return@get
+            }
+            enabledSwitch.isChecked = enabled
+            status.text = SETTINGS_LOADED_MESSAGE
+            saveButton.isEnabled = true
         }
     }
 
@@ -159,6 +182,21 @@ class DrinkSettingsActivity : AppCompatActivity() {
         status.text = SETTINGS_SAVING_MESSAGE
         saveButton.isEnabled = false
         WorkerApi.put(SETTINGS_PATH, body) { result ->
+            if (isFinishing || isDestroyed) return@put
+            val message = saveResultMessage(result)
+            if (message != SETTINGS_SAVED_MESSAGE) {  // 設定那步失敗就不送開關
+                saveButton.isEnabled = true
+                status.text = message
+                return@put
+            }
+            saveEnabled()
+        }
+    }
+
+    // 第二步：存開關；失敗顯示這一步的錯誤，不回滾已存的五個欄位
+    private fun saveEnabled() {
+        val enabledBody = JSONObject().put("enabled", enabledSwitch.isChecked).toString()
+        WorkerApi.put(ENABLED_PATH, enabledBody) { result ->
             if (isFinishing || isDestroyed) return@put
             saveButton.isEnabled = true
             status.text = saveResultMessage(result)

@@ -260,3 +260,9 @@
 - T2-W：`drink-view.js` 新增 `controlsVisibility`；`index.html` 新增 `window.pet.setDrinkEnabled`（只動 `#mic`、`#resist`、`#history`，隱藏時 `clearDrinkButtons()`）。`node --test` 610 個全過（含 S08、S09、S12）；V26 下限由 590 調為 610。
 - `./verify.sh`：V01～V65 通過（含 V08 仍 6 個 `@JavascriptInterface`、V59 DOM id 齊全）；`tools/check-m43.mjs v65`、`v67` 單獨執行通過。停在 V66（`OverlayService.kt` 缺 `ENABLED_PATH`，屬 T3），因此 V67 以單獨執行驗證。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0（V66 屬 T3 未實作）。
+
+### T3
+- `OverlayService.kt`：新增 `refreshDrinkEnabled()`（頁面載入完成與每次展開泡泡時呼叫，回呼先確認 `RUNNING`）與頂層 `parseEnabled`；`callJs` 只拼接 `drinkUiEnabled` 回傳的布林值。不存本機副本、不新增 `@JavascriptInterface`。
+- `DrinkSettingsActivity.kt`：「啟用戒飲記錄」`SwitchCompat` 置於訂閱名稱之前；`loadEnabled()` 在設定讀完後讀開關，讀不到不啟用儲存鈕；儲存為兩步驟（先五欄位，成功才 `PUT ENABLED_PATH`）。`DrinkSettingsActivity` 共用 `parseEnabled`（與 OverlayService 同套件）。
+- `:app:compileDebugKotlin` 通過；`./verify.sh` V01～V68 通過（含 V64、V66、V67、V08、V26），停在 V69（`backend/tests/drink-enabled-wiring.test.js` 屬 T4）。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0（V69 屬 T4 未實作）。
