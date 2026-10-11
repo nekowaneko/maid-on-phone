@@ -149,3 +149,14 @@
 67. **V26 下限暫定 511**：現值 498＋規格 13；T1 起每新增輔助測試再調高，T5 填實際值。
 68. **V52 掃描前先去掉註解**：`call-state.js` 等檔案的註解可能提到被禁字（如 `Math.random`），掃描只看程式碼；整行與行尾（前面有空白的）`//` 註解及區塊註解都去除。`CALL_TEXT` 的句子由 `call-state.js` 動態讀出，不另寫一份。
 69. **V58 放在 L3**：依計畫書標為 L3，於 `--full` 時檢查；`RISK-REVIEW.md` 取 `## M4.2` 之後的內容比對三個名稱。
+
+## M4.2 T2
+
+70. **接通時不自動說開場話**：規格 M42-S01、V2 寫「她說一句開場話（沿用現有聊天頁的開場行為）」，但現有聊天頁沒有任何自動開場，§4.4 的 `call.js` 與 `app.js` 項目也沒列。照最保守原則不新增，記在 CHECKLIST.md；建議後續另立功能（需要新增一次不帶使用者訊息的對話請求）。
+71. **輸入框可用性由 `app.js` 統一計算**：`call.js` 在 `#app` 上設 `data-call-input`（來自 `callView().composerEnabled`），並發出 `companion:call-input-changed`；`app.js` 的 `syncComposer()` 以「`call.js` 允許 且 沒在處理中」計算 `disabled`，所以 `call.js` 回到通話中時不會強制放開（§6.2）。`releaseInput`、`refreshCount`、`sendMessage` 都改走它。副作用：回覆說完後空輸入框時送出鍵是停用的（原本會是啟用，但空訊息本來就送不出去）。
+72. **`setupCall` 多收兩個參數**：除了 `{ renderer, config, callConfig }`，另收 `fetchUsage(signal)` 與 `readSecret()`，由 `app.js` 傳入（沿用 `app.js` 讀密鑰的方式，不在 `call.js` 重寫一份；探測不走 `callApi`，因為它遇到 401 會清掉密鑰）。「開啟密鑰設定」用事件 `companion:open-secret` 通知 `app.js` 呼叫既有的 `openSecret`。
+73. **新增三個事件**：`companion:call-ended`（掛斷時 `app.js` 作廢進行中的這一輪：停計時器、清空對話框、之後到的串流片段不再處理，對應 §7「HANGUP 後立即停止」）、`companion:call-input-changed`、`companion:open-secret`。
+74. **眨眼所需的狀態**：`renderer` 多回傳 `currentEmotion()`（給 `canBlink` 判斷平常的臉）；`app.js` 在 `#app` 上維護 `data-speaking`（先行換臉與逐字期間為 true）。`renderer.blink` 在換臉排隊中、沒畫過臉、圖載入失敗時都是空操作；換臉開始會立即收掉進行中的眨眼。
+75. **設定載入失敗時的重撥**：`emotion-map.json` 或 `call.json` 讀不到時，`call.js` 不發請求，直接走 `connectEvent({ status: null })` → 連線失敗；此時按「重撥」直接整頁重新載入（`app.js` 沒載到設定，單靠重新探測救不回來）。
+76. **`companion:reply-start` 發在 `beginSpeaking`**：即「等待回覆結束、表情先行的空拍之後、第一個字吐出之前」；`companion:reply-failed` 發在 `requestReply` 的 401 與例外兩條既有失敗路徑，在套用制式回覆之前。
+77. **蓋層文字與按鈕文字由 `call.js` 啟動時依 `CALL_TEXT` 填入**，`index.html` 的蓋層只放結構（無文字），避免兩處各寫一份。「⋯」面板六顆按鈕的文字（含前綴符號）寫在 `index.html`，順序與文字照 `MORE_MENU_ITEMS`。

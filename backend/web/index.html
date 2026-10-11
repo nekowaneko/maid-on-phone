@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <!-- 手機直式優先，允許畫面延伸到瀏海區 -->
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>陪伴角色</title>
+    <title>手機女僕</title>
     <meta name="description" content="以角色介面呈現的陪伴型對話產品。手機瀏覽器直接開，免安裝。" />
     <!-- 加到手機桌面之後看到的樣子：米色底、正中央一顆愛心，跟 --bg 同一個色 -->
     <meta name="theme-color" content="#ece2cf" />
@@ -16,40 +16,63 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="陪伴角色" />
+    <meta name="apple-mobile-web-app-title" content="手機女僕" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <main id="app">
-      <!-- 她的台詞：漫畫對話框，固定兩行高，字多就在框內上下捲 -->
-      <section id="dialog">
-        <p id="line"></p>
-      </section>
-
-      <!-- 角色舞台：圖層由 renderer.js 依設定檔疊上去 -->
+      <!-- 視訊區：角色、頂列、對話框與三個狀態蓋層都疊在這裡。圖層由 renderer.js 依設定檔疊上去 -->
       <section id="stage">
         <div id="character"></div>
 
-        <!-- 右側工具列。收起時只留下開關本身，再按一次就還原 -->
-        <div id="tools">
-          <button id="tools-toggle" class="tool" type="button" aria-label="隱藏右側按鈕">»</button>
-          <button id="log-open" class="tool" type="button" aria-label="查看對話紀錄">☰</button>
-          <button id="persona-open" class="tool" type="button" aria-label="編輯小檔案">✎</button>
-          <button id="usage-open" class="tool" type="button" aria-label="查看用量">◔</button>
-          <button id="bg-new-open" class="tool" type="button" aria-label="上傳背景圖">⊕</button>
-          <button id="bg-list-open" class="tool" type="button" aria-label="更換背景圖">▦</button>
-          <button id="outfit-open" class="tool" type="button" aria-label="更換服裝">❖</button>
-          <button id="replies-open" class="tool" type="button" aria-label="查看制式回覆">⚑</button>
+        <!-- 她的台詞：漫畫對話框貼在角色頭頂，固定兩行高，字多就在框內上下捲 -->
+        <section id="dialog">
+          <p id="line"></p>
+        </section>
+
+        <!-- 頂列：名字與通話狀態（文字由 call.js 依 core/call-state.js 填入）、「⋯」更多 -->
+        <header id="call-bar">
+          <div id="call-who">
+            <div id="call-name">手機女僕</div>
+            <div id="call-status"></div>
+          </div>
+          <button id="more-open" class="tool" type="button" aria-label="更多">⋯</button>
+        </header>
+
+        <!-- 三個狀態蓋層：標題、說明、按鈕文字都由 call.js 依 CALL_TEXT 填入，這裡只放結構 -->
+        <div id="ov-connecting" class="overlay">
+          <div class="ring">🐾</div>
+          <h3 class="overlay-title"></h3>
+          <p class="overlay-body"></p>
+        </div>
+        <div id="ov-error" class="overlay">
+          <div class="ring is-bad">!</div>
+          <h3 class="overlay-title"></h3>
+          <p class="overlay-body"></p>
+          <div class="btn-row">
+            <button id="call-redial" class="btn is-primary" type="button"></button>
+            <button id="call-secret" class="btn" type="button"></button>
+          </div>
+        </div>
+        <div id="ov-ended" class="overlay">
+          <div class="ring">☎</div>
+          <h3 class="overlay-title"></h3>
+          <p id="ended-time" class="overlay-body"></p>
+          <div class="btn-row">
+            <button id="call-redial-ended" class="btn is-primary" type="button"></button>
+            <button id="call-close" class="btn" type="button"></button>
+          </div>
         </div>
       </section>
 
-      <!-- 你剛說的話放在角色腳下，緊鄰輸入列 -->
+      <!-- 你剛說的話放在視訊區下面，緊鄰輸入列 -->
       <p id="echo"></p>
 
       <form id="composer" autocomplete="off">
+        <button id="hangup" type="button" aria-label="掛斷">✆</button>
         <!-- textarea 而不是 input：手機上五十個字擠成一長串不好讀，要能換行。
              rows=1 是起始高度，實際高度由 app.js 依內容算，超過上限就在框內捲動。 -->
-        <textarea id="message" name="message" rows="1" placeholder="想說點什麼？"></textarea>
+        <textarea id="message" name="message" rows="1" placeholder="想說點什麼？" aria-label="想說的話"></textarea>
         <!-- 字數：平常留白只佔位，接近上限才顯示數字，版面不會因為它出現而抽動 -->
         <span id="message-count" class="count" aria-live="polite"></span>
         <button id="send" type="submit">送出</button>
@@ -64,6 +87,22 @@
         <pre id="debug-state"></pre>
       </section>
     </main>
+
+    <!-- 「⋯」更多：從下方滑出的面板，六顆按鈕沿用舊 id，app.js 與 background.js 的既有綁定不必改。
+         順序與文字照 core/call-state.js 的 MORE_MENU_ITEMS。 -->
+    <div id="scrim"></div>
+    <section id="more" class="sheet" aria-hidden="true" aria-label="更多">
+      <header class="sheet-head">
+        <h2>更多</h2>
+        <button id="more-close" class="tool" type="button" aria-label="關閉">✕</button>
+      </header>
+      <button id="log-open" class="menu-item" type="button">☰ 對話紀錄</button>
+      <button id="persona-open" class="menu-item" type="button">✎ 小檔案</button>
+      <button id="usage-open" class="menu-item" type="button">◔ 用量</button>
+      <button id="bg-new-open" class="menu-item" type="button">⊕ 上傳背景圖</button>
+      <button id="bg-list-open" class="menu-item" type="button">▦ 更換背景圖</button>
+      <button id="replies-open" class="menu-item" type="button">⚑ 制式回覆</button>
+    </section>
 
     <!-- 對話紀錄：從下方滑出的半高抽屜，蓋住下半部，角色還看得到 -->
     <section id="log" aria-hidden="true" aria-label="對話紀錄">
@@ -179,22 +218,6 @@
         <div class="drawer-form">
           <button id="bg-delete" type="button" disabled>刪除</button>
           <button id="bg-apply" type="button" disabled>選擇</button>
-        </div>
-      </div>
-    </section>
-
-    <!-- 更換服裝：從設定檔列出的幾套裡挑一套。互動與更換背景圖完全相同——
-         點一下只是選取，按「選擇」才真的換上。服裝是內建素材，所以沒有刪除。 -->
-    <section id="outfit-list" class="drawer" aria-hidden="true" aria-label="更換服裝">
-      <header class="drawer-head">
-        <h2>更換服裝</h2>
-        <button id="outfit-close" class="tool" type="button" aria-label="取消更換服裝">✕</button>
-      </header>
-      <div class="drawer-body">
-        <p id="outfit-note" class="drawer-hint"></p>
-        <div id="outfit-list-body" class="pick-grid"></div>
-        <div class="drawer-form">
-          <button id="outfit-apply" type="button" disabled>選擇</button>
         </div>
       </div>
     </section>

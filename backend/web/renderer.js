@@ -130,6 +130,8 @@ export const createRenderer = (container, config) => {
   let hasPainted = false // 是否已經成功畫出過一張臉；首次繪製不做交叉淡入
   let wantedEmotion = EMPTY_TEXT // 最後一次被要求切換的表情，用來作廢過期的切換
   let swapChain = Promise.resolve() // 切換一律排隊，同一時間只會有一次解碼在進行
+  let pendingSwaps = 0 // 排隊中或進行中的換臉次數；不為 0 時不眨眼
+  let blinkState = null // 眨眼進行中：{ slot, timerId }，沒在眨眼就是 null
 
   zOrder.forEach((key, index) => {
     const zIndex = index + 1
@@ -167,13 +169,59 @@ export const createRenderer = (container, config) => {
     hasPainted = plan.hasPainted
   }
 
+  // 結束眨眼：把閉眼那張熄掉、原本的臉亮回來。沒有在眨眼時什麼都不做
+  const endBlink = () => {
+    if (blinkState === null) return
+    const { slot, timerId } = blinkState
+    blinkState = null
+    clearTimeout(timerId)
+    faceSlots[slot].style.opacity = TRANSPARENT
+    if (hasPainted) faceSlots[activeSlot].style.opacity = OPAQUE
+  }
+
   // 表情切換一律走 core/emotion.js 的解析結果，這裡不自行判斷情緒
   const setEmotion = (emotion) => {
     if (faceSlots.length === 0 || emotion === wantedEmotion) return
+    endBlink() // 換臉要用閒置那一格，先把眨眼收乾淨
     wantedEmotion = emotion
+    pendingSwaps += 1
     // 接在前一次之後執行；loadSource 自己吞掉錯誤，所以這條鏈不會斷
-    swapChain = swapChain.then(() => swapFace(emotion))
+    swapChain = swapChain.then(() => swapFace(emotion)).finally(() => {
+      pendingSwaps -= 1
+    })
   }
 
-  return { setEmotion, layerKeys: [...zOrder] }
+  // 眨眼：在閒置那一格短暫顯示閉眼圖，closedMs 毫秒後恢復。
+  // 表情正在切換、還沒畫出過臉、沒有臉部位置或圖載入失敗，都是空操作：
+  // 不丟例外、不改 wantedEmotion、不改 activeSlot。
+  const blink = async (fileName, closedMs) => {
+    if (faceSlots.length === 0 || !hasPainted || pendingSwaps > 0 || blinkState !== null) return
+    if (typeof fileName !== 'string' || fileName.length === 0 || !Number.isFinite(closedMs) || closedMs < 0) return
+    try {
+      const slot = pickFaceSlot({ activeSlot, slotCount: faceSlots.length, hasPainted })
+      const startedSlot = activeSlot
+      const image = faceSlots[slot]
+      blinkState = { slot, timerId: 0 }
+      const token = blinkState
+      image.src = toAssetUrl(`${config.assetRoot}/${fileName}`)
+      const result = await waitForImage(image)
+      // 等圖的時候換了臉或被收掉，這一次眨眼作廢；沒載好也不動畫面（閉眼圖壞掉不該把臉藏起來）
+      if (blinkState !== token || result !== LOAD_OK || pendingSwaps > 0 || activeSlot !== startedSlot) {
+        if (blinkState === token) blinkState = null
+        return
+      }
+      image.style.visibility = VISIBLE
+      image.style.opacity = OPAQUE
+      faceSlots[activeSlot].style.opacity = TRANSPARENT
+      token.timerId = setTimeout(endBlink, closedMs)
+    } catch (error) {
+      // 眨眼只是點綴，任何失敗都收乾淨、維持原本的臉
+      blinkState = null
+    }
+  }
+
+  // 目前最後一次被要求的表情；呼叫端用它判斷「現在是不是平常的臉」
+  const currentEmotion = () => wantedEmotion
+
+  return { setEmotion, blink, currentEmotion, layerKeys: [...zOrder] }
 }

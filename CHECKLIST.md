@@ -86,3 +86,5 @@
 - □ App 端名稱（快速設定磚「🐾 陪伴角色」等）是否也要改成「手機女僕」：見 design/prototype/later.md
 - □ 讀 RISK-REVIEW.md 裡 ChatActivity.kt 與 call.js 的 M4.2 新增項目
 - □ 看 MUTATION-REPORT.md 的 M4.2 範圍結果（或待補狀態）
+- □ 預覽框位置（D08）：背景圖裁切預覽依 `#dialog`、`#composer`、角色圖畫框，視訊版版面下角色圖放大成 118% 寬，預覽的框位置可能與實際略有出入；`background.js` 依規定不改，請在手機上確認預覽仍可用
+- □ 開場話：視訊版接通時目前沒有自動的開場話（現有聊天頁本來就沒有，見 DECISIONS.md 70），需要的話另立功能

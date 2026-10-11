@@ -10,13 +10,14 @@ import { describeMessage, isMessageAcceptable } from '../core/message.js'
 import { formatTranscript, buildTranscriptFilename } from '../core/transcript.js'
 import { createRenderer } from './renderer.js'
 import { setupBackground } from './background.js'
-import { setupOutfit } from './outfit.js'
+import { setupCall } from './call.js'
 
 // 常數定義
 const CONFIG_URL = new URL('../config/emotion-map.json', import.meta.url) // 啟動時取得設定，不內嵌複本
 const CHAT_URL = new URL('../api/chat', import.meta.url) // 只呼叫自家 Worker，金鑰全留在後端
 const PERSONA_URL = new URL('../api/persona', import.meta.url) // 一律相對網址，不對外部服務發請求
 const USAGE_URL = new URL('../api/usage', import.meta.url)
+const CALL_CONFIG_URL = new URL('../config/call.json', import.meta.url) // 視訊通話的契約檔（名稱、關閉網址、連線逾時、眨眼）
 const MESSAGE_SCHEMA_URL = new URL('../config/message.json', import.meta.url) // 字數上限，前後端讀同一份
 const COUNT_SEPARATOR = ' / '
 const OVER_CLASS = 'is-over'
@@ -70,19 +71,24 @@ const FALLBACK_EVENT = 'fallback'
 const NETWORK_ERROR_TEXT = '（連線好像斷掉了，等一下再跟我說一次好嗎？）'
 const EMPTY_TEXT = ''
 const USER_ROLE = 'user'
+
+// 與 call.js 之間只靠 document 上的事件和 #app 的 data- 屬性溝通；app.js 不認識任何通話狀態文字
+const SEND_EVENT_NAME = 'companion:send' // 使用者送出且通過檢查後
+const REPLY_START_EVENT_NAME = 'companion:reply-start' // 等待回覆結束、即將逐字說話時
+const REPLY_FAILED_EVENT_NAME = 'companion:reply-failed' // 既有失敗流程開始說制式回覆時
+const CALL_ENDED_EVENT_NAME = 'companion:call-ended' // call.js 通知：通話結束，停掉進行中的逐字說話
+const CALL_INPUT_EVENT_NAME = 'companion:call-input-changed' // call.js 通知：輸入框是否被通話狀態允許有變動
+const OPEN_SECRET_EVENT_NAME = 'companion:open-secret' // call.js 要求打開既有的存取密鑰抽屜
+const CALL_INPUT_ATTRIBUTE = 'callInput' // #app 的 data-call-input：call.js 是否允許輸入
+const SPEAKING_ATTRIBUTE = 'speaking' // #app 的 data-speaking：她是否正在先行換臉或逐字說話
 const REPLY_ROLE = 'assistant'
 
-// 右側工具列與對話紀錄抽屜
-const FOLDED_CLASS = 'is-folded'
+// 對話紀錄抽屜
 const OPEN_CLASS = 'is-open'
 const MINE_CLASS = 'is-mine'
 const LOG_ROW_CLASS = 'log-row'
 const LOG_BUBBLE_CLASS = 'log-bubble'
 const LOG_EMPTY_CLASS = 'log-empty'
-const FOLD_LABEL = '隱藏右側按鈕'
-const UNFOLD_LABEL = '顯示右側按鈕'
-const FOLD_GLYPH = '»'
-const UNFOLD_GLYPH = '«'
 const EMPTY_LOG_TEXT = '還沒有對話紀錄。先跟她說點什麼吧。'
 // 匯出對話紀錄：檔案裡誰講的就掛誰的名字，格式本身由 core/transcript.js 決定
 const TRANSCRIPT_LABELS = { user: '我', assistant: '奈奈' }
@@ -118,7 +124,6 @@ const USAGE_VALUE_CLASS = 'usage-value'
 const USAGE_WARN_CLASS = 'is-warn'
 const SPAN_TAG = 'span'
 const ARIA_HIDDEN = 'aria-hidden'
-const ARIA_LABEL = 'aria-label'
 const TRUE_TEXT = 'true'
 const FALSE_TEXT = 'false'
 const DIV_TAG = 'div'
@@ -134,8 +139,7 @@ const sendButton = document.getElementById('send')
 const debugElement = document.getElementById('debug')
 const debugRawElement = document.getElementById('debug-raw')
 const debugStateElement = document.getElementById('debug-state')
-const toolsElement = document.getElementById('tools')
-const toolsToggleButton = document.getElementById('tools-toggle')
+const appElement = document.getElementById('app')
 const logOpenButton = document.getElementById('log-open')
 const logCloseButton = document.getElementById('log-close')
 const logElement = document.getElementById('log')
@@ -186,7 +190,8 @@ const runtime = {
   rawOutput: EMPTY_TEXT,
   shownEmotion: EMPTY_TEXT, // 畫面上真正看得到的表情
   phase: PHASE_IDLE,
-  phaseStartedAt: 0
+  phaseStartedAt: 0,
+  aborted: false // 通話結束時作廢進行中的這一輪，之後到的串流片段與計時一律不理
 }
 
 // 功能函數定義
@@ -268,10 +273,24 @@ const updateDebugPanel = () => {
   )
 }
 
+// 對 document 發出一個通知事件；app.js 只管「發生了什麼」，怎麼反映在畫面上是 call.js 的事
+const emitCompanionEvent = (name) => document.dispatchEvent(new CustomEvent(name))
+
+// call.js 是否允許輸入；沒有這個旗標（call.js 還沒啟動）就當作允許
+const isCallInputAllowed = () => appElement.dataset[CALL_INPUT_ATTRIBUTE] !== FALSE_TEXT
+
+// 輸入框與送出鍵可用＝call.js 允許，而且這一輪沒有在處理中，兩份並存，誰都不強制放開
+const syncComposer = () => {
+  const locked = runtime.streaming || !isCallInputAllowed()
+  inputElement.disabled = locked
+  sendButton.disabled = locked || !isMessageAcceptable(inputElement.value, runtime.messageSchema)
+}
+
 // 進入下一個階段，順便把計時起點歸零
 const setPhase = (next) => {
   runtime.phase = next
   runtime.phaseStartedAt = Date.now()
+  appElement.dataset[SPEAKING_ATTRIBUTE] = String(next === PHASE_LEADING || next === PHASE_SPEAKING)
   updateDebugPanel()
 }
 
@@ -308,13 +327,6 @@ const clearPendingTimers = () => {
   runtime.leadTimerId = 0
   window.clearTimeout(runtime.holdTimerId)
   runtime.holdTimerId = 0
-}
-
-// 收合或展開右側工具列。開關自己會留在原地（縮小變淡），再按一次就還原。
-const toggleTools = () => {
-  const folded = toolsElement.classList.toggle(FOLDED_CLASS)
-  toolsToggleButton.textContent = folded ? UNFOLD_GLYPH : FOLD_GLYPH
-  toolsToggleButton.setAttribute(ARIA_LABEL, folded ? UNFOLD_LABEL : FOLD_LABEL)
 }
 
 // 把一則訊息畫成一個聊天氣泡；你說的靠右，她說的靠左
@@ -552,8 +564,8 @@ const refreshCount = () => {
   const state = describeMessage(inputElement.value, runtime.messageSchema)
   countElement.textContent = state.isWarning ? state.used + COUNT_SEPARATOR + state.max : EMPTY_TEXT
   countElement.classList.toggle(OVER_CLASS, state.isOver)
-  // 串流中本來就是停用的，這裡不要把它打開
-  if (!runtime.streaming) sendButton.disabled = !isMessageAcceptable(inputElement.value, runtime.messageSchema)
+  // 處理中或通話不允許時本來就是停用的，由 syncComposer 統一判斷，這裡不要把它打開
+  syncComposer()
 }
 
 // 一張卡：kind 代號、她會講的那句話，以及觸發條件、日誌長相與該怎麼辦。
@@ -678,8 +690,7 @@ const saveReply = () => {
 // 這裡刻意不呼叫 focus()：送出時特地收了鍵盤，這時再叫回來版面會在最該看的瞬間再跳一次。
 const releaseInput = () => {
   runtime.streaming = false
-  sendButton.disabled = false
-  inputElement.disabled = false
+  syncComposer()
 }
 
 // 表情停留夠久了，交叉淡回待機表情
@@ -726,6 +737,7 @@ const revealNextCharacter = () => {
 
 const beginSpeaking = () => {
   runtime.leadTimerId = 0
+  emitCompanionEvent(REPLY_START_EVENT_NAME)
   setPhase(PHASE_SPEAKING)
   startTypewriter()
 }
@@ -756,6 +768,7 @@ const canLeaveWaiting = () => replyHasStarted() || runtime.streamEnded
 
 // 每次狀態有變動就問一次：該不該推進到下一階段
 const maybeAdvance = () => {
+  if (runtime.aborted) return
   if (runtime.phase === PHASE_WAITING && canLeaveWaiting()) {
     beginLead()
     return
@@ -766,6 +779,7 @@ const maybeAdvance = () => {
 
 // 收到一段新的文字：先解析，再看要不要推進階段
 const applyPiece = (piece) => {
+  if (runtime.aborted) return
   runtime.rawOutput += piece
   runtime.parser = feedChunk(runtime.parser, piece, runtime.config.emotionMap, runtime.config.defaultEmotion)
   maybeAdvance()
@@ -774,6 +788,7 @@ const applyPiece = (piece) => {
 
 // 串流收完了；可能發生在版面還沒回穩的時候，所以一律再問一次要不要推進
 const noteStreamEnded = () => {
+  if (runtime.aborted) return
   runtime.streamEnded = true
   maybeAdvance()
 }
@@ -865,6 +880,7 @@ const waitForLayoutSettle = () =>
 
 // 版面穩了才換上等待期間的表情，這樣它不會在畫面正在收縮時出現
 const beginWaiting = () => {
+  if (runtime.aborted) return
   setPhase(PHASE_WAITING)
   showEmotion(runtime.config.thinkingEmotion)
   // 回穩期間可能已經收到片段甚至整段收完了，這裡補問一次，才不會卡在等待階段
@@ -882,6 +898,7 @@ const requestReply = async (text, minutesSinceLastSeen) => {
     // 密鑰不對就別演了，直接把輸入抽屜叫回來，免得使用者一直對著空畫面重送
     if (response.status === UNAUTHORIZED_STATUS) {
       handleUnauthorized()
+      emitCompanionEvent(REPLY_FAILED_EVENT_NAME)
       applyPiece(SECRET_BLOCKED_TEXT)
       noteStreamEnded()
       return
@@ -890,6 +907,7 @@ const requestReply = async (text, minutesSinceLastSeen) => {
     await consumeStream(response)
   } catch (error) {
     console.warn('對話請求失敗。')
+    emitCompanionEvent(REPLY_FAILED_EVENT_NAME)
     applyPiece(NETWORK_ERROR_TEXT)
     noteStreamEnded()
   }
@@ -898,6 +916,7 @@ const requestReply = async (text, minutesSinceLastSeen) => {
 // 送出一句話：請求先走，版面先穩，然後才開始演
 const sendMessage = async (text) => {
   clearPendingTimers()
+  runtime.aborted = false
   runtime.streaming = true
   runtime.streamEnded = false
   runtime.finalized = false
@@ -908,9 +927,9 @@ const sendMessage = async (text) => {
   runtime.parser = createParserState(runtime.config.defaultEmotion)
   lineElement.textContent = EMPTY_TEXT
   echoElement.textContent = text
-  sendButton.disabled = true
-  inputElement.disabled = true
+  syncComposer()
   setPhase(PHASE_SETTLING)
+  emitCompanionEvent(SEND_EVENT_NAME) // 清完對話框之後才通知，call.js 才能在裡面放「想」的動畫
 
   const minutesSinceLastSeen = readMinutesSinceLastSeen()
   markLastSeen()
@@ -931,7 +950,7 @@ const handleSubmit = (event) => {
   const text = inputElement.value.trim()
   // 空的與超過上限的都不送。判定與計數器、後端共用 core/message.js 的同一支函式，
   // 三邊不會各算各的而對不起來。
-  if (!isMessageAcceptable(text, runtime.messageSchema) || runtime.streaming) return
+  if (!isMessageAcceptable(text, runtime.messageSchema) || runtime.streaming || !isCallInputAllowed()) return
   inputElement.value = EMPTY_TEXT
   refreshCount()
   resizeInput()
@@ -939,6 +958,41 @@ const handleSubmit = (event) => {
   inputElement.blur()
   sendMessage(text)
 }
+
+// 通話結束：立刻停掉逐字說話與計時器，清空對話框，臉回到平常；之後到的串流片段不再處理
+const abortReply = () => {
+  runtime.aborted = true
+  clearPendingTimers()
+  runtime.streaming = false
+  lineElement.textContent = EMPTY_TEXT
+  if (runtime.renderer) showEmotion(runtime.config.defaultEmotion)
+  setPhase(PHASE_IDLE)
+  syncComposer()
+}
+
+// 探測連線用：只帶密鑰打一次 /api/usage，呼叫端只看 HTTP 狀態碼，不讀回應內容，也不因 401 清掉密鑰
+const fetchUsageProbe = (signal) => fetch(USAGE_URL, { method: 'GET', headers: { [SECRET_HEADER]: readStoredSecret() }, signal })
+
+// 讀視訊通話的契約檔；讀不到就回 null，讓 call.js 把這次當成連線失敗
+const loadCallConfig = async () => {
+  try {
+    const response = await fetch(CALL_CONFIG_URL)
+    return response.ok ? await response.json() : null
+  } catch (error) {
+    console.warn('通話設定載入失敗。')
+    return null
+  }
+}
+
+// 接上視訊通話的外殼；renderer、config 可能是 null（設定載入失敗），由 call.js 走連線失敗的路徑
+const startCall = (callConfig) =>
+  setupCall({
+    renderer: runtime.renderer,
+    config: runtime.config,
+    callConfig,
+    fetchUsage: fetchUsageProbe,
+    readSecret: readStoredSecret
+  })
 
 // 啟動：載入設定 → 疊好圖層 → 準備好輸入
 const boot = async () => {
@@ -948,6 +1002,8 @@ const boot = async () => {
   } catch (error) {
     console.warn('設定檔載入失敗，畫面無法初始化。')
     lineElement.textContent = NETWORK_ERROR_TEXT
+    runtime.config = null
+    startCall(await loadCallConfig())
     return
   }
   // 字數上限單獨讀：讀不到就當作不設限，不該因為這個小檔案而讓整個畫面用不了
@@ -958,13 +1014,10 @@ const boot = async () => {
   }
   runtime.timing = createTiming()
   runtime.renderer = createRenderer(stageElement, runtime.config)
-  // 圖層都擺好之後才接換裝，wearOutfit 要抓得到 renderer 建出來的 body 那一層
-  setupOutfit(runtime.config)
   runtime.parser = createParserState(runtime.config.defaultEmotion)
   showEmotion(runtime.config.defaultEmotion)
   runtime.history = trimHistory(readStoredHistory(), HISTORY_TURN_LIMIT)
   formElement.addEventListener('submit', handleSubmit)
-  toolsToggleButton.addEventListener('click', toggleTools)
   logOpenButton.addEventListener('click', openLog)
   logCloseButton.addEventListener('click', closeLog)
   logExportButton.addEventListener('click', exportLog)
@@ -990,6 +1043,13 @@ const boot = async () => {
   if (readStoredSecret().length === 0) openSecret()
   if (isDebugEnabled()) debugElement.hidden = false
   setPhase(PHASE_IDLE)
+  // 全部接好之後才開始呼叫，呼叫中的停用輸入才蓋得過上面 refreshCount 算出的結果
+  startCall(await loadCallConfig())
 }
+
+// call.js 的通知在啟動前就接好，設定載入失敗的路徑也聽得到
+document.addEventListener(CALL_INPUT_EVENT_NAME, syncComposer)
+document.addEventListener(CALL_ENDED_EVENT_NAME, abortReply)
+document.addEventListener(OPEN_SECRET_EVENT_NAME, () => openSecret())
 
 boot()

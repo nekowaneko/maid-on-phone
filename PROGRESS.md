@@ -204,3 +204,11 @@
 - `node --test`：585 通過、1 失敗（M42-S13，需要 T4 改 `index.html`／`manifest`，不屬本階段）；規格 S01～S05、S07、S08、S10～S13 之 JS 與 S15 通過，S09 JS 與 Kotlin 通過。`./gradlew :core:test` 全綠。
 - `./verify.sh` 的 L1 通過 V01～V47，停在 V48（`outfit.js` 尚未刪，屬 T4）；V50 單獨跑通過；V52 對 core 兩檔手動確認無 import、document、window、fetch、localStorage、Math.random。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+### T2
+- `index.html`（視訊版結構、「手機女僕」、`#more` 面板與 `#scrim`、移除換裝與工具列）、`manifest.webmanifest`、`style.css`（`:root` 加 `--face-width` 等變數，色碼不外洩到 `:root` 外，V55 仍為 2）、`renderer.js`（`blink`、`currentEmotion`）、`app.js`（移除換裝與工具列、三個事件、`syncComposer`、掛斷作廢）、新增 `call.js`；刪除 `outfit.js`、`tryon.html`、`tryon.js`（換裝移除）。
+- 新增輔助測試 `backend/tests/call-wiring.test.js`（W-A，4 個）。
+- `node --test`：590 通過、0 失敗（含 M42 規格 13 個、S13 現在通過、W-A 4 個）。
+- `./verify.sh`：L1 通過 V01～V52，停在 V53（`ChatActivity.kt` 的 `isChatExitUrl` 攔截，屬 T3）；V54、V55、V57 的檢查內容單獨手動確認通過。V26 下限尚待 T5 填實際值。
+- 瀏覽器預覽（375 寬、本機預覽伺服器＋stub）手動走過：接通→送出→她在想→逐字→回通話中、掛斷→再撥一次（對話紀錄保留）、錯密鑰→連線失敗→開啟密鑰設定→重撥、「⋯」選單點項目先關面板再開抽屜；無水平捲軸，對話框下緣與角色圖上緣距離 14px，無主控台錯誤。
+- 修正輪數：0（V57 的 grep 命中測試檔註解裡的「monkeypatch」字樣，改寫註解，不算驗收失敗）；錯誤指紋：無；驗收項失敗次數：全部 0。

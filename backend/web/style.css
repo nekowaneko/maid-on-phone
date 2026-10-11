@@ -31,6 +31,15 @@
      但別超過 app.js 的 LEAD_MS，否則臉還沒顯現完字就開始吐了。 */
   --fade: 0ms;
   --drawer: 280ms; /* 對話紀錄抽屜滑出的長度 */
+  /* 視訊版：角色整張圖的寬度是視訊區寬度的 118%，高度由長寬比（300×349）算出，
+     對話框的位置就是用這三個值算出來的，改角色大小只動這裡。 */
+  --face-width: 118cqw;
+  --face-aspect-h: 349;
+  --face-aspect-w: 300;
+  --danger: #c0392b; /* 掛斷鈕與連線失敗 */
+  --ok: #1b7f4b; /* 通話中的綠點 */
+  --stage-from: #f3e6cf; /* 視訊區沒有背景圖時的暖米色漸層 */
+  --stage-to: #d9bfa0;
 }
 
 * {
@@ -55,18 +64,41 @@ body {
   height: 100dvh;
   max-width: 480px;
   margin: 0 auto;
-  padding: var(--gap);
-  /* 上下分別避開瀏海與手勢列 */
-  padding-top: max(var(--gap), env(safe-area-inset-top));
+  padding: 0 var(--gap);
+  /* 視訊區從畫面最上方開始：只避開瀏海，上方間距由 #stage 的 margin-top 給 */
+  padding-top: env(safe-area-inset-top);
   padding-bottom: max(var(--gap), env(safe-area-inset-bottom));
   gap: var(--gap);
 }
 
-/* 漫畫對話框。高度固定成剛好 --bubble-lines 行是刻意的：
-   字一多就長高會把角色往下推，等於製造新的位移源。 */
-#dialog {
+/* 視訊區：圓角黑框，角色、頂列、對話框與蓋層都疊在裡面。
+   container-type 讓裡面可以用 cqw（視訊區寬度的百分比）排角色與對話框，兩者同一把尺。
+   沒有背景圖時用暖米色漸層，有背景圖時（body.has-background）透明，露出背景圖。 */
+#stage {
   position: relative;
-  flex: 0 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  margin-top: var(--gap);
+  container-type: inline-size;
+  border: var(--bubble-border) solid var(--ink);
+  border-radius: var(--bubble-radius);
+  background: linear-gradient(180deg, var(--stage-from) 0%, var(--stage-to) 100%);
+  overflow: hidden;
+}
+
+body.has-background #stage {
+  background: transparent;
+}
+
+/* 漫畫對話框貼在角色頭頂。高度固定成剛好 --bubble-lines 行是刻意的：
+   字一多就長高會把角色往下推，等於製造新的位移源。
+   下緣＝角色圖高度（寬度 × 長寬比）再往下壓 14px，讓尖角剛好指到頭頂。 */
+#dialog {
+  position: absolute;
+  left: var(--gap);
+  right: var(--gap);
+  bottom: calc(var(--face-width) * var(--face-aspect-h) / var(--face-aspect-w) - 14px);
+  z-index: 5;
   height: calc(
     var(--bubble-lines) * var(--line-leading) * var(--line-size) + 2 * var(--gap) + 2 * var(--bubble-border)
   );
@@ -75,58 +107,55 @@ body {
   border-radius: var(--bubble-radius);
   background: var(--panel);
   color: var(--ink);
-  overflow-y: auto;
-  /* 捲到底之後不要把整個頁面一起帶著捲 */
-  overscroll-behavior: contain;
+  /* 尖角畫在框外，所以框本身不能裁切；捲動交給裡面的 #line */
+  overflow: visible;
+}
+
+/* 對話框的尖角，指向角色的頭 */
+#dialog::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -11px;
+  width: 16px;
+  height: 16px;
+  background: var(--panel);
+  border-right: var(--bubble-border) solid var(--ink);
+  border-bottom: var(--bubble-border) solid var(--ink);
+  transform: translateX(-50%) rotate(45deg);
 }
 
 #line {
+  height: 100%;
   margin: 0;
+  overflow-y: auto;
+  /* 捲到底之後不要把整個頁面一起帶著捲 */
+  overscroll-behavior: contain;
   font-size: var(--line-size);
   line-height: var(--line-leading);
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-#stage {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
+/* 她在想：對話框裡的「……」輕輕閃動 */
+#line.is-thinking {
+  animation: thinking-pulse 1.2s ease-in-out infinite;
 }
 
-/* 對話框的尖尾巴，指向喵娘的頭。用兩個三角形疊出「黑邊白底」：
-   ::before 是外層的黑色描邊，::after 是往上挪一點的白色填色，
-   蓋掉對話框底邊之後，尾巴就跟框內連成一體。
-   畫在 stage 上而不是 dialog 裡，才不會被對話框的捲動裁掉。 */
-#stage::before,
-#stage::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  z-index: 6;
-  width: 0;
-  height: 0;
-  transform: translateX(-50%);
-  border-left: 14px solid transparent;
-  border-right: 14px solid transparent;
-}
-
-#stage::before {
-  top: calc(-1 * var(--gap));
-  border-top: 18px solid var(--ink);
-}
-
-#stage::after {
-  top: calc(-1 * var(--gap) - 4px);
-  border-left-width: 10px;
-  border-right-width: 10px;
-  border-top: 18px solid var(--panel);
+@keyframes thinking-pulse {
+  from {
+    opacity: 0.35;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* 角色容器：所有圖層共用同一個座標系 */
 #character {
   position: absolute;
   inset: 0;
+  transition: opacity 0.15s;
 }
 
 .layer {
@@ -142,16 +171,154 @@ body {
   transition: opacity var(--fade) ease;
 }
 
-/* 右側工具列，疊在角色上方 */
-#tools {
+/* 整張表情圖：寬度為視訊區的 --face-width，置中貼底，兩側裁掉一點 */
+#character .layer {
+  inset: auto;
+  left: 50%;
+  bottom: 0;
+  width: var(--face-width);
+  max-width: none;
+  height: auto;
+  transform: translateX(-50%);
+}
+
+/* 通話狀態切換樣式一律用 #app 上的 data- 屬性，不用行內樣式 */
+#app[data-face-dimmed="true"] #character {
+  opacity: 0.25;
+  filter: grayscale(0.6);
+}
+
+#app[data-dialog-visible="false"] #dialog {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* 頂列：疊在視訊區上方，左邊名字與狀態，右邊「⋯」 */
+#call-bar {
   position: absolute;
-  top: var(--gap);
-  right: var(--gap);
-  z-index: 7;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 9;
   display: flex;
+  align-items: center;
+  gap: var(--gap);
+  padding: 10px 14px;
+}
+
+#call-who {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+#call-name {
+  font-weight: 700;
+}
+
+#call-status {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+#call-status[data-tone="live"]::before {
+  content: "● ";
+  color: var(--ok);
+}
+
+#call-status[data-tone="bad"]::before {
+  content: "● ";
+  color: var(--danger);
+}
+
+/* 疊在視訊區上的狀態蓋層，在對話框之上、頂列之下 */
+.overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 8;
+  display: none;
   flex-direction: column;
-  align-items: flex-end;
-  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 24px;
+  text-align: center;
+  background: rgba(236, 226, 207, 0.88);
+}
+
+.overlay.is-shown {
+  display: flex;
+}
+
+.overlay-title {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.overlay-body {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.ring {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--panel);
+  font-size: 2rem;
+}
+
+.ring.is-bad {
+  border-color: var(--danger);
+}
+
+/* 呼叫中的圓圈向外擴散 */
+#ov-connecting .ring::after {
+  content: "";
+  position: absolute;
+  inset: -10px;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  opacity: 0.4;
+  animation: ring-pulse 1.4s ease-out infinite;
+}
+
+@keyframes ring-pulse {
+  from {
+    transform: scale(0.85);
+    opacity: 0.5;
+  }
+  to {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: 2px solid var(--ink);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn.is-primary {
+  background: var(--ink);
+  color: var(--panel);
 }
 
 .tool {
@@ -170,26 +337,13 @@ body {
   cursor: pointer;
 }
 
-/* 收起狀態：其餘按鈕整個消失，開關自己縮小變淡，但還按得到 */
-#tools.is-folded .tool:not(#tools-toggle) {
-  display: none;
-}
-
-#tools.is-folded #tools-toggle {
-  width: 32px;
-  height: 32px;
-  border-width: 1px;
-  font-size: 14px;
-  opacity: 0.35;
-}
-
 /* 回聲：你上一句話，放在角色腳下。
    它會直接壓在背景圖上，所以自帶一層半透明白底——照片再深再花也讀得到，
    而且用的是跟對話框同一組「白面板 + 黑字」的語彙，不另外發明一種樣子。
    高度固定保留一行，空的時候只是看不見，不會讓版面在第一次送出時抽動。 */
 #echo {
   flex: 0 0 auto;
-  align-self: flex-start;
+  align-self: flex-end;
   max-width: 100%;
   min-height: calc(
     var(--echo-size) * var(--echo-leading) + 2 * var(--echo-padding) + 2 * var(--echo-border)
@@ -198,7 +352,7 @@ body {
   padding: var(--echo-padding) 10px;
   border: var(--echo-border) solid transparent;
   border-radius: 999px;
-  color: var(--ink);
+  color: var(--muted);
   font-size: var(--echo-size);
   line-height: var(--echo-leading);
   /* 一行就好，太長切掉，免得把輸入列往下擠 */
@@ -221,6 +375,20 @@ body {
   /* 輸入框長高時，送出鍵與計數留在底部 */
   align-items: flex-end;
   gap: 8px;
+}
+
+/* 掛斷：最左邊的紅色圓形 */
+#hangup {
+  flex: 0 0 auto;
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  border: 2px solid var(--ink);
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--panel);
+  font-size: 1.2rem;
+  cursor: pointer;
 }
 
 #message {
@@ -427,7 +595,8 @@ body {
     visibility 0s;
 }
 
-.drawer-head {
+.drawer-head,
+.sheet-head {
   flex: 0 0 auto;
   display: flex;
   align-items: center;
@@ -437,7 +606,8 @@ body {
   border-bottom: 2px solid var(--ink);
 }
 
-.drawer-head h2 {
+.drawer-head h2,
+.sheet-head h2 {
   margin: 0;
   font-size: 1rem;
 }
@@ -490,10 +660,78 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .drawer,
-  .drawer.is-open {
+  .drawer.is-open,
+  .sheet,
+  .sheet.is-open {
     transition: none;
   }
+
+  #character,
+  #line.is-thinking,
+  #ov-connecting .ring::after {
+    transition: none;
+    animation: none;
+  }
 }
+
+/* 「⋯」更多：從下方滑出的面板，外型與抽屜相同，裡面是六顆選單按鈕 */
+.sheet {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  z-index: 16;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  max-height: 62dvh;
+  overflow-y: auto;
+  border: var(--bubble-border) solid var(--ink);
+  border-bottom: none;
+  border-radius: var(--bubble-radius) var(--bubble-radius) 0 0;
+  background: var(--panel);
+  transform: translate(-50%, 100%);
+  visibility: hidden;
+  transition:
+    transform var(--drawer) ease,
+    visibility 0s linear var(--drawer);
+}
+
+.sheet.is-open {
+  transform: translate(-50%, 0);
+  visibility: visible;
+  transition:
+    transform var(--drawer) ease,
+    visibility 0s;
+}
+
+.menu-item {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  padding: 14px var(--gap);
+  border: 0;
+  border-bottom: 1px solid var(--muted-surface);
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* 遮罩：點一下關掉「⋯」面板 */
+#scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  display: none;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+#scrim.is-open {
+  display: block;
+}
+
 
 /* 小檔案的編輯區與錯誤訊息，沿用抽屜既有的框線與圓角 */
 .drawer-area {
