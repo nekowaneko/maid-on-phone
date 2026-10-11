@@ -38,7 +38,7 @@ test('M44-S11 開關、訂閱名稱、月費、每月額度、入帳金額、每
   assert.ok(switchAt >= 0, 'buildLayout 缺少 addSwitchCard(')
   let previous = switchAt
   for (const label of LABELS_IN_ORDER) {
-    const at = body.search(new RegExp(`addField\([^\n]*"${label}"`))
+    const at = body.search(new RegExp(`addField\\([^\\n]*"${label}"`))
     assert.ok(at >= 0, `buildLayout 缺少欄位 ${label}`)
     assert.ok(at > previous, `${label} 的位置必須在前一個欄位之後`)
     previous = at
