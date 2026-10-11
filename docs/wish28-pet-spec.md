@@ -348,3 +348,11 @@
 - 規格範例表 M43-S01～S15 全部由使用者確認，見 docs/M4.3-EXPENSIVE-PLAN.md §4.5。
 - 手機實測見 DEVICE-CHECKLIST-M4.3.md（D01～D08）。
 - 不做：把整個戒飲功能從程式碼移除（牽涉約 25 個檔案與凍結的驗收項）；主畫面隱藏戒飲卡片；定時自動開關。
+
+## M4.4 驗收（戒飲設定頁重做）
+
+- 使用者 2026-10-11 決定：戒飲設定頁改成與主畫面一致的深色玻璃風格；錯誤只在頁首顯示並把對應欄位標紅；欄位與儲存流程不變。
+- 規格範例表 M44-S01～S12 全部由使用者確認，見 docs/M4.4-EXPENSIVE-PLAN.md §4.6。
+- 原型：design/prototype/drink-settings.html；畫面規格：design/prototype/screens.md 的 D1；UI 驗收項：design/prototype/ui-assertions.md 的 U36～U46。
+- 手機實測見 DEVICE-CHECKLIST-M4.4.md（D01～D10）。
+- 不做：淺色模式、即時毛玻璃模糊、把「戒飲歷史」做成真正的紀錄頁（見 design/prototype/later.md）。
