@@ -23,7 +23,7 @@ npx wrangler d1 execute pet-maid-db --remote --file worker/schema.sql
 npx wrangler secret put APP_SECRET          # 自己想一串新的存取密鑰，不要和 accompany_bot 相同
 npx wrangler secret put LLM_API_KEY         # 到 https://aistudio.google.com/apikey 另開一把 Gemini 金鑰
 npx wrangler secret put LLM_RELAY_SECRET    # 與 accompany_bot 相同的轉送服務密鑰
-cmd /c "type ""%USERPROFILE%\Downloads\pet-maid-firebase-adminsdk-fbsvc-417b80d064.json"" | npx wrangler secret put FCM_SERVICE_ACCOUNT"
+cmd /c "type ""%USERPROFILE%\Downloads\你的服務帳戶金鑰檔名.json"" | npx wrangler secret put FCM_SERVICE_ACCOUNT"
 cmd /c """%LOCALAPPDATA%\Android\Sdk\platform-tools\adb.exe"" exec-out run-as com.accompany.pet cat files/push-token.txt | npx wrangler secret put FCM_DEVICE_TOKEN"
 ```
 最後一行需要手機接線（或無線偵錯）。重裝 App 或清除資料後推播代碼會變，要重新執行這一行。
