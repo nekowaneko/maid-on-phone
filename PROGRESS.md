@@ -287,3 +287,7 @@
 ## M4.4 T0b
 - 凍結規格測試 commit：`03d6504eeeb21639f9d878c489ab4bd690d935fb`（Kotlin 9、JS 2），已填入 `verify.sh` 的 `FROZEN_HASH`；V05 總數 50→59；V71～V79 已寫入。
 - 修正輪數：0；錯誤指紋：無（第一次用 shell heredoc 寫含反斜線的檔案失敗，改用 Write 工具，非程式錯誤）。
+
+## M4.4 T1
+- 新增 `SettingsError.kt`（`SettingsField`、`SETTINGS_ERROR_PREFIX`、`settingsFieldOf`）與 `M44HelperTest.kt`（7 個）。`:core:test` 全綠（含 M44-S01～S09）。
+- 修正輪數：0；錯誤指紋：無。
