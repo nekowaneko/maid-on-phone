@@ -266,3 +266,9 @@
 - `DrinkSettingsActivity.kt`：「啟用戒飲記錄」`SwitchCompat` 置於訂閱名稱之前；`loadEnabled()` 在設定讀完後讀開關，讀不到不啟用儲存鈕；儲存為兩步驟（先五欄位，成功才 `PUT ENABLED_PATH`）。`DrinkSettingsActivity` 共用 `parseEnabled`（與 OverlayService 同套件）。
 - `:app:compileDebugKotlin` 通過；`./verify.sh` V01～V68 通過（含 V64、V66、V67、V08、V26），停在 V69（`backend/tests/drink-enabled-wiring.test.js` 屬 T4）。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0（V69 屬 T4 未實作）。
+
+### T4
+- 新增 `backend/tests/drink-enabled-wiring.test.js`（W-A，4 個）：Kotlin 常數 ↔ `handlers.js`（路由 `enabled`、`DRINK_DISABLED_ERROR` 開頭、403）；`OverlayService` 呼叫的 `setDrinkEnabled` ↔ `index.html` 定義與三個按鈕 id；設定畫面先 PUT 設定、成功才 PUT 開關且設定 body 不含 `enabled`；真的 `createHandler`／`runScheduled` 走完「打開 → 記一筆 → 關閉（寫入 403、詢問不發、統計與匯出可讀）→ 打開 → 恢復」。只替換語言模型、儲存、推播、時間，無 monkeypatch。
+- 沒有發現需要對齊的名稱或文字缺口，T1～T3 的檔案未再修改。V26 下限調為 614（實際 614）。
+- `./verify.sh`（L1＋L2）全部通過（V01～V69；V70 屬 L3，留到 T5）。
+- 修正輪數：0（測試內切函式遇到 CRLF 換行，是測試自己的問題，已在測試內統一換行，未動被測程式）；錯誤指紋：無。
