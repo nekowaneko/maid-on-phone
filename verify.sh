@@ -461,6 +461,14 @@ NODE
 [ "$V55_COUNT" -le "$V55_BASELINE" ] || fail "V55 style.css 在 :root 以外有 $V55_COUNT 個十六進位色碼，基準為 $V55_BASELINE"
 pass "V55"
 
+# V59：網頁程式用到的 id 都存在於 index.html；腳本本身用少一個 id 的複本驗過會失敗
+node backend/tools/check-dom-ids.mjs || fail "V59 index.html 缺少程式用到的 id"
+V59_TMP=$(mktemp)
+sed 's/id="hangup"/id="hangup-removed"/' "$INDEX_HTML" > "$V59_TMP"
+if node backend/tools/check-dom-ids.mjs "$V59_TMP" >/dev/null 2>&1; then rm -f "$V59_TMP"; fail "V59 check-dom-ids.mjs 對缺 id 的複本沒有失敗（腳本失效）"; fi
+rm -f "$V59_TMP"
+pass "V59"
+
 # V28：角色頁只載入本機相對路徑的一般 script，不用 module、不讀檔、不連外（M1.6 A24）
 PET_ASSETS=app/src/main/assets/pet
 if grep -rnE 'type="module"|fetch\(|XMLHttpRequest|import\(|https?://' "$PET_ASSETS" --include='*.html' --include='*.js'; then fail "V28 角色頁含 module、讀檔或外部網址"; fi

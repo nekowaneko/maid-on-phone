@@ -217,3 +217,9 @@
 - `ChatActivity.kt`：`ChatWebViewClient.shouldOverrideUrlLoading` 先判斷 `isChatExitUrl(...)`，成立就 `finish()` 並回傳 true，否則維持同源判斷；其餘不變，未新增 `@JavascriptInterface`。
 - `./gradlew :app:compileDebugKotlin` 通過；`./verify.sh`（L1＋L2）全部通過（V53 通過、V26 為 590 個）。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+### T4
+- 新增 `backend/tools/check-dom-ids.mjs`（讀 `app.js`、`call.js`、`background.js` 的 `getElementById`／`querySelector('#…')`，逐一比對 `index.html`；動態 id 例外清單目前為空），接進 `verify.sh` 成為 V59，並在 V59 內用「`id="hangup"` 被改名的 `index.html` 複本」實跑，確認腳本會失敗。
+- 接線缺口：無。`check-dom-ids` 零缺漏；`companion:send`、`companion:reply-start`、`companion:reply-failed` 兩端相同（`app.js` 發出、`call.js` 監聽）；`call.js` 在 LIVE 時呼叫 `renderer.blink`；`zOrder` 為 `["face"]` 時 `createRenderer` 可建立（實跑確認有 `blink`、`setEmotion`）；`chat-exit://close` 在 `call.json`、`Chat.kt`、`call-state.js` 相同，`call.js` 導向 `CHAT_EXIT_URL`、`ChatActivity` 以 `isChatExitUrl` 攔截。未修改任何網頁檔。
+- `./verify.sh`（L1＋L2）全綠，V47、V51、V53、V59 通過。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
