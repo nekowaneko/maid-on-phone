@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 戒飲設定頁輸入框聚焦：加藍色描邊 -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android"
+    android:shape="rectangle">
+    <solid android:color="@color/settings_field_fill" />
+    <corners android:radius="12dp" />
+    <stroke
+        android:width="2dp"
+        android:color="@color/settings_accent" />
+</shape>

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 戒飲設定頁的主要按鈕：藍底圓角，停用時改成半透明灰 -->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:state_enabled="false">
+        <shape android:shape="rectangle">
+            <solid android:color="@color/settings_ghost_fill" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@color/settings_accent" />
+            <corners android:radius="14dp" />
+        </shape>
+    </item>
+</selector>

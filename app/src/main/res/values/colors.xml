@@ -2,4 +2,21 @@
 <resources>
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
+    <!-- M4.4 戒飲設定頁（深色玻璃風格） -->
+    <color name="settings_text">#F5F5F7</color>
+    <color name="settings_text_secondary">#ADEBEBF5</color>
+    <color name="settings_accent">#0A84FF</color>
+    <color name="settings_success">#30D158</color>
+    <color name="settings_warning">#FF9F0A</color>
+    <color name="settings_danger">#FF6961</color>
+    <color name="settings_card_fill">#A61E1E23</color>
+    <color name="settings_card_stroke">#26FFFFFF</color>
+    <color name="settings_field_fill">#12FFFFFF</color>
+    <color name="settings_divider">#1AFFFFFF</color>
+    <color name="settings_bar_fill">#D118181D</color>
+    <color name="settings_note_fill">#2EFF9F0A</color>
+    <color name="settings_note_stroke">#66FF9F0A</color>
+    <color name="settings_status_fill">#8C1E1E23</color>
+    <color name="settings_ghost_fill">#1FFFFFFF</color>
+    <color name="settings_switch_off">#59FFFFFF</color>
 </resources>
