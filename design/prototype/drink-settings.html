@@ -1,0 +1,337 @@
+<title>戒飲設定 原型</title>
+<style>
+  /* 版面：手機寬度的單欄分組清單，桌機置中；沿用 App 主畫面的深色玻璃（macOS 風）語彙 */
+  :root {
+    --font-main: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --wall-a: #1b2340;
+    --wall-b: #3a2a52;
+    --wall-c: #14304a;
+    --glass: rgba(30, 30, 35, 0.65);
+    --glass-border: rgba(255, 255, 255, 0.15);
+    --card: rgba(255, 255, 255, 0.08);
+    --field: rgba(255, 255, 255, 0.07);
+    --line: rgba(255, 255, 255, 0.10);
+    --text: #F5F5F7;
+    --text-2: rgba(235, 235, 245, 0.68);
+    --accent: #0A84FF;
+    --accent-press: #409CFF;
+    --on-accent: #ffffff;
+    --danger: #FF6961;
+    --success: #30D158;
+    --warning: #FF9F0A;
+    --radius-card: 18px;
+    --radius-field: 12px;
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    font-family: var(--font-main);
+    color: var(--text);
+    background:
+      radial-gradient(900px 600px at 15% 10%, var(--wall-b), transparent 60%),
+      radial-gradient(900px 700px at 90% 85%, var(--wall-c), transparent 60%),
+      var(--wall-a);
+    background-attachment: fixed;
+    min-height: 100vh;
+    padding-inline: 16px;
+    padding-block: 16px 140px;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 560px; margin-inline: auto; display: flex; flex-direction: column; gap: 16px; }
+
+  /* 原型專用控制列（不屬於 App 畫面） */
+  .proto {
+    border: 1px dashed rgba(255,255,255,.28); border-radius: 12px; padding: 10px 12px;
+    font-size: 12px; color: var(--text-2); display: flex; flex-wrap: wrap; gap: 6px 8px; align-items: center;
+  }
+  .proto b { color: var(--text); font-weight: 600; margin-right: 4px; }
+  .proto button {
+    font: inherit; font-size: 12px; color: var(--text); background: rgba(255,255,255,.10);
+    border: 1px solid rgba(255,255,255,.18); border-radius: 999px; padding: 5px 11px; cursor: pointer; min-height: 30px;
+  }
+  .proto button:hover { background: rgba(255,255,255,.18); }
+
+  /* 頂列 */
+  .top { display: flex; align-items: center; gap: 8px; padding-top: 4px; }
+  .back {
+    width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--glass-border);
+    background: var(--glass); color: var(--text); font-size: 20px; cursor: pointer; display: grid; place-items: center;
+    backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+  }
+  h1 { margin: 0; font-size: 28px; font-weight: 700; letter-spacing: .01em; text-wrap: balance; }
+  .lead { margin: 2px 0 0; font-size: 14px; color: var(--text-2); }
+
+  /* 狀態列 */
+  .status {
+    display: flex; align-items: center; gap: 10px; min-height: 44px; padding: 10px 14px;
+    border-radius: 14px; border: 1px solid var(--glass-border); background: var(--glass);
+    backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%);
+    font-size: 14px;
+  }
+  .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--text-2); flex: none; }
+  .status[data-s="ready"] .dot, .status[data-s="saved"] .dot { background: var(--success); }
+  .status[data-s="invalid"] .dot, .status[data-s="unreachable"] .dot { background: var(--danger); }
+  .status[data-s="loading"] .dot, .status[data-s="saving"] .dot { background: var(--warning); animation: pulse 1s ease-in-out infinite; }
+  .status .retry {
+    margin-left: auto; font: inherit; font-size: 13px; color: var(--accent-press); background: none; border: 0; cursor: pointer;
+    min-height: 32px; padding: 0 4px;
+  }
+  @keyframes pulse { 50% { opacity: .3; } }
+
+  /* 分組卡片 */
+  .group-title { margin: 6px 4px -6px; font-size: 12px; letter-spacing: .08em; color: var(--text-2); font-weight: 600; }
+  .card {
+    background: var(--glass); border: 1px solid var(--glass-border); border-radius: var(--radius-card);
+    backdrop-filter: blur(25px) saturate(190%); -webkit-backdrop-filter: blur(25px) saturate(190%);
+    overflow: hidden;
+  }
+  .row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; min-height: 58px; }
+  .row + .row { border-top: 1px solid var(--line); }
+  .row-text { flex: 1; min-width: 0; }
+  .row-label { font-size: 16px; font-weight: 500; }
+  .row-sub { font-size: 13px; color: var(--text-2); margin-top: 2px; line-height: 1.45; }
+
+  .field { display: flex; align-items: center; gap: 12px; padding: 10px 16px; min-height: 58px; }
+  .field + .field { border-top: 1px solid var(--line); }
+  .field label { flex: 1; min-width: 0; font-size: 16px; }
+  .field label small { display: block; font-size: 12px; color: var(--text-2); margin-top: 2px; }
+  .input-wrap {
+    display: flex; align-items: center; gap: 6px; background: var(--field); border: 1px solid transparent;
+    border-radius: var(--radius-field); padding: 0 12px; min-height: 44px; width: 150px; flex: none;
+  }
+  .input-wrap:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(10,132,255,.25); }
+  .field[data-invalid="true"] .input-wrap { border-color: var(--danger); box-shadow: 0 0 0 3px rgba(255,105,97,.22); }
+  .input-wrap input, .input-wrap select {
+    flex: 1; min-width: 0; width: 100%; background: transparent; border: 0; outline: 0; color: var(--text);
+    font: inherit; font-size: 16px; text-align: right; font-variant-numeric: tabular-nums;
+  }
+  .input-wrap select { text-align-last: right; appearance: none; -webkit-appearance: none; cursor: pointer; }
+  .input-wrap select option { background: #26262c; color: #f5f5f7; }
+  .input-wrap .unit { color: var(--text-2); font-size: 14px; flex: none; }
+  .input-wrap .chev { color: var(--text-2); font-size: 11px; flex: none; }
+  .name-field .input-wrap { width: 190px; }
+
+  /* 開關 */
+  .switch { position: relative; width: 52px; height: 32px; flex: none; }
+  .switch input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; z-index: 1; }
+  .switch .track { position: absolute; inset: 0; border-radius: 999px; background: rgba(255,255,255,.22); transition: background .2s; }
+  .switch .knob {
+    position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 50%; background: #fff;
+    box-shadow: 0 2px 6px rgba(0,0,0,.35); transition: transform .2s;
+  }
+  .switch input:checked ~ .track { background: var(--success); }
+  .switch input:checked ~ .knob { transform: translateX(20px); }
+  .switch input:focus-visible ~ .track { outline: 3px solid rgba(10,132,255,.6); outline-offset: 2px; }
+  .switch input:disabled { cursor: default; }
+
+  .hint { margin: -4px 6px 0; font-size: 13px; color: var(--text-2); line-height: 1.5; }
+  .off-note {
+    display: flex; gap: 8px; align-items: flex-start; padding: 12px 14px; border-radius: 14px;
+    background: rgba(255,159,10,.14); border: 1px solid rgba(255,159,10,.35); font-size: 13px; line-height: 1.5;
+  }
+  .off-note[hidden] { display: none; }
+
+  /* 載入中骨架 */
+  body[data-s="loading"] .input-wrap { position: relative; overflow: hidden; }
+  body[data-s="loading"] .input-wrap > * { visibility: hidden; }
+  body[data-s="loading"] .input-wrap::after, body[data-s="loading"] .switch .track::after {
+    content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent);
+    transform: translateX(-100%); animation: shimmer 1.2s infinite;
+  }
+  body[data-s="loading"] .switch .track { overflow: hidden; }
+  body[data-s="loading"] .switch .knob { visibility: hidden; }
+  @keyframes shimmer { to { transform: translateX(100%); } }
+
+  /* 底部固定操作列 */
+  .bar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+    background: rgba(24,24,29,.82); border-top: 1px solid var(--glass-border);
+    backdrop-filter: blur(25px) saturate(190%); -webkit-backdrop-filter: blur(25px) saturate(190%);
+  }
+  .bar-inner { max-width: 560px; margin-inline: auto; display: flex; gap: 10px; }
+  .btn {
+    font: inherit; font-size: 16px; font-weight: 600; min-height: 48px; border-radius: 14px; cursor: pointer;
+    border: 1px solid transparent; padding: 0 18px;
+  }
+  .btn-primary { flex: 1; background: var(--accent); color: var(--on-accent); }
+  .btn-primary:hover:not(:disabled) { background: var(--accent-press); }
+  .btn-ghost { background: rgba(255,255,255,.10); color: var(--text); border-color: var(--glass-border); }
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+  :focus-visible { outline: 3px solid rgba(10,132,255,.7); outline-offset: 2px; }
+
+  @media (max-width: 420px) {
+    .input-wrap, .name-field .input-wrap { width: 128px; }
+    h1 { font-size: 24px; }
+  }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+  <div class="proto" role="group" aria-label="原型控制">
+    <b>原型控制</b>
+    <button type="button" data-go="loading">載入中</button>
+    <button type="button" data-go="ready">讀取完成</button>
+    <button type="button" data-go="unreachable">連不上</button>
+    <button type="button" data-go="invalid">設定值不正確</button>
+    <button type="button" data-go="saved">已儲存</button>
+  </div>
+
+  <header>
+    <div class="top">
+      <button class="back" type="button" aria-label="返回">‹</button>
+      <h1>戒飲設定</h1>
+    </div>
+    <p class="lead">調整每月額度、忍住一杯的入帳金額，以及女僕每天問你的時間。</p>
+  </header>
+
+  <div class="status" id="status" data-s="loading" role="status" aria-live="polite">
+    <span class="dot" aria-hidden="true"></span><span id="statusText">讀取中…</span>
+    <button class="retry" id="retry" type="button" hidden>重新讀取</button>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="row-text">
+        <div class="row-label" id="enLabel">啟用戒飲記錄</div>
+        <div class="row-sub">開啟後，泡泡上有 🎤 說話、沒喝、戒飲歷史三顆按鈕。</div>
+      </div>
+      <span class="switch">
+        <input type="checkbox" id="enabled" role="switch" aria-labelledby="enLabel" checked>
+        <span class="track" aria-hidden="true"></span><span class="knob" aria-hidden="true"></span>
+      </span>
+    </div>
+  </div>
+  <div class="off-note" id="offNote" hidden role="note">
+    <span aria-hidden="true">ℹ️</span>
+    <span>已關閉：泡泡上不會顯示 🎤 說話、沒喝、戒飲歷史。聊聊與盤前均線不受影響。</span>
+  </div>
+
+  <div class="group-title">訂閱</div>
+  <div class="card">
+    <div class="field name-field" data-field="name">
+      <label for="f-name">訂閱名稱<small>例如「星巴克咖啡月租」</small></label>
+      <div class="input-wrap"><input id="f-name" type="text" value="星巴克咖啡月租" autocomplete="off"></div>
+    </div>
+    <div class="field" data-field="fee">
+      <label for="f-fee">月費</label>
+      <div class="input-wrap"><input id="f-fee" type="text" inputmode="numeric" value="990"><span class="unit">元</span></div>
+    </div>
+    <div class="field" data-field="quota">
+      <label for="f-quota">每月額度<small>一個月最多喝幾杯</small></label>
+      <div class="input-wrap"><input id="f-quota" type="text" inputmode="numeric" value="20"><span class="unit">杯</span></div>
+    </div>
+  </div>
+
+  <div class="group-title">忍住一杯</div>
+  <div class="card">
+    <div class="field" data-field="resist">
+      <label for="f-resist">入帳金額<small>每按一次「沒喝」記進省下的錢</small></label>
+      <div class="input-wrap"><input id="f-resist" type="text" inputmode="numeric" value="120"><span class="unit">元</span></div>
+    </div>
+  </div>
+
+  <div class="group-title">提醒</div>
+  <div class="card">
+    <div class="field" data-field="ask">
+      <label for="f-ask">每天詢問時間<small>女僕會在這個整點問你今天喝了沒</small></label>
+      <div class="input-wrap"><select id="f-ask"></select><span class="chev" aria-hidden="true">▾</span></div>
+    </div>
+  </div>
+  <p class="hint">月費 1～100000 元、入帳金額 0～10000 元、每月額度 0～300 杯，都要填整數；訂閱名稱最多 30 字。</p>
+</div>
+
+<div class="bar">
+  <div class="bar-inner">
+    <button class="btn btn-ghost" id="reload" type="button">重新讀取</button>
+    <button class="btn btn-primary" id="save" type="button" disabled>儲存</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var status = $('status'), statusText = $('statusText'), retry = $('retry');
+  var save = $('save'), reload = $('reload'), enabled = $('enabled'), offNote = $('offNote');
+  var inputs = { name: $('f-name'), fee: $('f-fee'), quota: $('f-quota'), resist: $('f-resist'), ask: $('f-ask') };
+  var labels = { name: '訂閱名稱', fee: '月費', quota: '每月額度', resist: '忍住一杯的入帳金額' };
+  var timer = null;
+
+  // 每天詢問時間：00:00～23:00
+  for (var h = 0; h < 24; h++) {
+    var o = document.createElement('option');
+    o.value = o.textContent = (h < 10 ? '0' : '') + h + ':00';
+    inputs.ask.appendChild(o);
+  }
+  inputs.ask.value = '21:00';
+
+  function clearErrors() {
+    document.querySelectorAll('.field').forEach(function (f) {
+      f.removeAttribute('data-invalid');
+    });
+    Object.keys(inputs).forEach(function (k) { inputs[k].removeAttribute('aria-invalid'); });
+  }
+  function fieldError(key) {
+    var f = document.querySelector('[data-field="' + key + '"]');
+    f.setAttribute('data-invalid', 'true');
+    inputs[key].setAttribute('aria-invalid', 'true');
+  }
+  function lock(on) {
+    Object.keys(inputs).forEach(function (k) { inputs[k].disabled = on; });
+    enabled.disabled = on;
+  }
+  function set(state, text) {
+    clearTimeout(timer);
+    document.body.setAttribute('data-s', state);
+    status.setAttribute('data-s', state);
+    statusText.textContent = text;
+    retry.hidden = state !== 'unreachable';
+    var busy = state === 'loading' || state === 'saving';
+    lock(state === 'loading' || state === 'unreachable');
+    save.disabled = !(state === 'ready' || state === 'saved' || state === 'invalid');
+    reload.disabled = state === 'loading' || state === 'saving';
+    if (state === 'loading') clearErrors();
+  }
+  function load() {
+    set('loading', '讀取中…');
+    timer = setTimeout(function () { set('ready', '已讀取目前的設定'); }, 900);
+  }
+  function isInt(v) { return /^\d+$/.test(String(v).trim()); }
+  function doSave() {
+    clearErrors();
+    var bad = null;
+    var range = { fee: [1, 100000], resist: [0, 10000], quota: [0, 300] };
+    var nm = inputs.name.value.trim();
+    if (!nm || Array.from(nm).length > 30) bad = ['name', '設定值不正確：訂閱名稱'];
+    ['fee', 'resist', 'quota'].forEach(function (k) {
+      var v = inputs[k].value;
+      if (!bad && (!isInt(v) || +v < range[k][0] || +v > range[k][1])) bad = [k, '設定值不正確：' + labels[k]];
+    });
+    if (bad) {
+      fieldError(bad[0]);
+      set('invalid', bad[1]);
+      inputs[bad[0]].focus();
+      return;
+    }
+    set('saving', '儲存中…');
+    timer = setTimeout(function () { set('saved', '已儲存'); }, 800);
+  }
+
+  enabled.addEventListener('change', function () { offNote.hidden = enabled.checked; });
+  save.addEventListener('click', doSave);
+  reload.addEventListener('click', load);
+  retry.addEventListener('click', load);
+  document.querySelectorAll('.proto [data-go]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var g = b.getAttribute('data-go');
+      if (g === 'loading') load();
+      else if (g === 'ready') set('ready', '已讀取目前的設定');
+      else if (g === 'unreachable') { set('unreachable', '連不上伺服器，請確認網路後再試。'); }
+      else if (g === 'invalid') { set('ready', '已讀取目前的設定'); inputs.fee.value = '九百'; doSave(); }
+      else if (g === 'saved') { set('saved', '已儲存'); }
+    });
+  });
+  load();
+})();
+</script>
