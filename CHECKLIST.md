@@ -100,3 +100,12 @@
 □ 確認 `docs/AGENT-SETUP.md` 與 README 提到的「啟用戒飲記錄」說明和實際畫面一致
 □ 確認 MUTATION-REPORT.md 的 M4.3 建議新增規格列 M43-S16（防重複詢問）是否要納入下一版規格
 □ `npm audit` 需要連網，這次沒有執行；有網路時在暫存資料夾補跑
+
+## M4.4
+
+□ 實測 DEVICE-CHECKLIST-M4.4.md 的 D01～D10（需要手機）
+□ 重新安裝 App（這次不改 Worker，不用重新部署）
+□ 讀 RISK-REVIEW.md 的 M4.4 段落
+□ 看 MUTATION-REPORT.md 的 M4.4 段落（或「待補」的處理方式）
+□ 看 SECURITY-REPORT.md 與 `npm audit` 結果（需要網路）
+□ 對照線上原型確認新畫面的配色與原型一致，不一致處寫進 design/prototype/later.md
