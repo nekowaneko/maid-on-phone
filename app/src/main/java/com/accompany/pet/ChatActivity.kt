@@ -15,6 +15,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
+import com.accompany.pet.core.chat.isChatExitUrl
 import com.accompany.pet.core.chat.isSameOrigin
 import com.accompany.pet.core.chat.normalizeChatUrl
 import java.io.ByteArrayInputStream
@@ -72,9 +73,15 @@ class ChatActivity : AppCompatActivity() {
 
     // 只允許與聊天網址同源的導覽與子資源，其他一律擋下（M15-S04）
     private inner class ChatWebViewClient(private val baseUrl: String) : WebViewClient() {
-        // 攔截頁面跳轉：非同源回傳 true，停在原頁
-        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
-            !isSameOrigin(baseUrl, request.url.toString())
+        // 攔截頁面跳轉：掛斷導向 CHAT_EXIT_URL 則結束畫面，非同源回傳 true 停在原頁
+        override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean {
+            val targetUrl = request.url.toString()
+            if (isChatExitUrl(targetUrl)) {
+                finish()
+                return true
+            }
+            return !isSameOrigin(baseUrl, targetUrl)
+        }
 
         // 攔截子資源請求：同源照常載入，非同源回 403
         override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {

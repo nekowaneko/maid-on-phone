@@ -212,3 +212,8 @@
 - `./verify.sh`：L1 通過 V01～V52，停在 V53（`ChatActivity.kt` 的 `isChatExitUrl` 攔截，屬 T3）；V54、V55、V57 的檢查內容單獨手動確認通過。V26 下限尚待 T5 填實際值。
 - 瀏覽器預覽（375 寬、本機預覽伺服器＋stub）手動走過：接通→送出→她在想→逐字→回通話中、掛斷→再撥一次（對話紀錄保留）、錯密鑰→連線失敗→開啟密鑰設定→重撥、「⋯」選單點項目先關面板再開抽屜；無水平捲軸，對話框下緣與角色圖上緣距離 14px，無主控台錯誤。
 - 修正輪數：0（V57 的 grep 命中測試檔註解裡的「monkeypatch」字樣，改寫註解，不算驗收失敗）；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+### T3
+- `ChatActivity.kt`：`ChatWebViewClient.shouldOverrideUrlLoading` 先判斷 `isChatExitUrl(...)`，成立就 `finish()` 並回傳 true，否則維持同源判斷；其餘不變，未新增 `@JavascriptInterface`。
+- `./gradlew :app:compileDebugKotlin` 通過；`./verify.sh`（L1＋L2）全部通過（V53 通過、V26 為 590 個）。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
