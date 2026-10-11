@@ -33,10 +33,14 @@ private fun ensureChannels(context: Context) {
     nm.createNotificationChannel(queue)
 }
 
-// 點通知後送給角色服務的 PendingIntent（script 為要演出的原文；null 表示只叫出角色、報告排隊）
-private fun showPending(context: Context, requestCode: Int, script: String?): PendingIntent {
+// 點通知後送給角色服務的 PendingIntent（script 為要演出的原文；null 表示只叫出角色、報告排隊；todoistJson 有值時角色帶出 Todoist 按鈕）
+private fun showPending(context: Context, requestCode: Int, script: String?, todoistJson: String? = null): PendingIntent {
     val intent = Intent(context, OverlayService::class.java).setAction(ACTION_SHOW)
     if (script != null) intent.putExtra(EXTRA_TEXT, script)
+    if (todoistJson != null) {
+        intent.putExtra(EXTRA_TODOIST_JSON, todoistJson)
+        if (script != null) intent.putExtra(EXTRA_TODOIST_SCRIPT, script)
+    }
     return PendingIntent.getForegroundService(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 }
 
@@ -68,7 +72,7 @@ fun showReminderNotification(context: Context, r: Reminder) {
     val contentIntent = if (r.ma != null) {
         maPending(context, id)
     } else {
-        showPending(context, id, r.script)
+        showPending(context, id, r.script, r.todoist)  // Todoist 提醒點通知也要帶按鈕
     }
     val builder = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
         .setSmallIcon(R.drawable.ic_launcher_foreground)
