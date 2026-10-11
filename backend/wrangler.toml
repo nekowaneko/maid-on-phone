@@ -20,7 +20,8 @@ directory = "./"
 [vars]
 USE_STUB = "false"
 LLM_MODEL = "gemini-3.5-flash-lite"
-LLM_RELAY_ORIGIN = "https://gemini-relay-528597314139.us-central1.run.app"
+# 只有在 Cloudflare 直連 Gemini 失敗（地區不支援）時才需要，填你自己架的中繼站網址，並用 secret 設 LLM_RELAY_SECRET。
+# LLM_RELAY_ORIGIN = "https://你的中繼站網址"
 
 # 排程觸發：每個整點（UTC 整點即台北整點）與 UTC 00:30（台北 08:30）。
 [triggers]
@@ -38,4 +39,4 @@ fallthrough = false
 [[d1_databases]]
 binding = "DB"
 database_name = "pet-maid-db"
-database_id = "ba0f3e4a-ce01-4ee9-9a69-cf0dd1cfcb43"
+database_id = "REPLACE_WITH_YOUR_D1_DATABASE_ID"

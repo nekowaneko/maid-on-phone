@@ -51,3 +51,6 @@ screen_test.png
 prototype.html
 tools/push.json
 !design/prototype/prototype.html
+
+# 本機實際部署用的 wrangler 設定（含真實資料庫 id 與中繼站網址）
+backend/wrangler.local.toml
