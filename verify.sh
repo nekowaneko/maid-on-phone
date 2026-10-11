@@ -660,7 +660,7 @@ if runs D && [ "$STAGE" -ge 2 ]; then
     NODE_MIN=450   # M3R 起跑前（不含第一輪的 todoist-core、todoist-api 輔助測試）＋M3R Worker 規格 15 列＋M4 Worker 規格 15 列
   else
     NODE_FILES="tests/**/*.test.js"
-    NODE_MIN=590   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助（498）＋M4.2 規格 13 列＋M4.2 輔助與 W-A；M4.3 先填 T0a 現值，T1～T4 結束時依實際值調高（T5 填最終值）
+    NODE_MIN=610   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助（498）＋M4.2 規格 13 列＋M4.2 輔助與 W-A；M4.3 先填 T0a 現值，T1～T4 結束時依實際值調高（T5 填最終值）
     [ -f backend/tests/spec/m43/drink-enabled.test.js ] || fail "V26 缺少 M4.3 規格測試 spec/m43/drink-enabled.test.js"
   fi
   NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }

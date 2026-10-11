@@ -254,3 +254,9 @@
 - `node --test`：616 個中 614 通過；M43 規格 S01～S07、S11～S15 全綠，M2 既有規格（含 M2-S11、M2-S12）全綠。僅 S08、S09 失敗（`controlsVisibility` 屬 T2 範圍，正常）。
 - `./verify.sh`：V60～V64 通過；停在 V65（角色頁 `setDrinkEnabled`、`controlsVisibility` 屬 T2），因此 L2 要到 T2 完成後才能全部跑完；V26 下限待 T2 後一併調高。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+### T2
+- T2-K：`Drink.kt` 追加 `ENABLED_PATH`、`STATUS_DISABLED`、`DRINK_DISABLED_MESSAGE`、`drinkUiEnabled`，`workerErrorMessage` 在 401 後加 403 一行；新增 `M43HelperTest.kt`（3 個）。`:core:test` 通過（含 M43-S10）。
+- T2-W：`drink-view.js` 新增 `controlsVisibility`；`index.html` 新增 `window.pet.setDrinkEnabled`（只動 `#mic`、`#resist`、`#history`，隱藏時 `clearDrinkButtons()`）。`node --test` 610 個全過（含 S08、S09、S12）；V26 下限由 590 調為 610。
+- `./verify.sh`：V01～V65 通過（含 V08 仍 6 個 `@JavascriptInterface`、V59 DOM id 齊全）；`tools/check-m43.mjs v65`、`v67` 單獨執行通過。停在 V66（`OverlayService.kt` 缺 `ENABLED_PATH`，屬 T3），因此 V67 以單獨執行驗證。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0（V66 屬 T3 未實作）。

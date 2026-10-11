@@ -413,6 +413,14 @@
       showDrinkButtons(view.buttons);
       window.pet.say(view.script);
     },
+    // 戒飲記錄開關：只有收到 false 才隱藏 🎤、沒喝、📊 三顆（聊聊、盤前均線不動）；隱藏時收掉現有的戒飲按鈕組
+    setDrinkEnabled: function (on) {
+      var show = DRINK_VIEW.controlsVisibility(on);
+      ['mic', 'resist', 'history'].forEach(function (id) {
+        document.getElementById(id).style.display = show[id] ? '' : 'none';
+      });
+      if (!show.mic) clearDrinkButtons();
+    },
     // 顯示 Todoist 提醒的回應（Worker 回應原文或推播 JSON）：台詞交給 say 演出，按鈕取代舊的一組；解析失敗就忽略
     showTodoist: function (jsonText) {
       var data;

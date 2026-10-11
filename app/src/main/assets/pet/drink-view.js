@@ -99,7 +99,14 @@
     return { script: script, buttons: buttons }; // already、undone、other 與不認得的 kind 沒有按鈕
   }
 
+  // 依開關算出五顆按鈕各自要不要顯示；只有參數恰為 false 才關閉，其他任何值都視為開啟
+  function controlsVisibility(enabled) {
+    var on = enabled !== false;
+    return { mic: on, resist: on, history: on, chat: true, ma: true };
+  }
+
   root.PetDrinkView = {
+    controlsVisibility: controlsVisibility,
     viewFor: viewFor,
     sugarMenu: sugarMenu,
     applyChoice: applyChoice
