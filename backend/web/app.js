@@ -43,7 +43,7 @@ const SECRET_STORAGE_KEY = 'companion:secret'
 const SECRET_HEADER = 'x-app-secret'
 const UNAUTHORIZED_STATUS = 401
 const HISTORY_TURN_LIMIT = 20 // 最近 20 輪，超過從最舊的開始丟棄
-const TYPEWRITER_INTERVAL_MS = 30 // 逐字顯示速度：每字 30 毫秒
+const TYPEWRITER_INTERVAL_MS = 100 // 逐字顯示速度：每字 100 毫秒（2026-10-11 使用者實測後由 30 改為 100）
 
 // 節奏參數：這幾個數字決定表情看不看得見，可用 ?debug=1&hold=5000 之類在真機上邊看邊調
 const SETTLE_TIMEOUT_MS = 500 // 收鍵盤後等版面回穩的上限

@@ -448,7 +448,7 @@ if grep -n 'addJavascriptInterface' "$CHAT_KT" app/src/main/java/com/accompany/p
 pass "V53"
 
 # V54：A60 逐字節奏不得改動
-grep -qE 'TYPEWRITER_INTERVAL_MS\s*=\s*30\b' "$APP_JS" || fail "V54 app.js 的 TYPEWRITER_INTERVAL_MS 不是 30"
+grep -qE 'TYPEWRITER_INTERVAL_MS\s*=\s*100\b' "$APP_JS" || fail "V54 app.js 的 TYPEWRITER_INTERVAL_MS 不是 100"
 grep -qE 'HOLD_MS\s*=\s*3000\b' "$APP_JS" || fail "V54 app.js 的 HOLD_MS 不是 3000"
 pass "V54"
 

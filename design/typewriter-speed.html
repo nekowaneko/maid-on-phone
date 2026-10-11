@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>逐字速度試玩</title>
+<style>
+  body { font-family: system-ui, "Noto Sans TC", sans-serif; background: #ece2cf; color: #222; margin: 0; padding: 16px; }
+  main { max-width: 480px; margin: 0 auto; }
+  .bubble { background: #fff; border: 3px solid #222; border-radius: 20px; padding: 12px; height: calc(2 * 1.7 * 1.05rem + 24px); overflow-y: auto; font-size: 1.05rem; line-height: 1.7; }
+  .row { display: flex; align-items: center; gap: 12px; margin: 16px 0 8px; }
+  input[type=range] { flex: 1; }
+  output { min-width: 5.5em; font-weight: 700; text-align: right; }
+  .presets { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 16px; }
+  button { font: inherit; padding: 8px 12px; border: 2px solid #222; border-radius: 12px; background: #fff; cursor: pointer; }
+  button.on { background: #222; color: #fff; }
+  p.note { font-size: .85rem; color: #555; }
+</style>
+</head>
+<body>
+<main>
+  <h2>逐字速度試玩</h2>
+  <div class="bubble" id="line"></div>
+  <div class="row">
+    <label for="ms">每字</label>
+    <input id="ms" type="range" min="20" max="250" step="5" value="30">
+    <output id="out"></output>
+  </div>
+  <div class="presets" id="presets"></div>
+  <button id="replay">重播</button>
+  <p class="note" id="note"></p>
+</main>
+<script>
+const TEXT = '哼，主人居然好久都沒有跟我說話了，害我還以為您把這裡忘得精光呢。不過既然來了，今天的事我都處理完了，主人可以放心。……要不要摸摸我的耳朵嘛。'
+const PRESETS = [[30, '目前（太快）'], [60, ''], [80, '懸浮窗'], [100, ''], [130, ''], [160, '']]
+const line = document.getElementById('line')
+const ms = document.getElementById('ms')
+const out = document.getElementById('out')
+const note = document.getElementById('note')
+const box = document.getElementById('presets')
+let timer = 0
+
+// 更新說明文字：每秒幾字、整段要幾秒
+const update = () => {
+  const v = Number(ms.value)
+  out.textContent = v + ' 毫秒'
+  note.textContent = `約每秒 ${(1000 / v).toFixed(1)} 字；這段 ${TEXT.length} 字約 ${(TEXT.length * v / 1000).toFixed(1)} 秒說完。`
+  box.querySelectorAll('button').forEach(b => b.classList.toggle('on', Number(b.dataset.v) === v))
+}
+
+// 從頭逐字播放
+const play = () => {
+  clearInterval(timer)
+  let n = 0
+  line.textContent = ''
+  timer = setInterval(() => {
+    n += 1
+    line.textContent = TEXT.slice(0, n)
+    line.scrollTop = line.scrollHeight
+    if (n >= TEXT.length) clearInterval(timer)
+  }, Number(ms.value))
+}
+
+PRESETS.forEach(([v, label]) => {
+  const b = document.createElement('button')
+  b.dataset.v = v
+  b.textContent = label ? `${v}（${label}）` : String(v)
+  b.onclick = () => { ms.value = v; update(); play() }
+  box.appendChild(b)
+})
+ms.oninput = () => { update(); play() }
+document.getElementById('replay').onclick = play
+update()
+play()
+</script>
+</body>
+</html>
