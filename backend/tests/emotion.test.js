@@ -90,8 +90,12 @@ test('emotionToAssetPath 沒有素材根目錄時只回傳檔名', () => {
 })
 
 test('layerToAssetPath 取得固定圖層的素材路徑', () => {
-  const layerKey = Object.keys(CONFIG.layers)[0]
-  assert.equal(layerToAssetPath(layerKey, CONFIG), `${CONFIG.assetRoot}/${CONFIG.layers[layerKey]}`)
+  // 視訊版的 layers 為空（整張表情圖），用測試自備的設定驗證路徑組裝
+  const config = { assetRoot: CONFIG.assetRoot, layers: { body: 'body.png' } }
+  assert.equal(layerToAssetPath('body', config), `${CONFIG.assetRoot}/body.png`)
+  for (const layerKey of Object.keys(CONFIG.layers)) {
+    assert.equal(layerToAssetPath(layerKey, CONFIG), `${CONFIG.assetRoot}/${CONFIG.layers[layerKey]}`)
+  }
 })
 
 test('layerToAssetPath 對未知圖層回傳空字串', () => {
