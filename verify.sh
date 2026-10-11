@@ -7,7 +7,7 @@
 set -euo pipefail
 
 # 常數定義
-FROZEN_HASH="03d6504eeeb21639f9d878c489ab4bd690d935fb"   # 凍結規格測試的 commit（M4.4 凍結版）
+FROZEN_HASH="e83ed4518fb0e07cfa639d36ad080d0b39caf62f"   # 凍結規格測試的 commit（M4.4 凍結版）
 SPEC_DIR="core/src/test/kotlin/com/accompany/pet/spec/"   # 規格測試目錄
 JS_SPEC_DIR="backend/tests/spec/"                         # backend 規格測試目錄（M1.5）
 MANIFEST="app/src/main/AndroidManifest.xml"
@@ -681,8 +681,12 @@ pass "V73"
 
 # V74：A74 色碼集中在資源檔
 if grep -nE '#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?\b|Color\.parseColor\(|0x[fF][fF]' "$M44_SETTINGS_KT" "$M44_ERROR_KT"; then fail "V74 程式碼含寫死的色碼"; fi
-RES_COLOR_HITS=$(grep -rlE '#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?\b' app/src/main/res --include=*.xml | grep -vE 'res/(values/colors\.xml|drawable/|color/)' || true)
-if [ -n "$RES_COLOR_HITS" ]; then echo "$RES_COLOR_HITS"; fail "V74 色碼出現在 colors.xml、drawable、color 以外的資源檔"; fi
+# 既有的 layout 本來就有色碼（主畫面，不動）；只檢查「色碼數比基準多」的資源檔
+for f in $(grep -rlE '#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?\b' app/src/main/res --include=*.xml | grep -vE 'res/(values/colors\.xml|drawable/|color/)' || true); do
+  now=$(grep -cE '#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?\b' "$f" || true)
+  before=$(git show "$M44_BASE:$f" 2>/dev/null | grep -cE '#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?\b' || true)
+  [ "$now" -le "${before:-0}" ] || fail "V74 色碼比基準多：$f（只准放在 colors.xml、drawable、color）"
+done
 pass "V74"
 
 # V75：A79 資源接線（存在、合法、被引用）
@@ -719,7 +723,7 @@ if runs D && [ "$STAGE" -ge 2 ]; then
     NODE_MIN=450   # M3R 起跑前（不含第一輪的 todoist-core、todoist-api 輔助測試）＋M3R Worker 規格 15 列＋M4 Worker 規格 15 列
   else
     NODE_FILES="tests/**/*.test.js"
-    NODE_MIN=614   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助（498）＋M4.2 規格 13 列＋M4.2 輔助與 W-A；M4.3 先填 T0a 現值，T1～T4 結束時依實際值調高（T5 填最終值）
+    NODE_MIN=621   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助（498）＋M4.2 規格 13 列＋M4.2 輔助與 W-A；M4.4 起 614＋規格 2＋W-A 5＝621；M4.3 先填 T0a 現值，T1～T4 結束時依實際值調高（T5 填最終值）
     [ -f backend/tests/spec/m43/drink-enabled.test.js ] || fail "V26 缺少 M4.3 規格測試 spec/m43/drink-enabled.test.js"
   fi
   NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }

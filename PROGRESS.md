@@ -291,3 +291,13 @@
 ## M4.4 T1
 - 新增 `SettingsError.kt`（`SettingsField`、`SETTINGS_ERROR_PREFIX`、`settingsFieldOf`）與 `M44HelperTest.kt`（7 個）。`:core:test` 全綠（含 M44-S01～S09）。
 - 修正輪數：0；錯誤指紋：無。
+
+## M4.4 T2～T4
+- T2：`colors.xml` 追加 16 個顏色（計畫的 11 個＋`settings_note_fill`、`settings_note_stroke`、`settings_status_fill`、`settings_ghost_fill`、`settings_switch_off`）、`res/color/` 2 個、`res/drawable/` 10 個。
+- T3：`DrinkSettingsActivity.kt` 重做（FrameLayout＋ScrollView＋底部固定操作列、狀態列圓點與骨架呼吸、`markField`／`clearMark`／`viewOf`、TextWatcher 與選單改選清紅框）；`saveSettings`／`saveEnabled` 的順序與內容不變。`:app:assembleDebug` 通過。
+- T4：新增 `backend/tests/drink-settings-ui-wiring.test.js`（W-A，5 個）；V26 下限 614→621（實際 621）。`./verify.sh`（L1＋L2）全綠。
+- 修正輪數：3。錯誤指紋：
+  1. `fp-m44-s11-regex`：凍結的 S11 規格測試因 shell heredoc 吃掉反斜線，正規表示式跳脫錯誤（`Unterminated group`）。這是轉寫工具造成的語法錯誤，期望值沒有動；以 Edit 修正跳脫後重新凍結（commit `e83ed45`），`FROZEN_HASH` 同步更新，並記錄於 DECISIONS.md。
+  2. `fp-v74-existing-layouts`：V74 把主畫面既有 layout 的色碼也算進去；改為只檢查「色碼數比基準多」的資源檔（主畫面不動，A77）。
+  3. `fp-verify-backspace`：修 V74 時 python 字串把 `\b` 寫成退格字元；改用 `chr(92)` 補正。
+- 驗收項失敗次數：V74 兩次（上述 2、3）；V76 一次（上述 1，S11）；其餘 0。
