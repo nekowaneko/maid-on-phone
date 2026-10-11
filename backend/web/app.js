@@ -712,6 +712,7 @@ const revealNextCharacter = () => {
   if (runtime.shownCount < target.length) {
     runtime.shownCount += 1
     lineElement.textContent = target.slice(0, runtime.shownCount)
+    lineElement.scrollTop = lineElement.scrollHeight // 字多時跟著捲到最新那行
     applyCuesUpTo(runtime.shownCount)
     updateDebugPanel()
     return
