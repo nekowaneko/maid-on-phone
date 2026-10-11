@@ -168,3 +168,13 @@
 - 設定畫面兩步驟儲存：第二步（開關）若回 400，顯示 Worker 的 error 欄位（沿用 `saveResultMessage`）。
 - `drink-enabled-wiring.test.js` 讀檔時統一換行（Windows 檔案是 CRLF）。
 - 建議後續（僅記錄，未實作）：新增 M43-S16（防重複詢問，見 MUTATION-REPORT.md）；角色出現瞬間三顆按鈕先顯示再隱藏的閃爍（A66 的刻意取捨）。
+
+## M4.4 貴批次
+- 凍結規格測試 S11 的轉寫錯誤：第一次凍結（commit `03d6504`）時，shell heredoc 吃掉正規表示式的反斜線（`Unterminated group`）。這是工具造成的語法錯誤，S01～S12 的期望值與測試意圖完全沒有動；以 Edit 工具補回跳脫後重新凍結（commit `e83ed45`），`verify.sh` 的 `FROZEN_HASH` 同步更新。此後兩個 spec 目錄沒有任何變動（V04）。
+- V73 的「`backend/` 對基準沒有差異」排除 `backend/tests`：本批次的規格測試與 W-A 測試放在該目錄，本來就會有新增檔案；`backend/core`、`backend/worker` 等程式碼沒有任何差異。
+- V74 的「資源檔色碼」改為「色碼數不得比基準 commit 多」：主畫面既有的 `activity_main.xml`、`dialog_settings_sheet.xml` 本來就含色碼，且主畫面不能動（A77）；本批次新增的色碼只在 `colors.xml`、`drawable/`、`color/`。
+- 紅框標在「輸入框外框」（含單位的那一格），不是 `EditText` 本身，這樣單位文字也在紅框內，與原型一致；`viewOf` 回傳的就是外框。
+- 計畫 §4.4 色表外多加 5 個顏色（`settings_note_fill`、`settings_note_stroke`、`settings_status_fill`、`settings_ghost_fill`、`settings_switch_off`）：計畫允許「先新增具名顏色再引用」（A74）。
+- `bg_settings_btn_primary.xml` 的停用狀態改用半透明灰底（而不是降低透明度），因為 `<shape>` 沒有 alpha 屬性。
+- T2 沒有額外跑一次 `assembleDebug`：資源檔在 T3 接上後一次編譯（計畫允許而非要求）。
+- 建議後續（僅記錄，未實作）：把「戒飲歷史」做成真正的紀錄頁；淺色模式；即時毛玻璃模糊（見 design/prototype/later.md）；`settingsFieldOf` 突變分析見 MUTATION-REPORT.md。

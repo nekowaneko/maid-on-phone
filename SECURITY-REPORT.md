@@ -132,3 +132,17 @@ gitleaks 未安裝，改用計畫指定的 grep 樣式掃描所有追蹤檔：�
 - 密鑰：App 兩處新請求都走 `WorkerApi`（密鑰只在標頭），沒有寫進網址、日誌或畫面。
 - 憑證掃描（V06）：通過，沒有新增含憑證的檔案。
 - 依賴套件：本批次沒有新增任何 npm 或 Gradle 依賴；`npm audit` 需要連網，已列入 CHECKLIST.md。
+
+## M4.4（戒飲設定頁重做）
+
+- 高嚴重度發現：**無**。
+- 架構約束檢查：
+  - A71／A72：欄位對應只在 core 的 `settingsFieldOf`；Activity 不含 `startsWith(`、`split(`、`removePrefix(`、`setError(`、`TextInputLayout`（V72）。
+  - A73：儲存流程與送出內容不變，設定 body 仍是五個欄位、不含 `enabled`；`backend/` 與 `Drink.kt` 對基準 commit 無差異（V73、V66、W-A⑤）。
+  - A74：Activity 與 `SettingsError.kt` 不含寫死色碼（V74）。
+  - A76：沒有新增 `SharedPreferences`、本機儲存或 `@JavascriptInterface`（仍 6 個，V08、V66）。
+  - A77：主畫面 `activity_main.xml`、`MainActivity.kt` 對基準 commit 無差異（V77）。
+- 密鑰：沒有新增任何請求；設定頁仍只走 `WorkerApi`（密鑰只在標頭），沒有寫進網址、日誌或畫面。錯誤訊息只顯示 Worker 回的固定中文句子。
+- 靜默降級掃描（V78）：`catch` 內沒有把例外吞成可儲存或預設值；`settingsFieldOf` 沒有備援猜測。
+- 憑證掃描（V06）：通過，沒有新增含憑證的檔案。
+- 依賴套件：本批次沒有新增任何 npm 或 Gradle 依賴；`npm audit` 需要連網，已列入 CHECKLIST.md。

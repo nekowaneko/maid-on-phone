@@ -301,3 +301,8 @@
   2. `fp-v74-existing-layouts`：V74 把主畫面既有 layout 的色碼也算進去；改為只檢查「色碼數比基準多」的資源檔（主畫面不動，A77）。
   3. `fp-verify-backspace`：修 V74 時 python 字串把 `\b` 寫成退格字元；改用 `chr(92)` 補正。
 - 驗收項失敗次數：V74 兩次（上述 2、3）；V76 一次（上述 1，S11）；其餘 0。
+
+## M4.4 T5
+- `./verify.sh --full`：第一次停在 V79（缺 ACCEPTANCE-M4.4.md，報告尚未產生）；補齊 RISK-REVIEW、MUTATION-REPORT、SECURITY-REPORT、DECISIONS、ACCEPTANCE-M4.4 後重跑，L1＋L2＋L3 全部通過（V01～V79，V26 backend 621 個）。
+- 突變測試：`settingsFieldOf` 8 個殺死 7 個，存活 1 個為編譯器 null 檢查（等價突變）。
+- 修正輪數：1；錯誤指紋：V79 報告缺漏（預期）。`npm audit` 無網路，列入 CHECKLIST.md。

@@ -275,3 +275,22 @@ T4 前曾有 3 個非等價存活（`sep <= 0` 邊界、`colon < 0` 決定主機
 | 建議編號 | 情境 | 預期結果 | 對應存活突變 |
 |---|---|---|---|
 | M43-S16 | 開關開啟、現在是詢問的整點、今天還沒有任何紀錄，但 `drink.askedOn` 已經是今天 | 不再推播第二次「今天有喝飲料嗎？」 | `drink.js` 第 392 行 |
+
+## M4.4（戒飲設定頁重做）
+
+- 執行範圍：`core/src/main/kotlin/com/accompany/pet/core/drink/SettingsError.kt` 的 `settingsFieldOf`（Pitest 的 `targetClasses` 已涵蓋 `com.accompany.pet.core.drink.*`，沒有改設定；只分析 `settingsFieldOf`）。
+- 程式版本：HEAD `715cade`（T4 完成後）；規格測試凍結 commit `e83ed45`。
+- 原始報告：`core/build/reports/pitest/`（建置產物，不進 git）。
+- **沒有為了提高分數修改任何測試或實作。**
+
+| 範圍 | 產生突變 | 被殺死 | 存活 | 分數 |
+|---|---|---|---|---|
+| `settingsFieldOf`（含 `SettingsField` 列舉的初始化） | 8 | 7 | 1 | 87.5% |
+
+### 存活突變（1 個）
+
+- 第 18 行 `message.substring(...)` 之後 Kotlin 編譯器自動插入的 `Intrinsics.checkNotNullExpressionValue` 被移除。這是編譯器產生的平台型別 null 檢查，`String.substring` 不會回 null，行為上與原程式等價（等價突變），不需要新增測試。
+
+### 建議新增的規格範例列
+
+無。五個欄位、前後空白、全形與半形冒號、label 前後多餘文字、只有開頭等邊界，已由 M44-S01～S09 與 `M44HelperTest` 殺死所有有行為差異的突變。

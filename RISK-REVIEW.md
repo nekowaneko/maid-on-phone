@@ -143,3 +143,11 @@ M4 計畫書 §2.1 列的五個高風險模組都在此清單中（`backend/work
 | 77 | `DrinkSettingsActivity.loadEnabled`、`saveSettings`、`saveEnabled` | `app/.../DrinkSettingsActivity.kt`（第 139、174、197 行） | 開關列；讀不到開關就不讓存；儲存先 PUT 五欄位，成功才 PUT 開關 | 設定儲存只成功一半（欄位已存、開關失敗），畫面顯示開關步驟的錯誤，不回滾；設定 body 若帶 `enabled` 會與舊版 App 的行為不一致（A62、M43-S15）；讀不到時被當成「開」會誤存 |
 | 78 | `OverlayService.refreshDrinkEnabled`、`parseEnabled` | `app/.../OverlayService.kt`（第 468、780 行） | 頁面載入完成與每次展開泡泡時帶密鑰 GET 開關，結果經 `drinkUiEnabled` 轉成布林值交給網頁 | 讀取失敗被自己吞成開啟（降級只准在 `drinkUiEnabled` 一處，A67）；`callJs` 拼接了來自伺服器的文字（A68）；角色收起後回呼仍執行；為開關另存本機副本（A66） |
 | 79 | `drinkUiEnabled`、`workerErrorMessage` 的 403 分支 | `core/.../drink/Drink.kt` | 只有 2xx 且 `enabled` 恰為 false 才隱藏按鈕；403 顯示「戒飲記錄已關閉，請到「戒飲設定」重新開啟」 | 非 2xx 或 null 被判成關閉，使用者看不到按鈕；403 分支放錯順序而吃掉 401（M43-S10） |
+
+## M4.4（戒飲設定頁重做）
+
+| # | 函式 | 檔案 | 白話說明 | 可能出錯的方式 |
+|---|---|---|---|---|
+| 80 | `DrinkSettingsActivity.saveSettings`／`saveEnabled`／`loadSettings`／`loadEnabled`（外觀重做後的流程） | `app/.../DrinkSettingsActivity.kt` | 仍帶存取密鑰對 Worker 寫入設定（金額、額度、開關）；讀到設定與開關之前「儲存」停用，避免用空白覆蓋；先存五個欄位、成功才存開關；結果訊息原樣顯示在頁首狀態列 | 外觀重做時誤動儲存流程（把 `enabled` 塞進設定 body、第一步失敗仍送開關、讀不到時放行儲存）；`catch` 裡把例外吞成可儲存（V73、V78、V66、M44-S10、W-A⑤）；載入失敗的畫面狀態沒停用「儲存」 |
+| 81 | `DrinkSettingsActivity.markField`／`clearMark`／`viewOf` 與 TextWatcher | `app/.../DrinkSettingsActivity.kt` | 依 `settingsFieldOf` 的結果把對應欄位的外框標紅，使用者改該欄時清掉；欄位與畫面元件的對應只寫在 `viewOf` | 標錯欄位（使用者改錯地方）或紅框殘留；只影響畫面標示，不影響送出內容。Activity 若自行解析訊息會與 core 對不上（A71、V72） |
+| 82 | `settingsFieldOf`／`SettingsField`／`SETTINGS_ERROR_PREFIX` | `core/.../drink/SettingsError.kt` | 純函式：訊息必須以固定開頭起頭、其後（去前後空白）恰好等於五個欄位名稱之一才回傳該欄位，其餘一律回 null | 錯誤訊息對應欄位只影響畫面標示（不碰密鑰與寫入）；label 與 `drink.js` 的 `SETTING_RULES` 悄悄不一致時紅框不再出現（A75、W-A①）；若加了模糊比對或備援猜測，會標錯欄位（V78） |
