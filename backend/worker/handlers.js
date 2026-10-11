@@ -37,6 +37,8 @@ import {
   fillLine,
   toBackupLog,
   validateDrinkSettings,
+  parseDrinkEnabled,
+  isDrinkEnabled,
   shouldAsk,
   questionPushId,
   drinkLogId,
@@ -129,6 +131,10 @@ const DRINK_SETTING_PREFIX = 'drink.'
 const DRINK_SETTING_FIELDS = ['subscriptionName', 'monthlyFee', 'resistValue', 'monthlyQuota', 'askTime']
 const DRINK_TEXT_SETTING_FIELDS = ['subscriptionName', 'askTime'] // 其餘三個欄位存成數字文字，讀回時轉整數
 const DRINK_ASKED_ON_KEY = 'drink.askedOn' // 每日詢問最後送出的日期
+const DRINK_ENABLED_KEY = DRINK_SETTING_PREFIX + 'enabled' // 戒飲記錄開關，獨立於五個設定欄位（A62）
+const DRINK_DISABLED_ERROR = '戒飲記錄已關閉'
+const DRINK_GUARDED_ROUTES = ['parse', 'preview', 'confirm', 'resist', 'undo'] // 關閉時被擋的寫入類路由（A64）
+const HTTP_FORBIDDEN = 403
 const DRINK_CAPPED_KIND = 'capped'
 const DRINK_TYPE = 'drink'
 const RESIST_TYPE = 'resist'
@@ -733,6 +739,18 @@ const handleDrinkSettingsWrite = async (deps, request) => {
   return jsonResponse(await readDrinkSettings(deps), 200)
 }
 
+// GET /api/drink/enabled：讀不到儲存體時讓例外往上丟，不當成開啟（A63）
+const handleDrinkEnabledRead = async (deps) =>
+  jsonResponse({ enabled: isDrinkEnabled(await deps.store.readSetting(DRINK_ENABLED_KEY)) }, 200)
+
+// PUT /api/drink/enabled：只接受布林值，不合格回 400 且不寫入
+const handleDrinkEnabledWrite = async (deps, request) => {
+  const checked = parseDrinkEnabled(await readPayload(request))
+  if (!checked.ok) return jsonResponse({ error: checked.error }, 400)
+  await deps.store.writeSetting(DRINK_ENABLED_KEY, String(checked.enabled))
+  return jsonResponse({ enabled: checked.enabled }, 200)
+}
+
 // GET /api/drink/export：戒飲存備份格式，不含已撤銷的紀錄（§4.1.6）
 const handleDrinkExport = async (deps) => {
   const settings = await readDrinkSettings(deps)
@@ -760,7 +778,8 @@ const DRINK_ROUTES = {
   history: { [POST_METHOD]: handleDrinkHistory, [GET_METHOD]: handleDrinkHistory },
   stats: { [GET_METHOD]: handleDrinkStats },
   settings: { [GET_METHOD]: handleDrinkSettingsRead, [PUT_METHOD]: handleDrinkSettingsWrite },
-  export: { [GET_METHOD]: handleDrinkExport }
+  export: { [GET_METHOD]: handleDrinkExport },
+  enabled: { [GET_METHOD]: handleDrinkEnabledRead, [PUT_METHOD]: handleDrinkEnabledWrite }
 }
 
 // /api/drink/* 的分派：路徑不認得回 404，方法不對回 405
@@ -770,6 +789,9 @@ const handleDrink = async (deps, request, pathname) => {
   if (route === null) return jsonResponse({ error: NOT_FOUND_MESSAGE }, 404)
   const handler = Object.hasOwn(route, request.method) ? route[request.method] : null
   if (handler === null) return jsonResponse({ error: METHOD_NOT_ALLOWED_MESSAGE }, 405)
+  if (DRINK_GUARDED_ROUTES.includes(name) && !isDrinkEnabled(await deps.store.readSetting(DRINK_ENABLED_KEY))) {
+    return jsonResponse({ error: DRINK_DISABLED_ERROR }, HTTP_FORBIDDEN)
+  }
   return handler(deps, request)
 }
 
@@ -1542,7 +1564,8 @@ export const runScheduled = async (deps, nowMs) => {
       const settings = await readDrinkSettings(deps)
       const askedOn = await deps.store.readSetting(DRINK_ASKED_ON_KEY)
       const logs = await deps.store.listDrinkLogs()
-      if (shouldAsk({ hour, askTime: settings.askTime, askedOn, todayKey: today, logs })) {
+      const enabled = isDrinkEnabled(await deps.store.readSetting(DRINK_ENABLED_KEY))
+      if (shouldAsk({ hour, askTime: settings.askTime, askedOn, todayKey: today, logs, enabled })) {
         const config = deps.pushConfig ?? {}
         if (isPushConfigured(config.serviceAccount, config.deviceToken)) {
           const finished = await speak(deps, { situation: SITUATIONS.ask, facts: EMPTY_TEXT, required: [], fallbackKey: 'ask' })

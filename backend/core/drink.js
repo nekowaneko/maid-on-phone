@@ -70,6 +70,8 @@ const SETTING_RULES = [
 const NAME_MIN_CHARS = 1
 const NAME_MAX_CHARS = 30
 const SETTINGS_ERROR_PREFIX = '設定值不正確：'
+const ENABLED_FALSE_TEXT = 'false'
+const ENABLED_ERROR = '設定值不正確：啟用戒飲記錄'
 
 // 功能函數定義
 
@@ -373,9 +375,19 @@ export const validateDrinkSettings = (payload) => {
 export const askHourOf = (askTime) =>
   typeof askTime === 'string' && ASK_TIME_PATTERN.test(askTime) ? Number(askTime.slice(0, HOUR_DIGITS)) : null
 
+// 把存起來的文字轉成是否啟用：只有明確存成 'false' 才算關閉，其餘（含 null、undefined、沒存過）一律開啟
+export const isDrinkEnabled = (stored) => stored !== ENABLED_FALSE_TEXT
+
+// 驗證請求內容：必須是物件且 enabled 恰為布林值（true 或 false）；字串、數字、null、缺少欄位一律不合格
+export const parseDrinkEnabled = (payload) =>
+  isPlainObject(payload) && typeof payload.enabled === 'boolean'
+    ? { ok: true, enabled: payload.enabled }
+    : { ok: false, error: ENABLED_ERROR }
+
 // 每日詢問要不要送（§4.1.5，不含推播是否已設定）：
-// 現在是詢問的整點、今天還沒問過、詢問時間所在的時段今天沒有任何未撤銷的紀錄
-export const shouldAsk = ({ hour, askTime, askedOn, todayKey, logs }) => {
+// 現在是詢問的整點、今天還沒問過、詢問時間所在的時段今天沒有任何未撤銷的紀錄；enabled 恰為 false 時一律不問
+export const shouldAsk = ({ hour, askTime, askedOn, todayKey, logs, enabled = true }) => {
+  if (enabled === false) return false
   const askHour = askHourOf(askTime)
   if (askHour === null || hour !== askHour) return false
   if (askedOn === todayKey) return false

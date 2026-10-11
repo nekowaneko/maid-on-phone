@@ -248,3 +248,9 @@
 - 新檢查驗證：對尚未實作的現況，V60、V64、V67 通過；V61、V62、V63、V65、V66 因尚未實作失敗（屬正常）；另以觸發輸入確認 V60（`DRINK_SETTING_FIELDS` 加 `enabled`）與 V67（catch 內 `setDrinkEnabled(true)`）會被抓到，測完已還原。`./verify.sh` 目前 L1 停在 V61。
 - V66 對「設定 body 不含 `"enabled"` 字串」的實作：`DrinkSettingsActivity.kt` 內 `"enabled"` 字面值必須在 `ENABLED_PATH` 前後 8 行內（開關那一步的 body），其餘位置出現即失敗；T3 若寫法不同需微調此條件（記 DECISIONS.md）。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+### T1
+- 後端完成：`drink.js` 新增 `isDrinkEnabled`、`parseDrinkEnabled`，`shouldAsk` 加選用參數 `enabled = true`；`handlers.js` 新增 `/api/drink/enabled`（GET／PUT）、`handleDrink` 守門（`parse preview confirm resist undo`，404、405 之後才讀開關）、`runScheduled` 只在每日詢問段落讀開關。輔助測試 `drink-enabled-core.test.js` 6 個。
+- `node --test`：616 個中 614 通過；M43 規格 S01～S07、S11～S15 全綠，M2 既有規格（含 M2-S11、M2-S12）全綠。僅 S08、S09 失敗（`controlsVisibility` 屬 T2 範圍，正常）。
+- `./verify.sh`：V60～V64 通過；停在 V65（角色頁 `setDrinkEnabled`、`controlsVisibility` 屬 T2），因此 L2 要到 T2 完成後才能全部跑完；V26 下限待 T2 後一併調高。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
