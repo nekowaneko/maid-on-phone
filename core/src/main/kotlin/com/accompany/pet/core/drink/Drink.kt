@@ -16,6 +16,9 @@ const val SETTINGS_PATH = "/api/drink/settings"         // 戒飲設定
 const val STATUS_NOT_SET = -1                           // 狀態：apiOrigin 或 apiSecret 沒設定，沒有連線
 const val STATUS_UNREACHABLE = 0                        // 狀態：連不上或逾時
 const val STATUS_UNAUTHORIZED = 401                     // 狀態：密鑰不對
+const val ENABLED_PATH = "/api/drink/enabled"           // 戒飲記錄開關
+const val STATUS_DISABLED = 403                         // 狀態：戒飲記錄已關閉
+const val DRINK_DISABLED_MESSAGE = "戒飲記錄已關閉，請到「戒飲設定」重新開啟"  // 回 403 時的提示（以 Worker 的「戒飲記錄已關閉」開頭）
 const val UNREACHABLE_MESSAGE = "連不上伺服器，晚點再試一次"                     // 連不上時的提示（§7.2）
 const val API_NOT_SET_MESSAGE = "還沒設定 apiSecret，見 docs/WORKER-SETUP.md 第 8 節"  // 尚未設定時的提示
 const val WRONG_SECRET_MESSAGE = "密鑰不對，檢查 apiSecret"                     // 回 401 時的提示
@@ -74,8 +77,13 @@ fun workerErrorMessage(status: Int): String? = when {
     status in 200..299 -> null                     // 成功
     status == STATUS_NOT_SET -> API_NOT_SET_MESSAGE
     status == STATUS_UNAUTHORIZED -> WRONG_SECRET_MESSAGE
+    status == STATUS_DISABLED -> DRINK_DISABLED_MESSAGE
     else -> UNREACHABLE_MESSAGE                    // 連不上、逾時、其他非 2xx
 }
+
+// 角色泡泡要不要顯示戒飲按鈕：只有「成功（2xx）且明確讀到 enabled 為 false」才隱藏；
+// 非 2xx、沒設定、連不上、讀不到或格式不對（enabled 為 null）一律顯示（M43-S10 唯一允許的降級）
+fun drinkUiEnabled(status: Int, enabled: Boolean?): Boolean = !(status in 200..299 && enabled == false)
 
 // 每天詢問時間的選項：00:00～23:00 共 24 個
 fun askTimeOptions(): List<String> = (0..23).map { it.toString().padStart(2, '0') + ":00" }  // 不受語系影響
