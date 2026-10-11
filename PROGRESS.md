@@ -239,3 +239,12 @@
 - 便宜批次產出（D01～D08、CHECKLIST、ARCHITECTURE、wish28、README／AGENT-SETUP）確認齊全。
 - 起點驗收：`./verify.sh` 原本失敗在 V06、V23（commit `aea127e` 已刻意把角色圖納入版控，與兩條禁令衝突）。經使用者決定，V06 改為只擋 `.jks`，V23 的 backend 檢查改為只擋 `.dev.vars`；修改後 `./verify.sh`（L1＋L2）全部通過。
 - 修正輪數：0；錯誤指紋：無。
+
+### T0b
+- 凍結 hash：`2e9288bd419455f4cecf102b910e4b054f6e9336`（commit「凍結 M4.3 規格測試」），已填入 `verify.sh` 的 `FROZEN_HASH`（另開 commit「更新凍結 hash」）。
+- 規格測試 15 個：JS 14（`backend/tests/spec/m43/drink-enabled.test.js`，S01～S09、S11～S15）、Kotlin 1（`M43SpecTest.kt`，S10）；每列編號各出現一次，沒有略過或獨跑標記。既有 M0～M4.2 規格測試檔 `git diff` 為空（只新增 m43 兩檔）。SPEC-MAP.md 已追加 M4.3 段落（含手機實測 D01～D08 對照）。
+- 起跑狀態：JS 規格 14 個中 13 個失敗（`/api/drink/enabled` 路由與守門尚未實作、`controlsVisibility` 不存在），只有 S12（讀主畫面檔案）通過；Kotlin 因 `drinkUiEnabled` 不存在編譯失敗，皆屬正常。S11 另用「不關閉開關」的複本確認其盤前均線／Todoist／聊天部分本身是綠的。
+- `verify.sh`：V04 改新 hash；V05 改 50 個 Kotlin 規格測試並加 `M43_SPEC_IDS`、`M43_JS_SPEC_IDS`；V26 下限維持 T0a 現值 590（T1～T4 結束時調高，T5 填最終值）並檢查 m43 規格檔存在；新增 V60～V70。結構檢查寫在新檔 `tools/check-m43.mjs`（V60、V61、V62、V63、V65、V67），V64、V66 直接寫在 `verify.sh`，V68、V69 在 L2、V70 在 L3。
+- 新檢查驗證：對尚未實作的現況，V60、V64、V67 通過；V61、V62、V63、V65、V66 因尚未實作失敗（屬正常）；另以觸發輸入確認 V60（`DRINK_SETTING_FIELDS` 加 `enabled`）與 V67（catch 內 `setDrinkEnabled(true)`）會被抓到，測完已還原。`./verify.sh` 目前 L1 停在 V61。
+- V66 對「設定 body 不含 `"enabled"` 字串」的實作：`DrinkSettingsActivity.kt` 內 `"enabled"` 字面值必須在 `ENABLED_PATH` 前後 8 行內（開關那一步的 body），其餘位置出現即失敗；T3 若寫法不同需微調此條件（記 DECISIONS.md）。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。

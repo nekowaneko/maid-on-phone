@@ -25,6 +25,9 @@ M4_SPEC_IDS="M4-S15C"  # M4 的 Kotlin 自動列
 M4_JS_SPEC_IDS="M4-S01 M4-S02 M4-S03 M4-S04 M4-S05 M4-S06 M4-S07 M4-S08 M4-S09 M4-S10 M4-S11 M4-S12 M4-S13 M4-S14 M4-S16 M4-S15B M4-S17 M4-S18 M4-S19 M4-S20 M4-S21 M4-S22"  # M4 的 Worker（15 列）與前端（2 列）自動列
 M42_SPEC_IDS="M42-S09"  # M4.2 的 Kotlin 自動列
 M42_JS_SPEC_IDS="M42-S01 M42-S02 M42-S03 M42-S04 M42-S05 M42-S07 M42-S08 M42-S09 M42-S10 M42-S11 M42-S12 M42-S13 M42-S15"  # M4.2 的 JS 自動列（13 列；S06、S14 為手機實測）
+M43_SPEC_IDS="M43-S10"  # M4.3 的 Kotlin 自動列
+M43_JS_SPEC_IDS="M43-S01 M43-S02 M43-S03 M43-S04 M43-S05 M43-S06 M43-S07 M43-S08 M43-S09 M43-S11 M43-S12 M43-S13 M43-S14 M43-S15"  # M4.3 的 JS 自動列（14 列；S10 為 Kotlin）
+M43_BASE="5d9771a4e7a08007687d9cda2de14fa8f6a10f49"  # T0a 記錄的基準 commit（V60、V64 比對用）
 M3R_JS_SPEC_IDS="M3R-S01 M3R-S02 M3R-S03 M3R-S04 M3R-S05 M3R-S06 M3R-S07 M3R-S08 M3R-S09 M3R-S10 M3R-S11 M3R-S12 M3R-S13 M3R-S14 M3R-S15 M3R-S18 M3R-S19"  # M3R 的 Worker 與懸浮窗自動列
 M41_SPEC_IDS="M41-S01 M41-S02 M41-S03 M41-S04 M41-S05 M41-S06 M41-S07 M41-S08 M41-S09 M41-S14"  # M4.1 的 Kotlin 自動列
 M41_JS_SPEC_IDS="M41-S11 M41-S12"  # M4.1 的 JS 自動列
@@ -82,14 +85,14 @@ git diff --quiet "$FROZEN_HASH" -- "$SPEC_DIR" "$JS_SPEC_DIR" || fail "V04 spec 
 [ -z "$(git status --porcelain -- "$SPEC_DIR" "$JS_SPEC_DIR")" ] || fail "V04 spec 目錄有未提交變動"
 pass "V04"
 
-# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個＋M4 1 個＋M4.1 10 個＋M4.2 1 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列、M4 22 列、M4.1 2 列、M4.2 13 列各一次；沒有略過或獨跑標記
+# V05：Kotlin M0 10 個＋M1 14 個＋M1.5 4 個＋M1.6 6 個＋M2 1 個＋M3R 2 個＋M4 1 個＋M4.1 10 個＋M4.2 1 個＋M4.3 1 個規格測試、各列一次；JS M1.5 9 列、M1.6 8 列、M2 15＋4 列、M3R 17 列、M4 22 列、M4.1 2 列、M4.2 13 列、M4.3 14 列各一次；沒有略過或獨跑標記
 TEST_COUNT=$(grep -rh '@Test' "$SPEC_DIR" | wc -l)
-[ "$TEST_COUNT" -eq 49 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 49"
-for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS $M4_SPEC_IDS $M41_SPEC_IDS $M42_SPEC_IDS; do
+[ "$TEST_COUNT" -eq 50 ] || fail "V05 規格測試數量為 $TEST_COUNT，應為 50"
+for id in $SPEC_IDS $M1_SPEC_IDS $M15_SPEC_IDS $M16_SPEC_IDS $M2_SPEC_IDS $M3R_SPEC_IDS $M4_SPEC_IDS $M41_SPEC_IDS $M42_SPEC_IDS $M43_SPEC_IDS; do
   n=$(grep -rhE "fun \`$id " "$SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
-for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS $M4_JS_SPEC_IDS $M41_JS_SPEC_IDS $M42_JS_SPEC_IDS; do
+for id in $M15_JS_SPEC_IDS $M16_JS_SPEC_IDS $M2_JS_SPEC_IDS $M2_JS_B_SPEC_IDS $M3R_JS_SPEC_IDS $M4_JS_SPEC_IDS $M41_JS_SPEC_IDS $M42_JS_SPEC_IDS $M43_JS_SPEC_IDS; do
   n=$(grep -rhF "test('$id " "$JS_SPEC_DIR" | wc -l)
   [ "$n" -eq 1 ] || fail "V05 $id 出現 $n 次"
 done
@@ -574,6 +577,69 @@ else
   echo "⚠️  --core-only：略過 V07～V10（app 尚未實作）"
 fi
 
+# ===== M4.3 戒飲記錄開關（docs/M4.3-EXPENSIVE-PLAN.md §6.1）=====
+M43_OVERLAY_KT="app/src/main/java/com/accompany/pet/OverlayService.kt"
+M43_SETTINGS_KT="app/src/main/java/com/accompany/pet/DrinkSettingsActivity.kt"
+M43_DRINK_KT="core/src/main/kotlin/com/accompany/pet/core/drink/Drink.kt"
+
+# V60：A62 開關獨立於五個設定欄位，設定的讀寫函式與基準相同
+node tools/check-m43.mjs v60 "$M43_BASE" || fail "V60 開關被放進設定欄位，或設定的讀寫函式被改動"
+pass "V60"
+
+# V61：A64 守門只在 handleDrink、集合恰為五個寫入類路由
+node tools/check-m43.mjs v61 "$M43_BASE" || fail "V61 守門集合或位置不符"
+pass "V61"
+
+# V62：A65 排程只有每日戒飲詢問那一段讀開關
+node tools/check-m43.mjs v62 "$M43_BASE" || fail "V62 排程讀開關的位置不符"
+pass "V62"
+
+# V63：drink.js 新增函式保持純函式
+node tools/check-m43.mjs v63 "$M43_BASE" || fail "V63 drink.js 新增函式不純"
+pass "V63"
+
+# V64：A69 主畫面不動
+git diff --quiet "$M43_BASE" -- app/src/main/res/layout/activity_main.xml app/src/main/java/com/accompany/pet/MainActivity.kt || fail "V64 主畫面（activity_main.xml 或 MainActivity.kt）與基準 commit 不同"
+pass "V64"
+
+# V65：網頁接線
+node tools/check-m43.mjs v65 "$M43_BASE" || fail "V65 角色頁的開關接線不符"
+pass "V65"
+
+# V66：App 接線與 A66、A68（SharedPreferences 等字樣的次數不得比基準多；"enabled" 字串只准出現在 ENABLED_PATH 附近的開關 body）
+for f in "$M43_OVERLAY_KT" "$M43_SETTINGS_KT"; do
+  for word in 'SharedPreferences' 'getSharedPreferences' 'drinkEnabled'; do
+    now=$(grep -c "$word" "$f" || true)
+    before=$(git show "$M43_BASE:$f" | grep -c "$word" || true)
+    [ "$now" -le "$before" ] || fail "V66 $f 的 $word 比基準多（A66 不得為開關另存本機副本）"
+  done
+done
+grep -q 'ENABLED_PATH' "$M43_OVERLAY_KT" || fail "V66 OverlayService.kt 缺少 ENABLED_PATH"
+grep -q 'drinkUiEnabled(' "$M43_OVERLAY_KT" || fail "V66 OverlayService.kt 缺少 drinkUiEnabled("
+grep -q 'setDrinkEnabled' "$M43_OVERLAY_KT" || fail "V66 OverlayService.kt 缺少 setDrinkEnabled"
+SET_JS_LINES=$(grep -n 'setDrinkEnabled' "$M43_OVERLAY_KT" | grep 'callJs' || true)
+[ -n "$SET_JS_LINES" ] || fail "V66 OverlayService.kt 沒有用 callJs 呼叫 setDrinkEnabled"
+if echo "$SET_JS_LINES" | grep -vE 'setDrinkEnabled\(\$[A-Za-z]+\)'; then fail "V66 callJs 的 setDrinkEnabled 參數不是單一布林變數"; fi
+grep -q 'SwitchCompat' "$M43_SETTINGS_KT" || fail "V66 DrinkSettingsActivity.kt 缺少 SwitchCompat"
+grep -q 'ENABLED_PATH' "$M43_SETTINGS_KT" || fail "V66 DrinkSettingsActivity.kt 缺少 ENABLED_PATH"
+ENABLED_BODY_LINES=$(grep -n '"enabled"' "$M43_SETTINGS_KT" | cut -d: -f1 || true)
+ENABLED_PATH_LINES=$(grep -n 'ENABLED_PATH' "$M43_SETTINGS_KT" | cut -d: -f1 || true)
+for l in $ENABLED_BODY_LINES; do
+  near=0
+  for p in $ENABLED_PATH_LINES; do
+    d=$((l - p)); [ "$d" -lt 0 ] && d=$((-d))
+    [ "$d" -le 8 ] && near=1
+  done
+  [ "$near" -eq 1 ] || fail "V66 DrinkSettingsActivity.kt 第 $l 行的 \"enabled\" 不在開關的 ENABLED_PATH 附近（設定 body 不得帶 enabled）"
+done
+grep -q 'fun drinkUiEnabled' "$M43_DRINK_KT" || fail "V66 Drink.kt 缺少 fun drinkUiEnabled"
+[ "$(grep -rho '@JavascriptInterface' app/src | wc -l)" -eq 6 ] || fail "V66 @JavascriptInterface 不是 6 次"
+pass "V66"
+
+# V67：條款 12，W-B 靜默降級掃描
+node tools/check-m43.mjs v67 "$M43_BASE" || fail "V67 發現把例外吞成開啟的寫法"
+pass "V67"
+
 echo "===== L2 單元測試與編譯 ====="
 
 if runs C; then
@@ -594,7 +660,8 @@ if runs D && [ "$STAGE" -ge 2 ]; then
     NODE_MIN=450   # M3R 起跑前（不含第一輪的 todoist-core、todoist-api 輔助測試）＋M3R Worker 規格 15 列＋M4 Worker 規格 15 列
   else
     NODE_FILES="tests/**/*.test.js"
-    NODE_MIN=590   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助（498）＋M4.2 規格 13 列＋M4.2 輔助與 W-A（T5 填實際值）
+    NODE_MIN=590   # 上一行＋角色頁測試＋M3R 規格＋M4 規格＋M4.1 規格 2 列與輔助（498）＋M4.2 規格 13 列＋M4.2 輔助與 W-A；M4.3 先填 T0a 現值，T1～T4 結束時依實際值調高（T5 填最終值）
+    [ -f backend/tests/spec/m43/drink-enabled.test.js ] || fail "V26 缺少 M4.3 規格測試 spec/m43/drink-enabled.test.js"
   fi
   NODE_OUT=$(cd backend && node --test $NODE_FILES 2>&1) || { echo "$NODE_OUT" | grep -E '^not ok|^# (pass|fail)'; fail "V26 backend 測試未通過"; }
   NODE_PASS=$(echo "$NODE_OUT" | grep -E '^# pass ' | awk '{print $3}')
@@ -644,6 +711,18 @@ WA_CALL_TEST="backend/tests/call-wiring.test.js"
 if grep -vE '^\s*//' "$WA_CALL_TEST" | grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub'; then fail "V57 $WA_CALL_TEST 含 monkeypatch"; fi
 (cd backend && node --test tests/call-wiring.test.js) >/dev/null 2>&1 || fail "V57 $WA_CALL_TEST 測試未通過"
 pass "V57"
+
+# V68：M4.3 規格測試通過（14 個 JS、1 個 Kotlin）
+(cd backend && node --test tests/spec/m43/drink-enabled.test.js) >/dev/null 2>&1 || fail "V68 M4.3 JS 規格測試未通過"
+./gradlew :core:test --tests "com.accompany.pet.spec.m43.*" -q || fail "V68 M4.3 Kotlin 規格測試未通過"
+pass "V68"
+
+# V69：W-A 契約測試存在且通過；不含 mock.method、monkeypatch、jest.mock、sinon.stub【條款 11】
+WA_ENABLED_TEST="backend/tests/drink-enabled-wiring.test.js"
+[ -f "$WA_ENABLED_TEST" ] || fail "V69 缺少 $WA_ENABLED_TEST"
+if grep -vE '^\s*//' "$WA_ENABLED_TEST" | grep -nE 'mock\.method|monkeypatch|jest\.mock|sinon\.stub'; then fail "V69 $WA_ENABLED_TEST 含 monkeypatch"; fi
+(cd backend && node --test tests/drink-enabled-wiring.test.js) >/dev/null 2>&1 || fail "V69 $WA_ENABLED_TEST 測試未通過"
+pass "V69"
 
 if [ "$FULL" -eq 0 ]; then
   [ -z "$LANE" ] || { echo "🎉 L1＋L2（$LANE 線）全部通過"; exit 0; }
@@ -712,6 +791,22 @@ if ! sed -n '/## M4.2/,$p' MUTATION-REPORT.md | grep -q '狀態：待補'; then
   done
 fi
 pass "V58"
+
+# V70：M4.3 風險審查與突變報告涵蓋項目【條款 9、10】
+for name in handlers.js DrinkSettingsActivity OverlayService; do
+  sed -n '/## M4.3/,$p' RISK-REVIEW.md 2>/dev/null | grep -q "$name" || fail "V70 RISK-REVIEW.md 的 M4.3 段落缺少 $name"
+done
+grep -q '## M4.3' MUTATION-REPORT.md || fail "V70 MUTATION-REPORT.md 缺少 ## M4.3"
+if sed -n '/## M4.3/,$p' MUTATION-REPORT.md | grep -q '狀態：待補'; then
+  for field in 未執行原因 預定範圍 程式版本 原工具補跑方式 替代品候選 搜尋紀錄; do
+    sed -n '/## M4.3/,$p' MUTATION-REPORT.md | grep -q "$field" || fail "V70 MUTATION-REPORT.md 的 M4.3 待補報告缺少欄位：$field"
+  done
+else
+  for scope in backend/core/drink.js parseDrinkEnabled drinkUiEnabled workerErrorMessage; do
+    sed -n '/## M4.3/,$p' MUTATION-REPORT.md | grep -q "$scope" || fail "V70 MUTATION-REPORT.md 的 M4.3 段落缺少 $scope"
+  done
+fi
+pass "V70"
 
 # V17：報告檔存在
 [ -f SECURITY-REPORT.md ] || fail "V17 缺少 SECURITY-REPORT.md"
