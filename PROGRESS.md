@@ -197,3 +197,10 @@
 - 起跑狀態：`./verify.sh` 的 L1 停在 V47（`Chat.kt`、`call-state.js` 還沒有 `CHAT_EXIT_URL`）；V48～V53 對真實專案逐條跑，失敗原因都是模組或網頁尚未實作；V54、V55 已通過。JS 規格測試因 `call-state.js`、`blink.js` 不存在而匯入失敗、Kotlin 因 `isChatExitUrl` 不存在而編譯失敗，屬正常。
 - 新檢查用觸發輸入驗證：好樣本全過，35 種壞輸入（改值、缺 id、巢狀錯、寫死文字、catch 內設 live、清除紀錄、假位元組、色碼超量等）全部被抓到。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+### T1
+- T1-J：`call-state.js`、`blink.js` 新增，`emotion-map.json` 改為整張表情圖（加 pout、shy，刪換裝三鍵）；輔助測試 `call-state.test.js`、`call-blink.test.js`。`emotion.test.js` 的 `layerToAssetPath` 輔助測試原本假設 `layers` 非空，改成自備設定驗證（非規格測試）。
+- T1-K：`Chat.kt` 追加 `CHAT_EXIT_URL`、`isChatExitUrl`；輔助測試 `ChatExitHelperTest.kt`。
+- `node --test`：585 通過、1 失敗（M42-S13，需要 T4 改 `index.html`／`manifest`，不屬本階段）；規格 S01～S05、S07、S08、S10～S13 之 JS 與 S15 通過，S09 JS 與 Kotlin 通過。`./gradlew :core:test` 全綠。
+- `./verify.sh` 的 L1 通過 V01～V47，停在 V48（`outfit.js` 尚未刪，屬 T4）；V50 單獨跑通過；V52 對 core 兩檔手動確認無 import、document、window、fetch、localStorage、Math.random。
+- 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。

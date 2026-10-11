@@ -60,3 +60,9 @@ fun isSameOrigin(baseUrl: String, targetUrl: String): Boolean {
 // 依聊天網址決定開啟聊天畫面或提示未設定
 fun decideChat(rawUrl: String?): ChatAction =
     if (normalizeChatUrl(rawUrl) == null) ChatAction.SHOW_NOT_SET else ChatAction.OPEN
+
+// 常數定義
+const val CHAT_EXIT_URL = "chat-exit://close"  // 與 call.json 的 exitUrl 相同
+
+// 判斷網址是不是聊天網頁要求關閉聊天畫面的網址；只接受與 CHAT_EXIT_URL 逐字相同者（不分大小寫的 scheme 也不放行）
+fun isChatExitUrl(url: String?): Boolean = url == CHAT_EXIT_URL
