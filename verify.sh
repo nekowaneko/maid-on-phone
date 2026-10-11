@@ -106,7 +106,7 @@ else
     | xargs -0 grep -nIE 'AIza|sk-|-----BEGIN|password=' 2>/dev/null || true)
   [ -z "$LEAKS" ] || { echo "$LEAKS"; fail "V06 追蹤中的檔案含疑似憑證"; }
 fi
-if git ls-files | grep -E '\.jks$|frames/local/.*\.png$'; then fail "V06 追蹤了金鑰或私人角色圖"; fi
+if git ls-files | grep -E '\.jks$'; then fail "V06 追蹤了金鑰"; fi
 if git ls-files | grep -E '(^|/)(firebase\.properties|google-services\.json)$'; then fail "V06 追蹤了 Firebase 設定檔"; fi
 pass "V06"
 
@@ -115,7 +115,7 @@ TOML=backend/wrangler.toml
 grep -qE '^name = "pet-maid-api"$' "$TOML" || fail "V23 wrangler.toml 名稱不是 pet-maid-api"
 if grep -n 'neko-companion' "$TOML"; then fail "V23 wrangler.toml 含 neko-companion"; fi
 if grep -nE '^\s*(FCM_SERVICE_ACCOUNT|FCM_DEVICE_TOKEN|APP_SECRET|LLM_API_KEY)\s*=' "$TOML"; then fail "V23 wrangler.toml 含金鑰賦值"; fi
-if git ls-files backend | grep -E '\.png$|(^|/)\.dev\.vars$'; then fail "V23 backend 追蹤了立繪或 .dev.vars"; fi
+if git ls-files backend | grep -E '(^|/)\.dev\.vars$'; then fail "V23 backend 追蹤了 .dev.vars"; fi
 pass "V23"
 
 # V24：googleapis.com 只出現在 fcm-client.js；backend/core 不連線、不碰憑證與環境變數（M1.5 A18）

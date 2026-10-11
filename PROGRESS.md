@@ -229,3 +229,13 @@
 - 突變測試：`stryker.config.json` 加入 `call-state.js`、`blink.js` 與三個測試檔（逐一列出）；`call-state.js` 114/124、`blink.js` 27/29、`isChatExitUrl` 2/2；存活突變寫成建議規格 M42-S16～S19，未改任何測試或實作。
 - `npm audit`（暫存資料夾產生鎖定檔）0 個漏洞；SECURITY-REPORT.md、RISK-REVIEW.md（#70～#74）、MUTATION-REPORT.md、ACCEPTANCE-M4.2.md 已追加。
 - 修正輪數：0；錯誤指紋：無；驗收項失敗次數：全部 0。
+
+## M4.3
+
+### T0a
+- 基準 commit（V60、V64 比對用）：`5d9771a4e7a08007687d9cda2de14fa8f6a10f49`。
+- 現有測試通過數（V26 現值）：`:core:test` 131 個（20 個測試類別，0 失敗）；backend `node --test` 590 個（0 失敗）。
+- Java：直接執行 Gradle 報 `JAVA_HOME is not set`；依計畫書 §7 在指令內設 `JAVA_HOME=C:\Program Files\Android\Android Studio\jbr`（存在），未改系統環境。
+- 便宜批次產出（D01～D08、CHECKLIST、ARCHITECTURE、wish28、README／AGENT-SETUP）確認齊全。
+- 起點驗收：`./verify.sh` 原本失敗在 V06、V23（commit `aea127e` 已刻意把角色圖納入版控，與兩條禁令衝突）。經使用者決定，V06 改為只擋 `.jks`，V23 的 backend 檢查改為只擋 `.dev.vars`；修改後 `./verify.sh`（L1＋L2）全部通過。
+- 修正輪數：0；錯誤指紋：無。

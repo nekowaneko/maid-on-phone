@@ -16,3 +16,9 @@
 ## M1.6 貴批次
 
 - ✅ 已解決（2026-10-04）：B 線斷路器停在 V28（指紋 `5e3838ab558d`）。根因是 `verify.sh` 第 118 行 sed 的替換字串被寫成 0x01 位元組而不是 `\1`，只要角色頁載入任何 script 就一定失敗。B 線依契約沒有修改 verify.sh，以暫存副本佐證修正後全綠；規劃者整合時修正（`80f0d9d`）。
+
+## M4.3 貴批次
+
+- ✅ 已解決（使用者選 a）：**T0a 停止：`./verify.sh` 起點就失敗在 V06**（非本批次造成，基準 commit `5d9771a`）：`verify.sh` 第 109 行禁止追蹤 `frames/local/*.png`，但 commit `aea127e`（「角色圖片納入版本控制，新增 ART-LICENSE.md」）已刻意把 `app/src/main/assets/pet/frames/local/` 的 7 張 png 納入版本控制，兩者互相衝突。V07 之後尚未驗證。T0a 步驟 3 規定起點不綠就停，所以未寫 PROGRESS.md、未 commit。
+- 其餘前置皆已確認：便宜批次產出齊全（D01～D08、CHECKLIST `## M4.3`、ARCHITECTURE、wish28 `M4.3 驗收`、README／AGENT-SETUP 的 `啟用戒飲記錄`）；Gradle 需設 `JAVA_HOME=C:\Program Files\Android\Android Studio\jbr` 才能跑；`:core:test` 通過（0 失敗，約 131 個）、backend `node --test` 590 個全過。
+- 請使用者決定：(a) 改 `verify.sh` V06（以及 V23 若也涉及），移除對 `frames/local/*.png` 的禁令，改為只擋 `.jks`；或 (b) 把角色圖移出追蹤。
