@@ -81,3 +81,11 @@
 5. App：`DrinkSettingsActivity` 加「啟用戒飲記錄」開關，按「儲存」時先存五個欄位、成功後再存開關。`OverlayService` 在角色頁載入完成與每次展開泡泡時讀 `/api/drink/enabled`，用 `callJs` 呼叫網頁的 `window.pet.setDrinkEnabled(布林值)`，網頁據此隱藏「說話」「沒喝」「戒飲歷史」三顆按鈕。`@JavascriptInterface` 仍是 6 個。
 6. 讀不到設定（沒網路、尚未設定伺服器、格式不對）時，三顆按鈕維持顯示，這是唯一允許的降級，只由 core 的 `drinkUiEnabled` 一處決定。
 7. 主畫面（`activity_main.xml`、`MainActivity.kt`）不動，「戒飲設定」卡片不論開關都留在原位。
+
+## M4.4 戒飲設定頁重做
+
+1. 只改 `DrinkSettingsActivity` 的外觀：深色玻璃風格的分組卡片、頂部狀態列、底部固定「重新讀取」「儲存」、欄位標紅。版面仍用程式碼組成，不新增 layout XML；樣式放在 `res/drawable/`、`res/color/` 與 `res/values/colors.xml`。
+2. 欄位（訂閱名稱、月費、每月額度、入帳金額、每天詢問時間）、「啟用戒飲記錄」開關、兩步驟儲存（先五個欄位，成功才存開關）與後端全部不變。
+3. 錯誤只在頁首（狀態列）顯示，並把對應欄位標紅，不在欄位下方另顯示錯誤文字。欄位由 `core` 的純函式 `settingsFieldOf(message)` 從 Worker 回的「設定值不正確：欄位名稱」對應出來；對不到欄位（含連不上、沒有錯誤文字、開關那一步的錯誤）就不標紅任何欄位。
+4. 欄位名稱的契約：`SettingsField` 的中文名稱必須與 `backend/core/drink.js` 的 `SETTING_RULES` 的 label 完全相同，由輔助測試用真的 `validateDrinkSettings` 的輸出驗證。
+5. 主畫面（`activity_main.xml`、`MainActivity.kt`）不動。
