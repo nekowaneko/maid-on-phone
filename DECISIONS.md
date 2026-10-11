@@ -160,3 +160,11 @@
 75. **設定載入失敗時的重撥**：`emotion-map.json` 或 `call.json` 讀不到時，`call.js` 不發請求，直接走 `connectEvent({ status: null })` → 連線失敗；此時按「重撥」直接整頁重新載入（`app.js` 沒載到設定，單靠重新探測救不回來）。
 76. **`companion:reply-start` 發在 `beginSpeaking`**：即「等待回覆結束、表情先行的空拍之後、第一個字吐出之前」；`companion:reply-failed` 發在 `requestReply` 的 401 與例外兩條既有失敗路徑，在套用制式回覆之前。
 77. **蓋層文字與按鈕文字由 `call.js` 啟動時依 `CALL_TEXT` 填入**，`index.html` 的蓋層只放結構（無文字），避免兩處各寫一份。「⋯」面板六顆按鈕的文字（含前綴符號）寫在 `index.html`，順序與文字照 `MORE_MENU_ITEMS`。
+
+## M4.3 貴批次
+
+- 突變測試的 Stryker 指令不含 `spec/m43/drink-enabled.test.js`：它的 S08、S09、S12 讀 `app/` 目錄，Stryker 沙盒只複製 backend 會讓初始測試失敗。改用 `drink-enabled-core.test.js` 驗 `drink.js` 的三個函式；這是限制而非放寬，已寫入 MUTATION-REPORT.md。
+- `parseEnabled` 放在 `OverlayService.kt` 檔尾成為頂層函式，讓 `DrinkSettingsActivity` 共用，避免兩處各寫一份解析（它回 `null` 只代表「讀不到」，降級仍只由 `drinkUiEnabled` 決定）。
+- 設定畫面兩步驟儲存：第二步（開關）若回 400，顯示 Worker 的 error 欄位（沿用 `saveResultMessage`）。
+- `drink-enabled-wiring.test.js` 讀檔時統一換行（Windows 檔案是 CRLF）。
+- 建議後續（僅記錄，未實作）：新增 M43-S16（防重複詢問，見 MUTATION-REPORT.md）；角色出現瞬間三顆按鈕先顯示再隱藏的閃爍（A66 的刻意取捨）。

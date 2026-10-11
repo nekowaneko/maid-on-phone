@@ -272,3 +272,10 @@
 - 沒有發現需要對齊的名稱或文字缺口，T1～T3 的檔案未再修改。V26 下限調為 614（實際 614）。
 - `./verify.sh`（L1＋L2）全部通過（V01～V69；V70 屬 L3，留到 T5）。
 - 修正輪數：0（測試內切函式遇到 CRLF 換行，是測試自己的問題，已在測試內統一換行，未動被測程式）；錯誤指紋：無。
+
+### T5
+- `./verify.sh --full`：V01～V69 通過（含 V15 突變步驟、assembleDebug、Lint）；第一次停在 V70（MUTATION-REPORT.md 尚無 M4.3 段落，屬報告尚未產生）。
+- 突變測試：`drink.js` 三函式 43/44；`Drink.kt` 兩函式 16/16；Stryker 的第一次結果因設定在跑到一半才改而作廢，用新設定單獨重跑（見 MUTATION-REPORT.md）。存活 1 個，建議規格列 M43-S16。
+- RISK-REVIEW.md #75～#79、SECURITY-REPORT.md、DECISIONS.md、CHECKLIST.md 已追加；`npm audit` 無網路，列入 CHECKLIST.md。
+- 修正輪數：0；錯誤指紋：無（V70 失敗屬預期的報告缺漏，補齊報告後重跑）。
+- 補齊報告後重跑 `./verify.sh --full`：L1＋L2＋L3 全部通過（V01～V70，V26 backend 614 個）。

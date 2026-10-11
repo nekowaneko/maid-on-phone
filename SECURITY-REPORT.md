@@ -119,3 +119,16 @@ gitleaks 未安裝，改用計畫指定的 grep 樣式掃描所有追蹤檔：�
 - 表情圖：會被部署成公開靜態檔案（與原本圖層同樣處境），已列入 CHECKLIST.md。
 - 依賴套件稽核：`backend/package.json` 沒有任何依賴；`package-lock.json` 依規定不進 git，因此在暫存資料夾用同一份 `package.json` 產生鎖定檔後執行 `npm audit`，結果 **0 vulnerabilities**。本批次沒有新增任何 npm 或 Gradle 依賴。
 - 憑證掃描（V06）：通過，沒有新增含憑證的檔案。
+
+## M4.3（戒飲記錄開關）
+
+- 高嚴重度發現：**無**。
+- 架構約束檢查：
+  - A62：`enabled` 不在 `DRINK_SETTING_FIELDS`，`/api/drink/settings` 回應與驗證不變（V60、M2-S12）；設定畫面送出的設定 body 不含 `enabled`（V66、drink-enabled-wiring）。
+  - A66：`OverlayService.kt`、`DrinkSettingsActivity.kt` 不含 `SharedPreferences`，沒有新增開關的本機副本（V66）。
+  - A67：「讀不到就顯示」的降級只在 `drinkUiEnabled` 一處（V67）。
+  - A68：`@JavascriptInterface` 仍恰好 6 個；`callJs` 只拼接 `drinkUiEnabled` 回傳的布林值，不含伺服器文字（V08、V66）。
+- 授權：`/api/drink/enabled` 在 `/api/` 授權中介之後，無密鑰回 401；PUT 只接受布林值，不合格回 400 且不寫入。403 回應只含固定文字，不回傳儲存內容。
+- 密鑰：App 兩處新請求都走 `WorkerApi`（密鑰只在標頭），沒有寫進網址、日誌或畫面。
+- 憑證掃描（V06）：通過，沒有新增含憑證的檔案。
+- 依賴套件：本批次沒有新增任何 npm 或 Gradle 依賴；`npm audit` 需要連網，已列入 CHECKLIST.md。

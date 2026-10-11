@@ -133,3 +133,13 @@ M4 計畫書 §2.1 列的五個高風險模組都在此清單中（`backend/work
 | 72 | `call.js` 的連線探測（`setupCall`） | `backend/web/call.js` | 呼叫中時帶存取密鑰打 `/api/usage`，只看 HTTP 狀態碼，不讀、不記錄回應內容；結果交給 `connectEvent` | 例外若被吞掉並當成成功，會在連不上時顯示「通話中」；逾時沒中止會卡在呼叫中。目前任何例外都轉成 `status: null` 走 `connect-failed`（V52） |
 | 73 | `call.js` 的事件接線與按鈕 | `backend/web/call.js` | 監聽 app.js 發出的三個事件、掛斷、重撥、關閉聊天；狀態文字與按鈕可用性一律來自 `callView` | 事件名稱兩端對不上，畫面就停在錯的狀態；重撥若清掉 `companion:history` 會弄丟對話紀錄（M42-S08、V52、V59） |
 | 74 | `app.js` 的 `syncComposer` 與三個事件 | `backend/web/app.js` | 輸入框可用＝`call.js` 允許且 `app.js` 沒在處理中；送出、開始說話、回覆失敗時對 `document` 發出事件；掛斷時作廢進行中的這一輪 | 兩邊各自改 `disabled` 會互相蓋掉（回到通話中時被強制放開）；掛斷後晚到的串流片段若沒被丟掉，會在已結束畫面又冒出字；讀寫存取密鑰的既有邏輯未動（A60：逐字節奏常數未改） |
+
+## M4.3（戒飲記錄開關）
+
+| # | 函式 | 檔案 | 白話說明 | 可能出錯的方式 |
+|---|---|---|---|---|
+| 75 | `handleDrink` 的守門與 `DRINK_GUARDED_ROUTES` | `backend/worker/handlers.js`（第 136、792 行） | 開關為關時，`parse`、`preview`、`confirm`、`resist`、`undo` 五條寫入類路由回 403「戒飲記錄已關閉」，在 404、405 判斷之後才讀開關 | 守門集合被誤改：少一條就能繞過關閉寫入，多擋 `history`、`stats`、`export`、`settings`、`enabled` 會讓使用者關掉後看不到資料、也無法重新打開（A64、M43-S07） |
+| 76 | `handleDrinkEnabledRead`／`handleDrinkEnabledWrite` 與 `runScheduled` 的詢問略過 | `backend/worker/handlers.js`（第 743～751、1567 行） | 讀寫獨立鍵 `drink.enabled`；排程在每日詢問前讀開關，關閉時不推播也不寫 `drink.askedOn` | 讀取儲存體失敗被吞成「開啟」，關閉的使用者在儲存體出問題時被詢問或被寫入（A63）；寫入開關接受非布林值；把 `enabled` 塞進五欄位會讓 M2-S12 失敗（A62） |
+| 77 | `DrinkSettingsActivity.loadEnabled`、`saveSettings`、`saveEnabled` | `app/.../DrinkSettingsActivity.kt`（第 139、174、197 行） | 開關列；讀不到開關就不讓存；儲存先 PUT 五欄位，成功才 PUT 開關 | 設定儲存只成功一半（欄位已存、開關失敗），畫面顯示開關步驟的錯誤，不回滾；設定 body 若帶 `enabled` 會與舊版 App 的行為不一致（A62、M43-S15）；讀不到時被當成「開」會誤存 |
+| 78 | `OverlayService.refreshDrinkEnabled`、`parseEnabled` | `app/.../OverlayService.kt`（第 468、780 行） | 頁面載入完成與每次展開泡泡時帶密鑰 GET 開關，結果經 `drinkUiEnabled` 轉成布林值交給網頁 | 讀取失敗被自己吞成開啟（降級只准在 `drinkUiEnabled` 一處，A67）；`callJs` 拼接了來自伺服器的文字（A68）；角色收起後回呼仍執行；為開關另存本機副本（A66） |
+| 79 | `drinkUiEnabled`、`workerErrorMessage` 的 403 分支 | `core/.../drink/Drink.kt` | 只有 2xx 且 `enabled` 恰為 false 才隱藏按鈕；403 顯示「戒飲記錄已關閉，請到「戒飲設定」重新開啟」 | 非 2xx 或 null 被判成關閉，使用者看不到按鈕；403 分支放錯順序而吃掉 401（M43-S10） |

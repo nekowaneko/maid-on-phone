@@ -243,3 +243,35 @@ T4 前曾有 3 個非等價存活（`sep <= 0` 邊界、`colon < 0` 決定主機
 | M42-S17 | 讀 `CALL_TEXT` 的呼叫中兩句 | `connectingTitle` 為「呼叫中…」、`connectingBody` 為「正在連上她」 | `call-state.js` 第 25、26 行 |
 | M42-S18 | `formatCallTime(NaN)`、`("abc")`、`(Infinity)`、`(-1)` | 一律回 `00:00` | `call-state.js` 第 76 行 |
 | M42-S19 | `nextBlinkDelay(NaN, cfg)`、`("0.5", cfg)` | 回區間下界（`minIntervalMs`），不回 NaN | `blink.js` 第 12 行 |
+
+## M4.3（戒飲記錄開關）
+
+- 執行範圍：
+  - `backend/core/drink.js` 第 379～396 行：`isDrinkEnabled`、`parseDrinkEnabled`、`shouldAsk`（Stryker 行範圍語法 `core/drink.js:379-396`，共 44 個突變）
+  - `core/src/main/kotlin/com/accompany/pet/core/drink/Drink.kt` 內的 `drinkUiEnabled`（第 86 行）與 `workerErrorMessage`（第 76～82 行）（Pitest 對整個檔案執行，只分析這兩個函式，共 16 個突變）
+- 設定調整：`backend/stryker.config.json` 的 `mutate` 把 `core/drink.js` 改成 `core/drink.js:379-396`；測試指令加入 `tests/drink-enabled-core.test.js`。**`tests/spec/m43/drink-enabled.test.js` 沒有放進指令**：Stryker 在暫存沙盒只複製 backend，S08、S09、S12 要讀 `app/` 下的檔案，沙盒內會失敗而讓初始測試不過。因此 Worker 層的突變是由輔助測試與既有 M2 規格殺死，M43 規格 S01～S07 沒有參與。
+- 程式版本：HEAD `fa8fb57`（T4 完成後）；規格測試凍結 commit `2e9288b`。
+- 原始報告：`backend/reports/mutation/`、`core/build/reports/pitest/`（建置產物，不進 git）。
+- 第一次完整回歸（`./verify.sh --full`）內的 Stryker 是在我改設定之前啟動的，結果（整個 `drink.js` 的 584 個突變）作廢；本段數字來自改完設定後單獨重跑的結果。
+- **沒有為了提高分數修改任何測試或實作。**
+
+| 範圍 | 產生突變 | 被殺死 | 存活 | 分數 |
+|---|---|---|---|---|
+| `drink.js` 的 `isDrinkEnabled`、`parseDrinkEnabled`、`shouldAsk` | 44 | 43 | 1 | 約 97.7% |
+| `drinkUiEnabled` | 7 | 7 | 0 | 100% |
+| `workerErrorMessage` | 9 | 9 | 0 | 100% |
+| 合計 | 60 | 59 | 1 | 約 98.3% |
+
+（Pitest 對整個 `Drink.kt` 是 366 個突變、337 個被殺；其餘函式屬先前里程碑，不在本批次分析。）
+
+### 存活突變（1 個）
+
+- `drink.js` 第 392 行 `if (askedOn === todayKey) return false` 的條件被改成永遠 `false`：「今天已經問過」這道防重複，目前沒有測試單獨驗證到（`askedOn` 等於今天、且今天詢問時段沒有紀錄的組合沒有被斷言）。
+
+### 建議新增的規格範例列
+
+以下 1 列**未納入凍結**，要先給使用者確認才能加入下一版規格。
+
+| 建議編號 | 情境 | 預期結果 | 對應存活突變 |
+|---|---|---|---|
+| M43-S16 | 開關開啟、現在是詢問的整點、今天還沒有任何紀錄，但 `drink.askedOn` 已經是今天 | 不再推播第二次「今天有喝飲料嗎？」 | `drink.js` 第 392 行 |

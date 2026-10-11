@@ -1,9 +1,9 @@
 {
   "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
-  "mutate": ["core/push.js", "core/drink.js", "core/todoist.js", "core/ma.js", "web/ma-render.js", "core/call-state.js", "core/blink.js"],
+  "mutate": ["core/push.js", "core/drink.js:379-396", "core/todoist.js", "core/ma.js", "web/ma-render.js", "core/call-state.js", "core/blink.js"],
   "testRunner": "command",
   "commandRunner": {
-    "command": "node --test tests/spec/m15/push.test.js tests/push-helper.test.js tests/spec/m16/push.test.js tests/push-script.test.js tests/push-actions.test.js tests/spec/m2/drink.test.js tests/drink-api.test.js tests/drink-core.test.js tests/spec/m3r/todoist.test.js tests/todoist-api.test.js tests/todoist-core.test.js tests/spec/m4/ma.test.js tests/ma-core.test.js tests/ma-web-render.test.js tests/spec/m41/ma-back.test.js tests/ma-entry-contract.test.js tests/spec/m42/call.test.js tests/call-state.test.js tests/call-blink.test.js"
+    "command": "node --test tests/spec/m15/push.test.js tests/push-helper.test.js tests/spec/m16/push.test.js tests/push-script.test.js tests/push-actions.test.js tests/spec/m2/drink.test.js tests/drink-api.test.js tests/drink-core.test.js tests/drink-enabled-core.test.js tests/spec/m3r/todoist.test.js tests/todoist-api.test.js tests/todoist-core.test.js tests/spec/m4/ma.test.js tests/ma-core.test.js tests/ma-web-render.test.js tests/spec/m41/ma-back.test.js tests/ma-entry-contract.test.js tests/spec/m42/call.test.js tests/call-state.test.js tests/call-blink.test.js"
   },
   "reporters": ["clear-text", "html", "json"],
   "htmlReporter": { "fileName": "reports/mutation/mutation.html" },
