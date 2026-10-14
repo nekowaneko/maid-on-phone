@@ -13,7 +13,7 @@ https://github.com/user-attachments/assets/c2d89f6e-9192-4d9a-bf26-c50b41d126de
 ## 展示
 
 <p align="center">
-https://github.com/user-attachments/assets/84368b3d-d055-4a72-bb42-81b7a572e969
+  <video src="https://github.com/user-attachments/assets/84368b3d-d055-4a72-bb42-81b7a572e969" width="320" controls></video>
 </p>
 
 | 叫出角色 | 聊天 | 戒飲記錄 | 提醒 |
