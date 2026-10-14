@@ -6,6 +6,20 @@
 
 > 內附作者的貓娘女僕角色圖，**僅供瀏覽，不在 MIT 授權範圍內**，詳見 [ART-LICENSE.md](ART-LICENSE.md)。想換成自己的角色，見下方「自訂角色」。
 
+## 展示
+
+<p align="center">
+  <img src="docs/demo/demo.gif" alt="AccompanyPet 示範：從快速設定磚叫出角色、口說飲料後確認並算熱量、收到提醒後角色出現並說話" width="320">
+</p>
+
+<p align="center">
+  <img src="docs/demo/demo-chat.gif" alt="AccompanyPet 聊天與小檔案：視訊通話風格的聊天、逐字說話，以及在聊天頁編輯人設" width="320">
+</p>
+
+| 叫出角色 | 聊天 | 戒飲記錄 | 提醒 |
+|---|---|---|---|
+| <img src="docs/demo/01-summon.png" width="160" alt="從快速設定磚叫出角色"> | <img src="docs/demo/02-chat.png" width="160" alt="視訊通話風格的聊天頁"> | <img src="docs/demo/03-drink.png" width="160" alt="口說飲料後複述確認並算熱量"> | <img src="docs/demo/04-reminder.png" width="160" alt="伺服器推播後角色出現並說話"> |
+
 ## 功能與完成度
 
 對照願望 wish-28 列出的需求，誠實標示做到哪裡：
