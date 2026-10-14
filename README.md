@@ -8,9 +8,13 @@
 
 ## 展示
 
-<p align="center">
-  <video src="https://github.com/user-attachments/assets/84368b3d-d055-4a72-bb42-81b7a572e969" width="320" controls></video>
-</p>
+<table align="center">
+  <tr>
+    <td>
+      <video src="https://github.com/user-attachments/assets/84368b3d-d055-4a72-bb42-81b7a572e969" width="320" controls></video>
+    </td>
+  </tr>
+</table>
 
 | 叫出角色 | 聊天 | 戒飲記錄 | 提醒 |
 |---|---|---|---|
