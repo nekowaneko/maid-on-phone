@@ -1,3 +1,7 @@
+
+
+https://github.com/user-attachments/assets/c2d89f6e-9192-4d9a-bf26-c50b41d126de
+
 # AccompanyPet（桌面陪伴女僕）
 
 會常駐在 Android 桌面、會動、可以點、可以聊天的陪伴角色。她會在需要時出現，用你設定的人設說話，並幫你處理幾件日常小事。
@@ -9,11 +13,7 @@
 ## 展示
 
 <p align="center">
-  <img src="docs/demo/demo.gif" alt="AccompanyPet 示範：從快速設定磚叫出角色、口說飲料後確認並算熱量、收到提醒後角色出現並說話" width="320">
-</p>
-
-<p align="center">
-  <img src="docs/demo/demo-chat.gif" alt="AccompanyPet 聊天與小檔案：視訊通話風格的聊天、逐字說話，以及在聊天頁編輯人設" width="320">
+https://github.com/user-attachments/assets/84368b3d-d055-4a72-bb42-81b7a572e969
 </p>
 
 | 叫出角色 | 聊天 | 戒飲記錄 | 提醒 |
