@@ -1,7 +1,3 @@
-
-
-https://github.com/user-attachments/assets/c2d89f6e-9192-4d9a-bf26-c50b41d126de
-
 # AccompanyPet（桌面陪伴女僕）
 
 會常駐在 Android 桌面、會動、可以點、可以聊天的陪伴角色。她會在需要時出現，用你設定的人設說話，並幫你處理幾件日常小事。
