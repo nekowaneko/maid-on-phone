@@ -6,4 +6,11 @@
     </style>
 
     <style name="Theme.AccompanyPet" parent="Base.Theme.AccompanyPet" />
+
+    <!-- 收音畫面：全透明、沒有標題列與轉場動畫（ListenActivity） -->
+    <style name="Theme.AccompanyPet.Listen" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowAnimationStyle">@null</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+    </style>
 </resources>

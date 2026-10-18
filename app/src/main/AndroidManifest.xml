@@ -68,6 +68,17 @@
             android:label="戒飲設定"
             android:windowSoftInputMode="adjustResize" />
 
+        <!-- 看不見的收音畫面：只由懸浮角色的「說話」開啟，辨識期間讓 App 在前景（系統才給麥克風）；
+             獨立的 taskAffinity，避免把主畫面一起帶到前面 -->
+        <activity
+            android:name=".ListenActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:taskAffinity=""
+            android:noHistory="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboard|keyboardHidden|navigation|uiMode|density"
+            android:theme="@style/Theme.AccompanyPet.Listen" />
+
         <!-- 通知按鈕「沒喝」「有喝，用說的」：只接受本 App 通知送來的廣播（M2） -->
         <receiver
             android:name=".DrinkActionReceiver"

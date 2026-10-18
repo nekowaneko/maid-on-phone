@@ -26,10 +26,12 @@ fun speechErrorMessage(error: Int): String = when (error) {
 
 // SpeechRecognizer → 文字。呼叫端須先確認已有麥克風權限；所有方法都在主執行緒呼叫
 // onResult 只收成功辨識出的文字（M2 送去解析）；onStatus 收「我在聽…」與各種錯誤提示（只顯示）
+// onDone 在這次辨識結束（成功、失敗或無法開始）時呼叫，給 ListenActivity 關掉自己
 class SpeechBridge(
     private val context: Context,
     private val onResult: (String) -> Unit,
     private val onStatus: (String) -> Unit,
+    private val onDone: () -> Unit = {},
 ) {
 
     private var recognizer: SpeechRecognizer? = null  // 辨識器（用到才建立）
@@ -39,6 +41,7 @@ class SpeechBridge(
         if (!SpeechRecognizer.isRecognitionAvailable(context)) {
             android.util.Log.w(LOG_TAG, "找不到語音辨識服務")
             onStatus("$MIC_UNAVAILABLE_MESSAGE（找不到語音辨識服務）")
+            onDone()
             return
         }
         val r = recognizer ?: SpeechRecognizer.createSpeechRecognizer(context).also {
@@ -54,6 +57,7 @@ class SpeechBridge(
             r.startListening(intent)
         } catch (e: SecurityException) {
             onStatus(MIC_UNAVAILABLE_MESSAGE)  // 系統拒絕時只提示，不繞過
+            onDone()
         }
     }
 
@@ -69,12 +73,14 @@ class SpeechBridge(
         override fun onResults(results: Bundle?) {
             val text = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()
             if (text.isNullOrBlank()) onStatus(NOT_HEARD_MESSAGE) else onResult(text.trim())  // 只有成功的結果送解析
+            onDone()
         }
 
         // 辨識失敗：顯示對應提示
         override fun onError(error: Int) {
             android.util.Log.w(LOG_TAG, "語音辨識錯誤 $error")
             onStatus(speechErrorMessage(error))
+            onDone()
         }
 
         override fun onReadyForSpeech(params: Bundle?) {}

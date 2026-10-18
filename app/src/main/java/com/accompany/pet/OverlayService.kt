@@ -55,6 +55,7 @@ import com.accompany.pet.core.drink.workerErrorMessage
 import org.json.JSONException
 import org.json.JSONObject
 import com.accompany.pet.core.initialPosition
+import com.accompany.pet.core.isOnPet
 import com.accompany.pet.core.ma.maPageUrl
 import com.accompany.pet.core.permission.MIC_DENIED_MESSAGE
 import com.accompany.pet.core.reminder.idleDeadline
@@ -113,6 +114,7 @@ class OverlayService : Service() {
     private var params: WindowManager.LayoutParams? = null
     private var petPos = Point(0, 0)                     // 角色本體左上角（不含泡泡）
     private var bubbleShown = false                      // 泡泡是否展開
+    private var growDown = false                         // 泡泡是否往下長（角色太靠近螢幕頂端時）
     private val windowManager by lazy { getSystemService(WINDOW_SERVICE) as WindowManager }
     private val positionStore by lazy { FilePositionStore(java.io.File(filesDir, POSITION_FILE)) }
     private val speech by lazy { SpeechBridge(this, onResult = ::onSpeechResult, onStatus = ::showText) }
@@ -122,6 +124,7 @@ class OverlayService : Service() {
     private var pageReady = false                              // 角色頁是否載入完成
     private val pending = mutableListOf<Pair<PendingKind, String>>()  // 頁面還沒載入完成時先存著的呼叫，依到達順序
     private val idleCheck = Runnable { checkIdle() }           // 到期檢查
+    private var listenFallback: Runnable? = null               // 收音畫面沒開起來時改由服務直接辨識
 
     // 接收螢幕開關事件
     private val screenReceiver = object : BroadcastReceiver() {
@@ -199,6 +202,9 @@ class OverlayService : Service() {
     // 收掉懸浮窗與接收器
     private fun cleanup() {
         idleHandler.removeCallbacks(idleCheck)
+        listenFallback?.let { idleHandler.removeCallbacks(it) }
+        listenFallback = null
+        ListenActivity.cancel()
         running = false
         sendBroadcast(Intent(ACTION_PET_STATE_CHANGED).setPackage(packageName))
         refreshTile(this)
@@ -483,7 +489,7 @@ class OverlayService : Service() {
         val pet = petSize()
         val extra = if (bubbleShown) dp(BUBBLE_WIDTH_DP) else 0
         val extraHeight = if (bubbleShown) dp(BUBBLE_MAX_HEIGHT_DP) - pet.h else 0  // 泡泡比角色高出的部分
-        val growDown = petPos.y < extraHeight                                       // 上方空間不夠時，泡泡往下長
+        growDown = petPos.y < extraHeight                                           // 上方空間不夠時，泡泡往下長
         val right = isOnRightSide()
         lp.width = pet.w + extra
         lp.height = pet.h + extraHeight
@@ -513,13 +519,24 @@ class OverlayService : Service() {
     }
 
     // 按麥克風：沒權限就提示，有權限才啟動語音辨識
+    // 辨識交給透明的收音畫面做（App 要在前景系統才給麥克風，見 ListenActivity）；畫面開不起來才由服務直接辨識
     private fun onMicPressed() {
         markInteraction()
         if (!hasMicPermission()) {
             showText(MIC_DENIED_MESSAGE)  // 沒權限不啟動辨識（S02）
             return
         }
-        speech.start()
+        listenFallback?.let { idleHandler.removeCallbacks(it) }
+        val request = ListenActivity.launch(this, ListenRequest(onResult = ::onSpeechResult, onStatus = ::showText))
+        val fallback = Runnable {
+            listenFallback = null
+            if (ListenActivity.withdraw(request)) {
+                android.util.Log.w(LOG_TAG, "收音畫面沒有開起來，改由服務直接辨識（背景啟動時可能收不到聲音）")
+                speech.start()
+            }
+        }
+        listenFallback = fallback
+        idleHandler.postDelayed(fallback, LISTEN_LAUNCH_TIMEOUT_MS)
     }
 
     // 按「聊聊」：沒設定聊天網址就在泡泡提示；有設定就收起泡泡、開啟聊天畫面（角色保留，閒置照常計時）
@@ -698,16 +715,19 @@ class OverlayService : Service() {
         private var downY = 0f
         private var startPos = Point(0, 0)
         private var dragging = false
+        private var onPet = false  // 這次觸控是否從角色本體開始（從泡泡開始的整段交給網頁捲動）
 
         // 處理觸控事件
         override fun onTouch(v: android.view.View, e: MotionEvent): Boolean {
             markInteraction()  // 任何觸控都重新計時
+            if (e.actionMasked != MotionEvent.ACTION_DOWN && !onPet) return false  // 按在泡泡上：不拖曳，讓台詞區能捲動
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = e.rawX
                     downY = e.rawY
                     startPos = petPos
                     dragging = false
+                    onPet = isOnPet(e.x.toInt(), e.y.toInt(), Size(v.width, v.height), petSize(), isOnRightSide(), growDown)
                     return false  // 讓網頁也收到，才能判斷點擊
                 }
                 MotionEvent.ACTION_MOVE -> {

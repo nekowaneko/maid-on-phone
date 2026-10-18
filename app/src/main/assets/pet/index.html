@@ -67,7 +67,8 @@
   var BLINK_MIN_MS = 4000;   // 眨眼最短間隔
   var BLINK_MAX_MS = 6000;   // 眨眼最長間隔
   var BREATH_PERIOD_MS = 3000; // 呼吸週期
-  var BREATH_FPS = 10;         // 呼吸每秒更新次數（CSS 動畫會以 60fps 持續重繪，耗電又容易被系統判定為高耗電）
+  var SCROLL_STICK_PX = 4;     // 台詞區離底部幾 px 內算「在最底下」（逐字時才跟著捲）
+  var BREATH_FPS = 10;        // 呼吸每秒更新次數（CSS 動畫會以 60fps 持續重繪，耗電又容易被系統判定為高耗電）
   var EMOTION_MAP = window.PetEmotionMap;   // 表情對照表（emotion-map.js，契約檔）
   var PERF = window.PetPerformance;         // 演出排程（performance.js，純函式）
   var IDLE_PLACEHOLDER = 'frames/placeholder-idle.svg'; // 平常的臉也載不到時的替代圖
@@ -187,10 +188,13 @@
   }
 
   // 執行演出的一個步驟：face 換臉，count 以 textContent 顯示前 count 個字
+  // 逐字時只有原本就在最底下才跟著捲；使用者往上捲回去看時不把他拉回來
   function applyStep(step, text) {
     if (step.face !== undefined) { setFace(step.face); return; }
-    document.getElementById('text').textContent = text.slice(0, step.count); // 用 textContent，不解析 HTML
-    scrollBubbleToBottom();
+    var box = document.getElementById('text');
+    var atBottom = box.scrollHeight - box.scrollTop - box.clientHeight <= SCROLL_STICK_PX;
+    box.textContent = text.slice(0, step.count); // 用 textContent，不解析 HTML
+    if (atBottom) scrollBubbleToBottom();
   }
 
   // 依 planTimeline 排計時器開演目前這一則；演完接著演下一則
