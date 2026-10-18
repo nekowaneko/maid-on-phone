@@ -49,3 +49,4 @@ backend/wrangler.local.toml
 # 錄影原始素材（檔案很大，只保留剪好的 docs/demo/ 內容）
 docs/demo.mp4
 docs/DEMO-SCRIPT.md
+docs/demo-upload.mp4
